@@ -19,6 +19,7 @@ import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -29,11 +30,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class ServicioReservas implements FachadaReservas {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
+
+    /** Coincide con el mínimo que Stripe conserva sus claves de idempotencia. */
+    private static final Duration RETENCION_CLAVE = Duration.ofHours(24);
 
     private final RepositorioReservas reservas;
     private final FachadaPublicaciones publicaciones;
@@ -43,10 +48,11 @@ public class ServicioReservas implements FachadaReservas {
     private final PublicadorEventos eventos;
     private final TransactionTemplate transaccion;
     private final Clock reloj;
+    private final JsonMapper json;
 
     public ServicioReservas(RepositorioReservas reservas, FachadaPublicaciones publicaciones, FachadaCotizacion cotizacion,
                             FachadaPagos pagos, FachadaUsuarios usuarios, PublicadorEventos eventos,
-                            TransactionTemplate transaccion, Clock reloj) {
+                            TransactionTemplate transaccion, Clock reloj, JsonMapper json) {
         this.reservas = reservas;
         this.publicaciones = publicaciones;
         this.cotizacion = cotizacion;
@@ -55,6 +61,7 @@ public class ServicioReservas implements FachadaReservas {
         this.eventos = eventos;
         this.transaccion = transaccion;
         this.reloj = reloj;
+        this.json = json;
     }
 
     /**
@@ -75,10 +82,12 @@ public class ServicioReservas implements FachadaReservas {
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
         try {
             transaccion.executeWithoutResult(estado -> {
+                reservas.registrarSolicitud(claveSolicitud, huespedId, reloj.instant().plus(RETENCION_CLAVE));
                 reservas.guardar(reserva, adicionales);
                 pagos.registrarPago(reserva.id(), referencia, claveSolicitud, reserva.total());
                 eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", reserva.id(), "EXITO",
                         Map.of("total", reserva.total()), List.of(huespedId, publicacion.anfitrionId())));
+                reservas.completarSolicitud(claveSolicitud, reserva.id(), json.writeValueAsString(reserva));
             });
         } catch (PeriodoNoDisponibleException otraReservaGano) {
             devolverCobro(huespedId, publicacion, referencia, reserva);

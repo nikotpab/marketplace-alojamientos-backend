@@ -6,6 +6,8 @@ import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleExcepti
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,7 +29,36 @@ public class RepositorioReservasSql implements RepositorioReservas {
 
     @Override
     public Optional<SolicitudProcesada> buscarSolicitud(String clave) {
-        throw new UnsupportedOperationException(PENDIENTE);
+        return jdbc.sql("SELECT clave, huesped_id, reserva_id, resultado::text AS resultado, expira_en FROM solicitud_procesada WHERE clave = :clave")
+                .param("clave", clave)
+                .query((fila, numero) -> new SolicitudProcesada(
+                        fila.getString("clave"),
+                        fila.getObject("huesped_id", UUID.class),
+                        fila.getObject("reserva_id", UUID.class),
+                        fila.getString("resultado"),
+                        fila.getTimestamp("expira_en").toInstant()))
+                .optional();
+    }
+
+    @Override
+    public boolean registrarSolicitud(String clave, UUID huespedId, Instant expiraEn) {
+        return jdbc.sql("""
+                INSERT INTO solicitud_procesada (clave, huesped_id, expira_en)
+                VALUES (:clave, :huesped, :expiraEn)
+                ON CONFLICT (clave) DO NOTHING""")
+                .param("clave", clave)
+                .param("huesped", huespedId)
+                .param("expiraEn", Timestamp.from(expiraEn))
+                .update() == 1;
+    }
+
+    @Override
+    public void completarSolicitud(String clave, UUID reservaId, String resultado) {
+        jdbc.sql("UPDATE solicitud_procesada SET reserva_id = :reserva, resultado = :resultado::jsonb WHERE clave = :clave")
+                .param("reserva", reservaId)
+                .param("resultado", resultado)
+                .param("clave", clave)
+                .update();
     }
 
     @Override
