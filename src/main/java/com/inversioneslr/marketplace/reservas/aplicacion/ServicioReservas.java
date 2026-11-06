@@ -24,12 +24,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class ServicioReservas implements FachadaReservas {
+
+    private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
 
     private final RepositorioReservas reservas;
     private final FachadaPublicaciones publicaciones;
@@ -69,13 +73,29 @@ public class ServicioReservas implements FachadaReservas {
         Cotizacion cotizacionFinal = cotizacion.cotizar(publicacion.id(), comando.fechaLlegada(), comando.fechaSalida(), seleccionados);
         String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud);
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
-        transaccion.executeWithoutResult(estado -> {
-            reservas.guardar(reserva, adicionales);
-            pagos.registrarPago(reserva.id(), referencia, claveSolicitud, reserva.total());
-            eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", reserva.id(), "EXITO",
-                    Map.of("total", reserva.total()), List.of(huespedId, publicacion.anfitrionId())));
-        });
+        try {
+            transaccion.executeWithoutResult(estado -> {
+                reservas.guardar(reserva, adicionales);
+                pagos.registrarPago(reserva.id(), referencia, claveSolicitud, reserva.total());
+                eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", reserva.id(), "EXITO",
+                        Map.of("total", reserva.total()), List.of(huespedId, publicacion.anfitrionId())));
+            });
+        } catch (PeriodoNoDisponibleException otraReservaGano) {
+            devolverCobro(huespedId, publicacion, referencia, reserva);
+            throw otraReservaGano;
+        }
         return reserva;
+    }
+
+    /** SEC-03: otra reserva ganó el periodo. Si la devolución falla, queda en auditoría para reconciliarla (SCRUM-59). */
+    private void devolverCobro(UUID huespedId, DatosPublicacion publicacion, String referencia, Reserva reserva) {
+        try {
+            pagos.devolver(referencia, reserva.total());
+        } catch (ExcepcionNegocio error) {
+            log.error("No se pudo devolver el cobro {} tras perder el periodo", referencia);
+            eventos.publicar(new EventoDominio("DevolucionFallida", huespedId, "publicacion", publicacion.id(), error.tipo().name(),
+                    Map.of("referencia", referencia, "total", reserva.total()), List.of()));
+        }
     }
 
     private void validarFechas(ConfirmarReservaComando comando) {
