@@ -24,6 +24,9 @@ class NotificacionesIT extends PruebaIntegracion {
     PublicadorEventos eventos;
 
     @Autowired
+    ProcesadorEventos procesador;
+
+    @Autowired
     JdbcClient jdbc;
 
     @Autowired
@@ -74,6 +77,19 @@ class NotificacionesIT extends PruebaIntegracion {
         }
 
         assertThat(comoAplicacion.queryForObject(consulta, String.class, entidad.toString())).isEqualTo("FALLIDO:5");
+    }
+
+    @Test
+    void entregarUnEventoCreaUnaNotificacionPorDestinatarioSinDuplicar() {
+        UUID huesped = crearUsuario(Rol.HUESPED);
+        UUID anfitrion = crearUsuario(Rol.ANFITRION);
+        eventos.publicar(evento("ReservaConfirmada", huesped, UUID.randomUUID(), List.of(huesped, anfitrion)));
+
+        procesador.procesarPendientes();
+        procesador.procesarPendientes();
+
+        assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", huesped)).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", anfitrion)).isEqualTo(1);
     }
 
     private static EventoDominio evento(String tipo, UUID actor, UUID entidad, List<UUID> destinatarios) {
