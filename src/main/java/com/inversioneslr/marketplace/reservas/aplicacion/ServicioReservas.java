@@ -41,6 +41,7 @@ public class ServicioReservas implements FachadaReservas {
 
     /** Coincide con el mínimo que Stripe conserva sus claves de idempotencia. */
     private static final Duration RETENCION_CLAVE = Duration.ofHours(24);
+    private static final String RESULTADO_RECHAZADO = "{\"rechazo\":\"PERIODO_NO_DISPONIBLE\"}";
 
     private final RepositorioReservas reservas;
     private final FachadaPublicaciones publicaciones;
@@ -105,6 +106,7 @@ public class ServicioReservas implements FachadaReservas {
             });
         } catch (PeriodoNoDisponibleException otraReservaGano) {
             devolverCobro(huespedId, publicacion, referencia, reserva);
+            recordarRechazo(claveSolicitud, huespedId);
             throw otraReservaGano;
         }
     }
@@ -113,7 +115,19 @@ public class ServicioReservas implements FachadaReservas {
         if (!solicitud.huespedId().equals(huespedId)) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta solicitud pertenece a otro huésped.");
         }
+        if (solicitud.reservaId() == null) {
+            throw new PeriodoNoDisponibleException();
+        }
         return json.readValue(solicitud.resultado(), Reserva.class);
+    }
+
+    /** Sin esto, un reintento volvería a cobrar con la misma clave un pago que ya se devolvió. */
+    private void recordarRechazo(String claveSolicitud, UUID huespedId) {
+        transaccion.executeWithoutResult(estado -> {
+            if (reservas.registrarSolicitud(claveSolicitud, huespedId, reloj.instant().plus(RETENCION_CLAVE))) {
+                reservas.completarSolicitud(claveSolicitud, null, RESULTADO_RECHAZADO);
+            }
+        });
     }
 
     /** SEC-03: otra reserva ganó el periodo. Si la devolución falla, queda en auditoría para reconciliarla (SCRUM-59). */

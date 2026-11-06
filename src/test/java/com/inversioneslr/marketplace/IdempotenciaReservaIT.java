@@ -16,6 +16,7 @@ import com.inversioneslr.marketplace.cotizacion.api.FachadaCotizacion;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas.ConfirmarReservaComando;
+import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -129,6 +130,24 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         assertThatThrownBy(() -> reservas.confirmarReserva(otroHuesped, comando, clave))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.ACCESO_DENEGADO));
+    }
+
+    @Test
+    void unReintentoTrasPerderElPeriodoRecibeElMismoRechazoSinCobrarDeNuevo() {
+        String clave = UUID.randomUUID().toString();
+        // Otra reserva toma el periodo mientras se cobra.
+        when(pasarela.cobrar(any(), any())).thenAnswer(llamada -> {
+            comoAplicacion.update("""
+                    INSERT INTO reserva (huesped_id, publicacion_id, fecha_llegada, fecha_salida, numero_huespedes, estado)
+                    VALUES (?, ?, '2030-09-10', '2030-09-13', 1, 'CONFIRMADA')""", huesped, publicacion);
+            return "pi_" + llamada.getArgument(1);
+        });
+
+        assertThatThrownBy(() -> reservas.confirmarReserva(huesped, comando, clave)).isInstanceOf(PeriodoNoDisponibleException.class);
+        assertThatThrownBy(() -> reservas.confirmarReserva(huesped, comando, clave)).isInstanceOf(PeriodoNoDisponibleException.class);
+
+        verify(pasarela, times(1)).cobrar(any(), any());
+        verify(pasarela, times(1)).devolver(any(), any());
     }
 
     long contar(String sql, Object valor) {
