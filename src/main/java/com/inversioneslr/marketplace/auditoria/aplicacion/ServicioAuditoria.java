@@ -4,9 +4,11 @@ import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RegistroAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RepositorioAuditoria;
 import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
+import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.SuscriptorSincrono;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,6 +33,10 @@ public class ServicioAuditoria implements FachadaAuditoria, SuscriptorSincrono {
 
     @Override
     public List<EventoAuditoria> consultar(FiltrosAuditoria filtros) {
-        throw new UnsupportedOperationException("CU-27");
+        if (filtros.desde() != null && filtros.hasta() != null && filtros.desde().isAfter(filtros.hasta())) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, "El rango de fechas no es válido.",
+                    Map.of("desde", "La fecha inicial es posterior a la final. Elige una fecha igual o anterior."));
+        }
+        return auditoria.consultar(filtros);
     }
 }
