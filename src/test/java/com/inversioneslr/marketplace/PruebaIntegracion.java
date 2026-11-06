@@ -18,7 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /** Base de las pruebas de integración: Postgres real, usuario de aplicación restringido y sesiones simuladas. */
-@SpringBootTest(properties = {"marketplace.jwt-secreto=solo-para-pruebas", "marketplace.pagos.proveedor=simulado"})
+@SpringBootTest(properties = {"marketplace.jwt-secreto=solo-para-pruebas", "marketplace.pagos.proveedor=simulado",
+        "marketplace.eventos.cron=-"})
 @AutoConfigureMockMvc
 abstract class PruebaIntegracion {
 

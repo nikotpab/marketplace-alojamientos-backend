@@ -29,15 +29,15 @@ class EsqueletoIT extends PruebaIntegracion {
 
     @Test
     void rutaSinDeclararSeDeniega() throws Exception {
-        String huesped = sesionDe(UUID.randomUUID(), Rol.HUESPED);
+        String huesped = sesionDe(crearUsuario(Rol.HUESPED), Rol.HUESPED);
         mvc.perform(get("/api/v1/no-declarada")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/no-declarada").header("Authorization", huesped)).andExpect(status().isForbidden());
     }
 
     @Test
     void rutaDeAdministradorExigeElRol() throws Exception {
-        String huesped = sesionDe(UUID.randomUUID(), Rol.HUESPED);
-        String administrador = sesionDe(UUID.randomUUID(), Rol.ADMINISTRADOR);
+        String huesped = sesionDe(crearUsuario(Rol.HUESPED), Rol.HUESPED);
+        String administrador = sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR);
         mvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", huesped)).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", administrador)).andExpect(status().isNotImplemented());
