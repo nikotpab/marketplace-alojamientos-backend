@@ -2,8 +2,6 @@ package com.inversioneslr.marketplace.notificaciones.presentacion;
 
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.notificaciones.aplicacion.ServicioNotificaciones;
-import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,7 +23,7 @@ public class ControladorNotificaciones {
     }
 
     @GetMapping
-    public List<Notificacion> consultar(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+    public ServicioNotificaciones.Bandeja consultar(@AuthenticationPrincipal UsuarioAutenticado usuario) {
         return servicio.consultar(usuario.id());
     }
 
@@ -33,5 +31,11 @@ public class ControladorNotificaciones {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void marcarLeida(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable UUID id) {
         servicio.marcarLeida(usuario.id(), id);
+    }
+
+    @PostMapping("/lectura")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void marcarTodasLeidas(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+        servicio.marcarTodasLeidas(usuario.id());
     }
 }

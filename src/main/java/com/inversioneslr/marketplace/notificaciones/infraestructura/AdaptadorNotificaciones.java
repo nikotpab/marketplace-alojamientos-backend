@@ -48,16 +48,34 @@ public class AdaptadorNotificaciones implements SuscriptorAsincrono, Repositorio
 
     @Override
     public Optional<Notificacion> buscarPorId(UUID id) {
-        throw new UnsupportedOperationException("SQL de notificacion");
+        return jdbc.sql("SELECT * FROM notificacion WHERE id = :id")
+                .param("id", id)
+                .query(AdaptadorNotificaciones::aNotificacion)
+                .optional();
     }
 
     @Override
     public List<Notificacion> listarPorUsuario(UUID usuarioId) {
-        throw new UnsupportedOperationException("SQL de notificacion");
+        return jdbc.sql("SELECT * FROM notificacion WHERE usuario_id = :usuario ORDER BY creado_en DESC")
+                .param("usuario", usuarioId)
+                .query(AdaptadorNotificaciones::aNotificacion)
+                .list();
     }
 
     @Override
     public void marcarTodasLeidas(UUID usuarioId) {
-        throw new UnsupportedOperationException("SQL de notificacion");
+        jdbc.sql("UPDATE notificacion SET leida = true WHERE usuario_id = :usuario AND NOT leida")
+                .param("usuario", usuarioId)
+                .update();
+    }
+
+    private static Notificacion aNotificacion(ResultSet fila, int numero) throws SQLException {
+        return new Notificacion(
+                fila.getObject("id", UUID.class),
+                fila.getObject("usuario_id", UUID.class),
+                fila.getString("tipo"),
+                fila.getString("mensaje"),
+                fila.getBoolean("leida"),
+                fila.getTimestamp("creado_en").toInstant());
     }
 }

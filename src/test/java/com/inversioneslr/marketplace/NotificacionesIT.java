@@ -2,6 +2,10 @@ package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
 import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
@@ -90,6 +94,43 @@ class NotificacionesIT extends PruebaIntegracion {
 
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", huesped)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", anfitrion)).isEqualTo(1);
+    }
+
+    @Test
+    void elUsuarioConsultaYMarcaSusNotificaciones() throws Exception {
+        UUID usuario = crearUsuario(Rol.HUESPED);
+        String sesion = sesionDe(usuario, Rol.HUESPED);
+        eventos.publicar(evento("ReservaConfirmada", usuario, UUID.randomUUID(), List.of(usuario)));
+        eventos.publicar(evento("ReservaCancelada", usuario, UUID.randomUUID(), List.of(usuario)));
+        procesador.procesarPendientes();
+
+        mvc.perform(get("/api/v1/notificaciones").header("Authorization", sesion))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.noLeidas").value(2))
+                .andExpect(jsonPath("$.notificaciones.length()").value(2));
+
+        UUID notificacion = comoAplicacion.queryForObject(
+                "SELECT id FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaConfirmada'", UUID.class, usuario);
+        mvc.perform(post("/api/v1/notificaciones/{id}/lectura", notificacion).header("Authorization", sesion))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/notificaciones").header("Authorization", sesion)).andExpect(jsonPath("$.noLeidas").value(1));
+
+        mvc.perform(post("/api/v1/notificaciones/lectura").header("Authorization", sesion)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/notificaciones").header("Authorization", sesion)).andExpect(jsonPath("$.noLeidas").value(0));
+    }
+
+    @Test
+    void marcarLaNotificacionDeOtroUsuarioSeDeniegaYSeAudita() throws Exception {
+        UUID duena = crearUsuario(Rol.HUESPED);
+        UUID intruso = crearUsuario(Rol.HUESPED);
+        eventos.publicar(evento("ReservaConfirmada", duena, UUID.randomUUID(), List.of(duena)));
+        procesador.procesarPendientes();
+        UUID notificacion = comoAplicacion.queryForObject("SELECT id FROM notificacion WHERE usuario_id = ?", UUID.class, duena);
+
+        mvc.perform(post("/api/v1/notificaciones/{id}/lectura", notificacion).header("Authorization", sesionDe(intruso, Rol.HUESPED)))
+                .andExpect(status().isForbidden());
+
+        assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE actor_id = ? AND accion = 'AccesoDenegado'", intruso)).isEqualTo(1);
     }
 
     private static EventoDominio evento(String tipo, UUID actor, UUID entidad, List<UUID> destinatarios) {
