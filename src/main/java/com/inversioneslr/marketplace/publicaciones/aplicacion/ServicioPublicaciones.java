@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.publicaciones.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
@@ -70,12 +71,13 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     @Override
     public DatosPublicacion datosPublicacion(UUID publicacionId) {
-        throw new UnsupportedOperationException("CU-16");
+        return publicaciones.buscarDatos(publicacionId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "El alojamiento no existe."));
     }
 
     @Override
     public boolean periodoDisponible(UUID publicacionId, LocalDate llegada, LocalDate salida) {
-        throw new UnsupportedOperationException("CU-16");
+        return publicaciones.periodoDisponible(publicacionId, llegada, salida);
     }
 
     @Override
