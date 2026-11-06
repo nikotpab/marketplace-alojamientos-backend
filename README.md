@@ -2,7 +2,11 @@
 
 API del Marketplace de Alojamientos de Inversiones LR. Monolito modular con capas y regla de dependencia (ADR-01).
 
-**Estado: esqueleto.** La aplicación arranca y todas las rutas existen, pero los casos de uso, repositorios y adaptadores están sin implementar y responden `501`. Ya funcionan de verdad: el esquema de base de datos, la seguridad con denegación por defecto, el manejo de errores, los logs JSON enmascarados, el circuit breaker de pagos y las pruebas de arquitectura.
+**Estado: en construcción.** La aplicación arranca y todas las rutas existen. Lo que aún no se implementa responde `501`.
+
+Ya funcionan: el esquema de base de datos, la seguridad con denegación por defecto, el registro de usuarios, la edición de publicaciones, la confirmación de reservas con idempotencia, los pagos, la auditoría, las notificaciones, los logs y las pruebas de arquitectura.
+
+Aún no se puede reservar de punta a punta: faltan la cotización (SCRUM-32) y las sesiones JWT (SCRUM-17). Las pruebas las simulan.
 
 ## Ejecutar
 
@@ -84,6 +88,37 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 3. **`NOT NULL`.** El modelo de datos solo lo marca en claves y `creado_en`. Se agregó donde la integridad lo exige, por ejemplo en las fechas de `reserva`: con fechas nulas, la restricción anti-solape bloquearía todo el calendario.
 4. **Cruces entre módulos.** `Reserva.cancelar()` no devuelve una `Cancelacion`, porque está en otro módulo. `calcularDevolucion` recibe `(reserva, fecha)` como en SEC-04, no solo la reserva como en el diagrama de clases.
 5. **Nombres.** Se usan los del modelo de datos (`solicitud_procesada`, `evento_pendiente`) y `RepositorioBusqueda` del Patrón 1, no `RepositorioPublicaciones` de SEC-06.
+
+## Consultar los logs
+
+Los logs son JSON. Cada línea lleva `correlationId`, y los eventos agregan `tipoEvento`, `usuario`, `entidad`, `entidadId` y `resultado`. Cada respuesta incluye el mismo identificador en la cabecera `X-Correlation-Id`.
+
+En producción se consultan en CloudWatch Logs Insights, en el grupo `/marketplace/api`.
+
+Para seguir una petición que falló:
+
+```
+fields @timestamp, level, message, codigo, ruta, stack_trace
+| filter correlationId = "ID-DE-LA-CABECERA"
+| sort @timestamp asc
+```
+
+Para buscar por tipo de evento y usuario en un rango de fechas, elegido en la consola:
+
+```
+fields @timestamp, tipoEvento, usuario, entidadId, resultado
+| filter tipoEvento = "ReservaConfirmada" and usuario = "ID-DEL-USUARIO"
+| sort @timestamp desc
+```
+
+Para ver los errores recientes:
+
+```
+fields @timestamp, logger_name, message, correlationId
+| filter level = "ERROR"
+| sort @timestamp desc
+| limit 50
+```
 
 ## Decisiones pendientes
 
