@@ -1,18 +1,24 @@
 package com.inversioneslr.marketplace.usuarios.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
+import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.Tokens;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
+import com.inversioneslr.marketplace.usuarios.dominio.Usuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServicioAutenticacion implements FachadaUsuarios {
@@ -31,8 +37,23 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     /** CU-01: solo HUESPED o ANFITRION; el rol ADMINISTRADOR lo asigna el equipo. */
+    @Transactional
     public UsuarioResumen registrar(RegistroComando comando) {
-        throw new UnsupportedOperationException("CU-01");
+        if (comando.rol() == Rol.ADMINISTRADOR) {
+            String mensaje = "Este rol no se puede elegir. Regístrate como huésped o anfitrión.";
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of("rol", mensaje));
+        }
+        Usuario usuario = usuarios.guardar(new Usuario(UUID.randomUUID(), comando.nombre(), comando.apellido(),
+                comando.correo().toLowerCase(Locale.ROOT), comando.telefono(), cifrador.encode(comando.contrasena()),
+                comando.rol(), true, false, null, 0, null));
+        eventos.publicar(new EventoDominio("UsuarioRegistrado", usuario.id(), "usuario", usuario.id(), "EXITO",
+                Map.of("rol", usuario.rol().name()), List.of()));
+        return resumen(usuario);
+    }
+
+    private static UsuarioResumen resumen(Usuario usuario) {
+        return new UsuarioResumen(usuario.id(), usuario.nombre(), usuario.apellido(), usuario.correo(), usuario.telefono(),
+                usuario.rol(), usuario.cuentaActiva(), usuario.restringido());
     }
 
     /** CU-02: bloquea 30 min tras 5 intentos fallidos seguidos y registra cada intento (RNF-23). */
