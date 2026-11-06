@@ -15,6 +15,7 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
+import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -23,6 +24,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -65,15 +67,23 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     /**
-     * CU-17 · SEC-01, SEC-02. Cobra fuera de la transacción para no retener una conexión mientras responde
-     * la pasarela, y solo con el pago aprobado guarda la reserva, el pago, la auditoría y el evento, todo o nada.
+     * CU-17 · SEC-01, SEC-02, SEC-03. Cobra fuera de la transacción para no retener una conexión mientras responde
+     * la pasarela, y solo con el pago aprobado guarda la reserva, el pago, la clave, la auditoría y el evento, todo o nada.
+     * Una solicitud repetida recibe el resultado original sin procesarse de nuevo (ADR-04).
      */
     public Reserva confirmarReserva(UUID huespedId, ConfirmarReservaComando comando, String claveSolicitud) {
+        Optional<SolicitudProcesada> solicitudPrevia = reservas.buscarSolicitud(claveSolicitud);
+        if (solicitudPrevia.isPresent()) {
+            return resultadoOriginal(solicitudPrevia.get(), huespedId);
+        }
         validarFechas(comando);
         DatosPublicacion publicacion = publicaciones.datosPublicacion(comando.publicacionId());
         validarPublicacion(publicacion, comando);
         if (!publicaciones.periodoDisponible(publicacion.id(), comando.fechaLlegada(), comando.fechaSalida())) {
-            throw new PeriodoNoDisponibleException();
+            // Puede estar ocupado por esta misma solicitud, si un reintento simultáneo terminó primero.
+            return reservas.buscarSolicitud(claveSolicitud)
+                    .map(solicitud -> resultadoOriginal(solicitud, huespedId))
+                    .orElseThrow(PeriodoNoDisponibleException::new);
         }
         List<UUID> seleccionados = comando.serviciosAdicionales() == null ? List.of() : comando.serviciosAdicionales();
         List<AdicionalReservado> adicionales = adicionalesSeleccionados(publicacion, seleccionados);
@@ -81,19 +91,29 @@ public class ServicioReservas implements FachadaReservas {
         String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud);
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
         try {
-            transaccion.executeWithoutResult(estado -> {
-                reservas.registrarSolicitud(claveSolicitud, huespedId, reloj.instant().plus(RETENCION_CLAVE));
+            return transaccion.execute(estado -> {
+                if (!reservas.registrarSolicitud(claveSolicitud, huespedId, reloj.instant().plus(RETENCION_CLAVE))) {
+                    // Reintento simultáneo: comparte el pago con la solicitud ganadora, así que no se devuelve.
+                    return resultadoOriginal(reservas.buscarSolicitud(claveSolicitud).orElseThrow(), huespedId);
+                }
                 reservas.guardar(reserva, adicionales);
                 pagos.registrarPago(reserva.id(), referencia, claveSolicitud, reserva.total());
                 eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", reserva.id(), "EXITO",
                         Map.of("total", reserva.total()), List.of(huespedId, publicacion.anfitrionId())));
                 reservas.completarSolicitud(claveSolicitud, reserva.id(), json.writeValueAsString(reserva));
+                return reserva;
             });
         } catch (PeriodoNoDisponibleException otraReservaGano) {
             devolverCobro(huespedId, publicacion, referencia, reserva);
             throw otraReservaGano;
         }
-        return reserva;
+    }
+
+    private Reserva resultadoOriginal(SolicitudProcesada solicitud, UUID huespedId) {
+        if (!solicitud.huespedId().equals(huespedId)) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta solicitud pertenece a otro huésped.");
+        }
+        return json.readValue(solicitud.resultado(), Reserva.class);
     }
 
     /** SEC-03: otra reserva ganó el periodo. Si la devolución falla, queda en auditoría para reconciliarla (SCRUM-59). */

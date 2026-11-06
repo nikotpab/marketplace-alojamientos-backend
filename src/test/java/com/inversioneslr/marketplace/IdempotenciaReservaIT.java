@@ -1,10 +1,16 @@
 package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
+import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
 import com.inversioneslr.marketplace.cotizacion.api.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.api.FachadaCotizacion;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
@@ -13,8 +19,15 @@ import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas.Confir
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +39,9 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
 
     @Autowired
     ServicioReservas reservas;
+
+    @Autowired
+    ProcesadorEventos procesador;
 
     @MockitoBean
     FachadaCotizacion cotizacion;
@@ -58,6 +74,61 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         assertThat(solicitud.get("huesped_id")).isEqualTo(huesped);
         assertThat(solicitud.get("reserva_id")).isEqualTo(reserva.id());
         assertThat(solicitud.get("resultado").toString()).contains("CONFIRMADA");
+    }
+
+    @Test
+    void unReintentoRecibeElResultadoOriginalSinCobrarDeNuevo() {
+        String clave = UUID.randomUUID().toString();
+
+        Reserva original = reservas.confirmarReserva(huesped, comando, clave);
+        Reserva repetida = reservas.confirmarReserva(huesped, comando, clave);
+
+        assertThat(repetida).isEqualTo(original);
+        verify(pasarela, times(1)).cobrar(any(), any());
+        assertThat(contar("SELECT count(*) FROM reserva WHERE publicacion_id = ?", publicacion)).isEqualTo(1);
+    }
+
+    /** RNF-14: 10 envíos de la misma solicitud producen 1 reserva, 1 pago y 1 notificación por destinatario. */
+    @Test
+    void diezEnviosSimultaneosProducenUnSoloEfecto() throws Exception {
+        String clave = UUID.randomUUID().toString();
+        CountDownLatch salida = new CountDownLatch(1);
+        List<Future<Reserva>> envios = new ArrayList<>();
+
+        try (ExecutorService hilos = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 0; i < 10; i++) {
+                envios.add(hilos.submit(() -> {
+                    salida.await();
+                    return reservas.confirmarReserva(huesped, comando, clave);
+                }));
+            }
+            salida.countDown();
+        }
+
+        Set<UUID> resultados = new HashSet<>();
+        for (Future<Reserva> envio : envios) {
+            resultados.add(envio.get().id());
+        }
+        UUID reserva = resultados.iterator().next();
+        procesador.procesarPendientes();
+
+        assertThat(resultados).hasSize(1);
+        assertThat(contar("SELECT count(*) FROM reserva WHERE publicacion_id = ?", publicacion)).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM pago WHERE clave_idempotencia = ?", clave)).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'ReservaConfirmada'", reserva)).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", huesped)).isEqualTo(1);
+        verify(pasarela, never()).devolver(any(), any());
+    }
+
+    @Test
+    void laClaveDeOtroHuespedSeDeniega() {
+        String clave = UUID.randomUUID().toString();
+        reservas.confirmarReserva(huesped, comando, clave);
+        UUID otroHuesped = crearUsuario(Rol.HUESPED);
+
+        assertThatThrownBy(() -> reservas.confirmarReserva(otroHuesped, comando, clave))
+                .isInstanceOfSatisfying(ExcepcionNegocio.class,
+                        error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.ACCESO_DENEGADO));
     }
 
     long contar(String sql, Object valor) {
