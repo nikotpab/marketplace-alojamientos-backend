@@ -1,7 +1,9 @@
 package com.inversioneslr.marketplace.publicaciones.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
 import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
@@ -16,8 +18,10 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /** La propiedad de la publicación se verifica en cada método (ADR-07). */
 @Service
@@ -35,8 +39,28 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         throw new UnsupportedOperationException("CU-06");
     }
 
+    /**
+     * CU-07: solo el anfitrión propietario o un administrador. Conserva el estado: si editar una publicación
+     * activa debe devolverla a revisión sigue sin definirse (pendiente 12 del README).
+     */
+    @Transactional
     public Publicacion editar(UsuarioAutenticado usuario, UUID publicacionId, PublicacionComando comando) {
-        throw new UnsupportedOperationException("CU-07");
+        Publicacion actual = publicaciones.buscarPorId(publicacionId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La publicación no existe."));
+        if (usuario.rol() != Rol.ADMINISTRADOR && !actual.anfitrionId().equals(usuario.id())) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta publicación no es tuya.");
+        }
+        Publicacion editada = publicaciones.guardar(new Publicacion(actual.id(), actual.anfitrionId(),
+                comando.tipoAlojamientoId(), comando.politicaCancelacionId(), comando.titulo(), comando.descripcion(),
+                comando.ciudad(), comando.ubicacionTextual(), comando.capacidad(), comando.precioNoche(),
+                listaOVacia(comando.servicios()), listaOVacia(comando.reglas()), listaOVacia(comando.imagenes()),
+                actual.estado(), actual.motivoEstado()));
+        eventos.publicar(new EventoDominio("PublicacionEditada", usuario.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        return editada;
+    }
+
+    private static <T> List<T> listaOVacia(List<T> lista) {
+        return lista == null ? List.of() : lista;
     }
 
     public Publicacion solicitarActivacion(UUID anfitrionId, UUID publicacionId) {
