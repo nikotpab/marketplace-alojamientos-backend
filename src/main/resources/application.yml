@@ -49,4 +49,5 @@ marketplace:
   pagos:
     proveedor: ${PAGOS_PROVEEDOR}
     stripe-clave-secreta: ${STRIPE_CLAVE_SECRETA:}
+    stripe-metodo-pago: ${STRIPE_METODO_PAGO:pm_card_visa}
   jwt-secreto: ${JWT_SECRETO}
