@@ -89,6 +89,25 @@ class AdaptadorStripeTest {
         assertThat(Duration.between(inicio, Instant.now())).isLessThanOrEqualTo(Duration.ofSeconds(7));
     }
 
+    @Test
+    void devuelveElMontoDelPago() {
+        responder("/v1/refunds", 200, "{\"id\":\"re_1\",\"object\":\"refund\",\"status\":\"succeeded\"}");
+
+        adaptador.devolver("pi_1", new BigDecimal("978000.00"));
+
+        assertThat(cuerpo.get()).contains("payment_intent=pi_1", "amount=97800000");
+        assertThat(clave.get()).isEqualTo("devolucion-pi_1");
+    }
+
+    @Test
+    void devolucionFallidaSeInforma() {
+        responder("/v1/refunds", 500, "{\"error\":{\"type\":\"api_error\",\"message\":\"caido\"}}");
+
+        assertThatThrownBy(() -> adaptador.devolver("pi_1", BigDecimal.TEN))
+                .isInstanceOfSatisfying(ExcepcionNegocio.class,
+                        error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO));
+    }
+
     private void responder(String ruta, int estado, String respuesta) {
         servidor.createContext(ruta, intercambio -> {
             clave.set(intercambio.getRequestHeaders().getFirst("Idempotency-Key"));

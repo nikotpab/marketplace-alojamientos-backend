@@ -8,6 +8,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.RefundCreateParams;
 import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,16 @@ class AdaptadorStripe implements PasarelaPagos {
 
     @Override
     public void devolver(String referencia, BigDecimal monto) {
-        throw new UnsupportedOperationException("CU-20: crear la devolución en Stripe");
+        RefundCreateParams parametros = RefundCreateParams.builder()
+                .setPaymentIntent(referencia)
+                .setAmount(enCentavos(monto))
+                .build();
+        try {
+            stripe.v1().refunds().create(parametros, conClave("devolucion-" + referencia));
+        } catch (StripeException e) {
+            log.warn("Stripe no procesó la devolución: {} {}", e.getStatusCode(), e.getCode());
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO, "La devolución no se procesó, intenta de nuevo.");
+        }
     }
 
     /** COP es una moneda de dos decimales para Stripe: el monto va en centavos. */
