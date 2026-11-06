@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
+import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
 import com.inversioneslr.marketplace.reservas.api.EstadoReserva;
 import com.inversioneslr.marketplace.reservas.api.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
@@ -27,6 +28,9 @@ class ReservasIT extends PruebaIntegracion {
 
     @Autowired
     FachadaReservas fachada;
+
+    @Autowired
+    FachadaPublicaciones publicaciones;
 
     @Test
     void guardaLaReservaConSusServiciosAdicionales() {
@@ -74,6 +78,34 @@ class ReservasIT extends PruebaIntegracion {
         assertThatThrownBy(() -> fachada.datosReserva(UUID.randomUUID()))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.NO_ENCONTRADO));
+    }
+
+    @Test
+    void cancelarLiberaElPeriodoParaOtraReserva() {
+        UUID huesped = crearUsuario(Rol.HUESPED);
+        UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
+        LocalDate llegada = DIA.plusDays(20);
+        Reserva reserva = reserva(huesped, publicacion, llegada, llegada.plusDays(3));
+        reservas.guardar(reserva, List.of());
+        assertThat(publicaciones.periodoDisponible(publicacion, llegada, llegada.plusDays(3))).isFalse();
+
+        fachada.marcarCancelada(reserva.id());
+
+        assertThat(fachada.datosReserva(reserva.id()).estado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(publicaciones.periodoDisponible(publicacion, llegada, llegada.plusDays(3))).isTrue();
+        reservas.guardar(reserva(huesped, publicacion, llegada, llegada.plusDays(3)), List.of());
+    }
+
+    @Test
+    void soloSeCancelaUnaReservaConfirmada() {
+        UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
+        Reserva reserva = reserva(crearUsuario(Rol.HUESPED), publicacion, DIA.plusDays(30), DIA.plusDays(33));
+        reservas.guardar(reserva, List.of());
+        fachada.marcarCancelada(reserva.id());
+
+        assertThatThrownBy(() -> fachada.marcarCancelada(reserva.id()))
+                .isInstanceOfSatisfying(ExcepcionNegocio.class,
+                        error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.CONFLICTO));
     }
 
     private static Reserva reserva(UUID huesped, UUID publicacion, LocalDate llegada, LocalDate salida) {

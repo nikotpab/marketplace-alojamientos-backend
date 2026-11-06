@@ -139,7 +139,10 @@ public class RepositorioReservasSql implements RepositorioReservas {
 
     @Override
     public void actualizarEstado(UUID id, EstadoReserva estado) {
-        throw new UnsupportedOperationException(PENDIENTE);
+        jdbc.sql("UPDATE reserva SET estado = :estado WHERE id = :id")
+                .param("estado", estado.name())
+                .param("id", id)
+                .update();
     }
 
     @Override

@@ -226,7 +226,7 @@ public class ServicioReservas implements FachadaReservas {
 
     @Override
     public void marcarCancelada(UUID reservaId) {
-        throw new UnsupportedOperationException("CU-20");
+        reservas.actualizarEstado(reservaId, buscar(reservaId).cancelar().estado());
     }
 
     @Override
