@@ -1,6 +1,7 @@
 package com.inversioneslr.marketplace.pagos.aplicacion;
 
 import com.inversioneslr.marketplace.pagos.api.FachadaPagos;
+import com.inversioneslr.marketplace.pagos.dominio.Pago;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.RepositorioPagos;
 import java.math.BigDecimal;
@@ -31,6 +32,6 @@ public class ServicioPagos implements FachadaPagos {
 
     @Override
     public void registrarPago(UUID reservaId, String referencia, String claveSolicitud, BigDecimal monto) {
-        throw new UnsupportedOperationException("CU-19");
+        pagos.guardar(new Pago(UUID.randomUUID(), reservaId, referencia, claveSolicitud, monto, Pago.Estado.APROBADO));
     }
 }
