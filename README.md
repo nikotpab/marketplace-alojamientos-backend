@@ -94,14 +94,14 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 1. **Reserva a medias (RNF-12).** SEC-01 solo escribe el pago en el paso 10. Si la aplicación cae después de cobrar, no queda rastro local y el reconciliador no tiene qué revisar. Hace falta registrar el intento antes de llamar a Stripe.
 2. **Método de pago de prueba.** CU-17 y CU-19 lo piden como entrada, pero `cobrar(monto, clave)` no lo recibe. Por ahora sale de la variable `STRIPE_METODO_PAGO`, así que no se puede elegir por petición.
 3. **Devolución fallida.** CU-20 E4 supone que la reserva no cambia de estado. El Proceso 4 la deja cancelada con "devolución no procesada".
-4. **Reintento tras un solape.** Si la confirmación se rechaza por solape, la transacción se revierte y la clave no queda guardada. Un reintento con esa clave volvería a pasar por Stripe, y falta definir cómo evitarlo.
+4. **Reintento tras un solape.** Resuelto en SCRUM-34: el rechazo se guarda con su clave en una transacción aparte, y un reintento recibe el mismo rechazo sin volver a cobrar.
 
 **Faltan reglas o datos**
 
 5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`.
 6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase.
 7. **Código de recuperación (CU-03).** No hay tabla donde guardarlo.
-8. **Retención de claves de idempotencia (ADR-04).** Sigue "por definir".
+8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
 9. **Duración del JWT y revocación.** Un usuario restringido conservaría su token hasta que venza, salvo que se verifique en cada petición.
 
 **Transiciones sin caso de uso**

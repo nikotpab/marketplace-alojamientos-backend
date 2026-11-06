@@ -15,13 +15,16 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
+import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -29,11 +32,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class ServicioReservas implements FachadaReservas {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
+
+    /** Coincide con el mínimo que Stripe conserva sus claves de idempotencia. */
+    private static final Duration RETENCION_CLAVE = Duration.ofHours(24);
+    private static final String RESULTADO_RECHAZADO = "{\"rechazo\":\"PERIODO_NO_DISPONIBLE\"}";
 
     private final RepositorioReservas reservas;
     private final FachadaPublicaciones publicaciones;
@@ -43,10 +51,11 @@ public class ServicioReservas implements FachadaReservas {
     private final PublicadorEventos eventos;
     private final TransactionTemplate transaccion;
     private final Clock reloj;
+    private final JsonMapper json;
 
     public ServicioReservas(RepositorioReservas reservas, FachadaPublicaciones publicaciones, FachadaCotizacion cotizacion,
                             FachadaPagos pagos, FachadaUsuarios usuarios, PublicadorEventos eventos,
-                            TransactionTemplate transaccion, Clock reloj) {
+                            TransactionTemplate transaccion, Clock reloj, JsonMapper json) {
         this.reservas = reservas;
         this.publicaciones = publicaciones;
         this.cotizacion = cotizacion;
@@ -55,18 +64,27 @@ public class ServicioReservas implements FachadaReservas {
         this.eventos = eventos;
         this.transaccion = transaccion;
         this.reloj = reloj;
+        this.json = json;
     }
 
     /**
-     * CU-17 · SEC-01, SEC-02. Cobra fuera de la transacción para no retener una conexión mientras responde
-     * la pasarela, y solo con el pago aprobado guarda la reserva, el pago, la auditoría y el evento, todo o nada.
+     * CU-17 · SEC-01, SEC-02, SEC-03. Cobra fuera de la transacción para no retener una conexión mientras responde
+     * la pasarela, y solo con el pago aprobado guarda la reserva, el pago, la clave, la auditoría y el evento, todo o nada.
+     * Una solicitud repetida recibe el resultado original sin procesarse de nuevo (ADR-04).
      */
     public Reserva confirmarReserva(UUID huespedId, ConfirmarReservaComando comando, String claveSolicitud) {
+        Optional<SolicitudProcesada> solicitudPrevia = reservas.buscarSolicitud(claveSolicitud);
+        if (solicitudPrevia.isPresent()) {
+            return resultadoOriginal(solicitudPrevia.get(), huespedId);
+        }
         validarFechas(comando);
         DatosPublicacion publicacion = publicaciones.datosPublicacion(comando.publicacionId());
         validarPublicacion(publicacion, comando);
         if (!publicaciones.periodoDisponible(publicacion.id(), comando.fechaLlegada(), comando.fechaSalida())) {
-            throw new PeriodoNoDisponibleException();
+            // Puede estar ocupado por esta misma solicitud, si un reintento simultáneo terminó primero.
+            return reservas.buscarSolicitud(claveSolicitud)
+                    .map(solicitud -> resultadoOriginal(solicitud, huespedId))
+                    .orElseThrow(PeriodoNoDisponibleException::new);
         }
         List<UUID> seleccionados = comando.serviciosAdicionales() == null ? List.of() : comando.serviciosAdicionales();
         List<AdicionalReservado> adicionales = adicionalesSeleccionados(publicacion, seleccionados);
@@ -74,17 +92,42 @@ public class ServicioReservas implements FachadaReservas {
         String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud);
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
         try {
-            transaccion.executeWithoutResult(estado -> {
+            return transaccion.execute(estado -> {
+                if (!reservas.registrarSolicitud(claveSolicitud, huespedId, reloj.instant().plus(RETENCION_CLAVE))) {
+                    // Reintento simultáneo: comparte el pago con la solicitud ganadora, así que no se devuelve.
+                    return resultadoOriginal(reservas.buscarSolicitud(claveSolicitud).orElseThrow(), huespedId);
+                }
                 reservas.guardar(reserva, adicionales);
                 pagos.registrarPago(reserva.id(), referencia, claveSolicitud, reserva.total());
                 eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", reserva.id(), "EXITO",
                         Map.of("total", reserva.total()), List.of(huespedId, publicacion.anfitrionId())));
+                reservas.completarSolicitud(claveSolicitud, reserva.id(), json.writeValueAsString(reserva));
+                return reserva;
             });
         } catch (PeriodoNoDisponibleException otraReservaGano) {
             devolverCobro(huespedId, publicacion, referencia, reserva);
+            recordarRechazo(claveSolicitud, huespedId);
             throw otraReservaGano;
         }
-        return reserva;
+    }
+
+    private Reserva resultadoOriginal(SolicitudProcesada solicitud, UUID huespedId) {
+        if (!solicitud.huespedId().equals(huespedId)) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta solicitud pertenece a otro huésped.");
+        }
+        if (solicitud.reservaId() == null) {
+            throw new PeriodoNoDisponibleException();
+        }
+        return json.readValue(solicitud.resultado(), Reserva.class);
+    }
+
+    /** Sin esto, un reintento volvería a cobrar con la misma clave un pago que ya se devolvió. */
+    private void recordarRechazo(String claveSolicitud, UUID huespedId) {
+        transaccion.executeWithoutResult(estado -> {
+            if (reservas.registrarSolicitud(claveSolicitud, huespedId, reloj.instant().plus(RETENCION_CLAVE))) {
+                reservas.completarSolicitud(claveSolicitud, null, RESULTADO_RECHAZADO);
+            }
+        });
     }
 
     /** SEC-03: otra reserva ganó el periodo. Si la devolución falla, queda en auditoría para reconciliarla (SCRUM-59). */
@@ -151,6 +194,12 @@ public class ServicioReservas implements FachadaReservas {
     /** CU-18: el contacto del huésped solo llega al anfitrión si la reserva está confirmada (RNF-21). */
     public List<ReservaVista> consultarHistorial(UsuarioAutenticado usuario, EstadoReserva estado) {
         throw new UnsupportedOperationException("CU-18");
+    }
+
+    /** ADR-04: las claves se conservan 24 h, tiempo suficiente para los reintentos de un cliente. */
+    @Scheduled(cron = "0 0 * * * *")
+    public void eliminarSolicitudesVencidas() {
+        reservas.eliminarSolicitudesVencidas(reloj.instant());
     }
 
     /** Pendiente RNF-12: completar o revertir en máximo 15 min las reservas que quedaron a medias. */
