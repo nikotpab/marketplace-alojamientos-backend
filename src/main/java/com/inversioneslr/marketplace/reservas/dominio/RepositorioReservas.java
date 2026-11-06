@@ -20,6 +20,8 @@ public interface RepositorioReservas {
     /** @param reservaId null si la solicitud terminó rechazada */
     void completarSolicitud(String clave, UUID reservaId, String resultado);
 
+    void eliminarSolicitudesVencidas(Instant ahora);
+
     /** @throws PeriodoNoDisponibleException si la restricción anti-solape rechaza la reserva */
     void guardar(Reserva reserva, List<AdicionalReservado> adicionales);
 

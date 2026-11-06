@@ -150,6 +150,21 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         verify(pasarela, times(1)).devolver(any(), any());
     }
 
+    @Test
+    void lasClavesSeConservanVeinticuatroHorasYLuegoSeEliminan() {
+        String vigente = UUID.randomUUID().toString();
+        String vencida = UUID.randomUUID().toString();
+        reservas.confirmarReserva(huesped, comando, vigente);
+        comoAplicacion.update("INSERT INTO solicitud_procesada (clave, huesped_id, expira_en) VALUES (?, ?, now() - interval '1 minute')", vencida, huesped);
+
+        assertThat(comoAplicacion.queryForObject("SELECT expira_en > now() + interval '23 hours' FROM solicitud_procesada WHERE clave = ?", Boolean.class, vigente)).isTrue();
+
+        reservas.eliminarSolicitudesVencidas();
+
+        assertThat(contar("SELECT count(*) FROM solicitud_procesada WHERE clave = ?", vencida)).isZero();
+        assertThat(contar("SELECT count(*) FROM solicitud_procesada WHERE clave = ?", vigente)).isEqualTo(1);
+    }
+
     long contar(String sql, Object valor) {
         return comoAplicacion.queryForObject(sql, Long.class, valor);
     }

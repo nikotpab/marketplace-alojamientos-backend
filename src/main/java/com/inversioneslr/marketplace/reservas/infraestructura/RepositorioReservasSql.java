@@ -62,6 +62,13 @@ public class RepositorioReservasSql implements RepositorioReservas {
     }
 
     @Override
+    public void eliminarSolicitudesVencidas(Instant ahora) {
+        jdbc.sql("DELETE FROM solicitud_procesada WHERE expira_en < :ahora")
+                .param("ahora", Timestamp.from(ahora))
+                .update();
+    }
+
+    @Override
     public void guardar(Reserva reserva, List<AdicionalReservado> adicionales) {
         try {
             jdbc.sql("""

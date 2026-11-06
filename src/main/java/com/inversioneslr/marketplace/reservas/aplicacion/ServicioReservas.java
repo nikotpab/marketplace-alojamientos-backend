@@ -196,6 +196,12 @@ public class ServicioReservas implements FachadaReservas {
         throw new UnsupportedOperationException("CU-18");
     }
 
+    /** ADR-04: las claves se conservan 24 h, tiempo suficiente para los reintentos de un cliente. */
+    @Scheduled(cron = "0 0 * * * *")
+    public void eliminarSolicitudesVencidas() {
+        reservas.eliminarSolicitudesVencidas(reloj.instant());
+    }
+
     /** Pendiente RNF-12: completar o revertir en máximo 15 min las reservas que quedaron a medias. */
     @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     public void reconciliarReservasIncompletas() {
