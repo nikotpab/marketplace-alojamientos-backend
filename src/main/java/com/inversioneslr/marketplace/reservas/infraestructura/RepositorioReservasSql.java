@@ -8,6 +8,7 @@ import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -107,7 +108,23 @@ public class RepositorioReservasSql implements RepositorioReservas {
 
     @Override
     public Optional<Reserva> buscarPorId(UUID id) {
-        throw new UnsupportedOperationException(PENDIENTE);
+        return jdbc.sql("SELECT * FROM reserva WHERE id = :id")
+                .param("id", id)
+                .query((fila, numero) -> new Reserva(
+                        id,
+                        fila.getObject("huesped_id", UUID.class),
+                        fila.getObject("publicacion_id", UUID.class),
+                        fila.getObject("fecha_llegada", LocalDate.class),
+                        fila.getObject("fecha_salida", LocalDate.class),
+                        fila.getInt("numero_huespedes"),
+                        EstadoReserva.valueOf(fila.getString("estado")),
+                        fila.getInt("noches"),
+                        fila.getBigDecimal("precio_base"),
+                        fila.getBigDecimal("tarifa_limpieza"),
+                        fila.getBigDecimal("tarifa_servicio"),
+                        fila.getBigDecimal("descuento"),
+                        fila.getBigDecimal("total")))
+                .optional();
     }
 
     @Override

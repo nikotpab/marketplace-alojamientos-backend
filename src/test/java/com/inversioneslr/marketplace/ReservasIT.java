@@ -3,8 +3,10 @@ package com.inversioneslr.marketplace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.reservas.api.EstadoReserva;
+import com.inversioneslr.marketplace.reservas.api.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
@@ -22,6 +24,9 @@ class ReservasIT extends PruebaIntegracion {
 
     @Autowired
     RepositorioReservas reservas;
+
+    @Autowired
+    FachadaReservas fachada;
 
     @Test
     void guardaLaReservaConSusServiciosAdicionales() {
@@ -46,6 +51,29 @@ class ReservasIT extends PruebaIntegracion {
 
         assertThatThrownBy(() -> reservas.guardar(reserva(huesped, publicacion, DIA.plusDays(1), DIA.plusDays(4)), List.of()))
                 .isInstanceOf(PeriodoNoDisponibleException.class);
+    }
+
+    @Test
+    void entregaLosDatosDeUnaReservaAOtrosModulos() {
+        UUID huesped = crearUsuario(Rol.HUESPED);
+        UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
+        Reserva reserva = reserva(huesped, publicacion, DIA.plusDays(10), DIA.plusDays(13));
+        reservas.guardar(reserva, List.of());
+
+        var datos = fachada.datosReserva(reserva.id());
+
+        assertThat(datos.huespedId()).isEqualTo(huesped);
+        assertThat(datos.publicacionId()).isEqualTo(publicacion);
+        assertThat(datos.fechaLlegada()).isEqualTo(reserva.fechaLlegada());
+        assertThat(datos.estado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(datos.total()).isEqualByComparingTo(reserva.total());
+    }
+
+    @Test
+    void unaReservaInexistenteSeInforma() {
+        assertThatThrownBy(() -> fachada.datosReserva(UUID.randomUUID()))
+                .isInstanceOfSatisfying(ExcepcionNegocio.class,
+                        error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.NO_ENCONTRADO));
     }
 
     private static Reserva reserva(UUID huesped, UUID publicacion, LocalDate llegada, LocalDate salida) {

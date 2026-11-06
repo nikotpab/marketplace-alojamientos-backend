@@ -214,7 +214,14 @@ public class ServicioReservas implements FachadaReservas {
 
     @Override
     public DatosReserva datosReserva(UUID reservaId) {
-        throw new UnsupportedOperationException("CU-20");
+        Reserva reserva = buscar(reservaId);
+        return new DatosReserva(reserva.id(), reserva.huespedId(), reserva.publicacionId(), reserva.fechaLlegada(),
+                reserva.estado(), reserva.total(), reserva.tarifaServicio());
+    }
+
+    private Reserva buscar(UUID reservaId) {
+        return reservas.buscarPorId(reservaId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La reserva no existe."));
     }
 
     @Override
