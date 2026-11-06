@@ -58,6 +58,19 @@ abstract class PruebaIntegracion {
                 UUID.class, UUID.randomUUID() + "@prueba.co", rol.name());
     }
 
+    /** Publicación ACTIVA con capacidad 4, precio 100.000 y disponible durante todo 2030. */
+    UUID crearPublicacionActiva(UUID anfitrion) {
+        UUID publicacion = comoAplicacion.queryForObject("""
+                INSERT INTO publicacion (anfitrion_id, tipo_alojamiento_id, politica_cancelacion_id, titulo, ciudad, capacidad, precio_noche, estado)
+                VALUES (?, (SELECT id FROM tipo_alojamiento LIMIT 1), (SELECT id FROM politica_cancelacion LIMIT 1),
+                        'Casa de prueba', 'Cartagena', 4, 100000, 'ACTIVA')
+                RETURNING id""", UUID.class, anfitrion);
+        comoAplicacion.update("""
+                INSERT INTO periodo_disponibilidad (publicacion_id, fecha_inicio, fecha_fin, tipo)
+                VALUES (?, '2030-01-01', '2031-01-01', 'DISPONIBLE')""", publicacion);
+        return publicacion;
+    }
+
     /** @return valor de la cabecera Authorization para ese usuario */
     String sesionDe(UUID usuarioId, Rol rol) {
         String token = UUID.randomUUID().toString();
