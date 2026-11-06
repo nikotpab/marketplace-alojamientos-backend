@@ -9,11 +9,8 @@ public interface RepositorioReservas {
 
     Optional<SolicitudProcesada> buscarSolicitud(String clave);
 
-    /**
-     * Guarda reserva y clave. Lanza ExcepcionNegocio CONFLICTO si la restricción anti-solape rechaza,
-     * y debe distinguir ese caso de la clave repetida, que no se devuelve como conflicto.
-     */
-    Reserva guardarConfirmacion(Reserva reserva, SolicitudProcesada solicitud);
+    /** @throws PeriodoNoDisponibleException si la restricción anti-solape rechaza la reserva */
+    void guardar(Reserva reserva, List<AdicionalReservado> adicionales);
 
     Optional<Reserva> buscarPorId(UUID id);
 
