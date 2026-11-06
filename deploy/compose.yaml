@@ -1,0 +1,28 @@
+# Nodo de aplicación en EC2: Caddy y la API. La base de datos es RDS y no se expone.
+# Las variables de .env provienen de SSM Parameter Store.
+services:
+  marketplace-api:
+    image: ${IMAGEN_API}
+    restart: always
+    env_file: .env
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /marketplace/api
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    environment:
+      DOMINIO: ${DOMINIO}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./marketplace-web:/srv/marketplace-web:ro
+      - caddy_datos:/data
+
+volumes:
+  caddy_datos:

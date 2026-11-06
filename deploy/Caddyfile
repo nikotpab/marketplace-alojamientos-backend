@@ -1,0 +1,17 @@
+# RNF-26: redirige HTTP a HTTPS, renueva el certificado y exige TLS 1.2 o superior.
+# Solo /api/* llega a la API: los endpoints de actuator quedan fuera de internet.
+{$DOMINIO} {
+    tls {
+        protocols tls1.2 tls1.3
+    }
+
+    handle /api/* {
+        reverse_proxy marketplace-api:8080
+    }
+
+    handle {
+        root * /srv/marketplace-web
+        try_files {path} /index.html
+        file_server
+    }
+}

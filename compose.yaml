@@ -1,0 +1,22 @@
+# Base de datos local. Lee las variables de .env.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: marketplace
+      POSTGRES_USER: ${DB_USUARIO_MIGRACION}
+      POSTGRES_PASSWORD: ${DB_CONTRASENA_MIGRACION}
+      DB_USUARIO_APP: ${DB_USUARIO_APP}
+      DB_CONTRASENA_APP: ${DB_CONTRASENA_APP}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./deploy/crear-rol-app.sh:/docker-entrypoint-initdb.d/crear-rol-app.sh:ro
+      - datos:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -h localhost -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 2s
+      retries: 30
+
+volumes:
+  datos:

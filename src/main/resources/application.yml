@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: marketplace-api
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USUARIO_APP}
+    password: ${DB_CONTRASENA_APP}
+  flyway:
+    user: ${DB_USUARIO_MIGRACION}
+    password: ${DB_CONTRASENA_MIGRACION}
+    default-schema: marketplace
+    schemas: marketplace
+  mvc:
+    format:
+      date: iso
+  web:
+    locale: es
+    locale-resolver: fixed
+  task:
+    execution:
+      pool:
+        # RNF-08: hasta 5 exportaciones simultáneas, fuera del camino crítico.
+        core-size: 5
+        max-size: 5
+
+server:
+  forward-headers-strategy: framework
+
+logging:
+  structured:
+    format:
+      console: logstash
+    json:
+      customizer: com.inversioneslr.marketplace.compartido.infraestructura.EnmascaradorLogs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+marketplace:
+  pagos:
+    proveedor: ${PAGOS_PROVEEDOR}
+    stripe-clave-secreta: ${STRIPE_CLAVE_SECRETA:}
+  jwt-secreto: ${JWT_SECRETO}

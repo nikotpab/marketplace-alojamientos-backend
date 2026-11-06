@@ -1,0 +1,13 @@
+package com.inversioneslr.marketplace.auditoria.dominio;
+
+import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.EventoAuditoria;
+import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.FiltrosAuditoria;
+import java.util.List;
+
+/** Solo inserción (RNF-24): a propósito no ofrece modificar ni borrar. */
+public interface RepositorioAuditoria {
+
+    void insertar(EventoAuditoria evento);
+
+    List<EventoAuditoria> consultar(FiltrosAuditoria filtros);
+}
