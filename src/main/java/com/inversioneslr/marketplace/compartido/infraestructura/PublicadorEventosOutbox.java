@@ -4,6 +4,8 @@ import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
 import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.dominio.SuscriptorSincrono;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,8 @@ import tools.jackson.databind.json.JsonMapper;
 /** ADR-06 · SEC-05: auditoría síncrona y outbox, ambas en la transacción del caso de uso. */
 @Component
 public class PublicadorEventosOutbox implements PublicadorEventos {
+
+    private static final Logger log = LoggerFactory.getLogger(PublicadorEventosOutbox.class);
 
     private final List<SuscriptorSincrono> sincronos;
     private final JdbcClient jdbc;
@@ -31,5 +35,12 @@ public class PublicadorEventosOutbox implements PublicadorEventos {
                 .param("tipo", evento.tipo())
                 .param("payload", json.writeValueAsString(evento))
                 .update();
+        log.atInfo()
+                .addKeyValue("tipoEvento", evento.tipo())
+                .addKeyValue("usuario", String.valueOf(evento.actorId()))
+                .addKeyValue("entidad", evento.entidad())
+                .addKeyValue("entidadId", String.valueOf(evento.entidadId()))
+                .addKeyValue("resultado", evento.resultado())
+                .log("Evento de dominio");
     }
 }
