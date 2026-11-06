@@ -15,18 +15,23 @@ class CircuitBreakerPagos implements PasarelaPagos {
     private static final Duration ESPERA_ABIERTO = Duration.ofSeconds(30);
 
     private final PasarelaPagos pasarela;
-    private final CircuitBreaker circuito = CircuitBreaker.of("pagos", CircuitBreakerConfig.custom()
-            .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
-            .slidingWindowSize(FALLAS_SEGUIDAS)
-            .minimumNumberOfCalls(FALLAS_SEGUIDAS)
-            .failureRateThreshold(100)
-            .waitDurationInOpenState(ESPERA_ABIERTO)
-            .permittedNumberOfCallsInHalfOpenState(1)
-            .ignoreException(CircuitBreakerPagos::esPagoRechazado)
-            .build());
+    private final CircuitBreaker circuito;
 
     CircuitBreakerPagos(PasarelaPagos pasarela) {
+        this(pasarela, ESPERA_ABIERTO);
+    }
+
+    CircuitBreakerPagos(PasarelaPagos pasarela, Duration esperaAbierto) {
         this.pasarela = pasarela;
+        this.circuito = CircuitBreaker.of("pagos", CircuitBreakerConfig.custom()
+                .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+                .slidingWindowSize(FALLAS_SEGUIDAS)
+                .minimumNumberOfCalls(FALLAS_SEGUIDAS)
+                .failureRateThreshold(100)
+                .waitDurationInOpenState(esperaAbierto)
+                .permittedNumberOfCallsInHalfOpenState(1)
+                .ignoreException(CircuitBreakerPagos::esPagoRechazado)
+                .build());
     }
 
     @Override

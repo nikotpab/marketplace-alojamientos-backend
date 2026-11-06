@@ -16,6 +16,15 @@ public class RepositorioPagosSql implements RepositorioPagos {
 
     @Override
     public void guardar(Pago pago) {
-        throw new UnsupportedOperationException("SQL de pago");
+        jdbc.sql("""
+                INSERT INTO pago (id, reserva_id, id_pago_stripe, clave_idempotencia, monto, estado)
+                VALUES (:id, :reserva, :referencia, :clave, :monto, :estado)""")
+                .param("id", pago.id())
+                .param("reserva", pago.reservaId())
+                .param("referencia", pago.referencia())
+                .param("clave", pago.claveIdempotencia())
+                .param("monto", pago.monto())
+                .param("estado", pago.estado().name())
+                .update();
     }
 }

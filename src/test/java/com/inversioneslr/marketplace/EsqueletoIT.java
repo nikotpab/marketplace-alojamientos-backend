@@ -2,62 +2,20 @@ package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
-import com.inversioneslr.marketplace.compartido.dominio.Tokens;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
-/** Verifica lo que ya es real en el esqueleto: arranque, denegación por defecto y garantías de la base de datos. */
-@SpringBootTest(properties = {"marketplace.jwt-secreto=solo-para-pruebas", "marketplace.pagos.proveedor=simulado"})
-@AutoConfigureMockMvc
-@Testcontainers
-class EsqueletoIT {
-
-    private static final String CLAVE = "solo-para-pruebas";
-
-    @Container
-    static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine")
-            .withInitScript("crear-roles.sql");
-
-    @DynamicPropertySource
-    static void baseDeDatos(DynamicPropertyRegistry propiedades) {
-        propiedades.add("DB_URL", () -> postgres.getJdbcUrl() + "&currentSchema=marketplace");
-        propiedades.add("DB_USUARIO_APP", () -> "marketplace_app");
-        propiedades.add("DB_CONTRASENA_APP", () -> CLAVE);
-        propiedades.add("DB_USUARIO_MIGRACION", () -> "migrador");
-        propiedades.add("DB_CONTRASENA_MIGRACION", () -> CLAVE);
-    }
-
-    @Autowired
-    MockMvc mvc;
-
-    /** Conectado como marketplace_app, igual que la aplicación. */
-    @Autowired
-    JdbcTemplate comoAplicacion;
-
-    @MockitoBean
-    Tokens tokens;
+/** Verifica el arranque, la denegación por defecto y las garantías de la base de datos. */
+class EsqueletoIT extends PruebaIntegracion {
 
     @Test
     void aplicacionArranca() throws Exception {
@@ -71,18 +29,18 @@ class EsqueletoIT {
 
     @Test
     void rutaSinDeclararSeDeniega() throws Exception {
-        sesion("huesped", Rol.HUESPED);
+        String huesped = sesionDe(crearUsuario(Rol.HUESPED), Rol.HUESPED);
         mvc.perform(get("/api/v1/no-declarada")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/v1/no-declarada").header("Authorization", "Bearer huesped")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/no-declarada").header("Authorization", huesped)).andExpect(status().isForbidden());
     }
 
     @Test
     void rutaDeAdministradorExigeElRol() throws Exception {
-        sesion("huesped", Rol.HUESPED);
-        sesion("admin", Rol.ADMINISTRADOR);
+        String huesped = sesionDe(crearUsuario(Rol.HUESPED), Rol.HUESPED);
+        String administrador = sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR);
         mvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", "Bearer huesped")).andExpect(status().isForbidden());
-        mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", "Bearer admin")).andExpect(status().isNotImplemented());
+        mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", huesped)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", administrador)).andExpect(status().isNotImplemented());
     }
 
     @Test
@@ -117,14 +75,8 @@ class EsqueletoIT {
         assertThatThrownBy(() -> comoSuperusuario.execute("TRUNCATE auditoria.evento_auditoria")).isInstanceOf(DataAccessException.class);
     }
 
-    private void sesion(String token, Rol rol) {
-        when(tokens.verificar(token)).thenReturn(Optional.of(new UsuarioAutenticado(UUID.randomUUID(), rol)));
-    }
-
     private UUID crearPublicacion() {
-        UUID anfitrion = comoAplicacion.queryForObject(
-                "INSERT INTO usuario (correo, hash_contrasena, rol) VALUES (?, 'hash', 'ANFITRION') RETURNING id",
-                UUID.class, UUID.randomUUID() + "@prueba.co");
+        UUID anfitrion = crearUsuario(Rol.ANFITRION);
         return comoAplicacion.queryForObject("""
                 INSERT INTO publicacion (anfitrion_id, tipo_alojamiento_id, politica_cancelacion_id)
                 VALUES (?, (SELECT id FROM tipo_alojamiento LIMIT 1), (SELECT id FROM politica_cancelacion LIMIT 1))

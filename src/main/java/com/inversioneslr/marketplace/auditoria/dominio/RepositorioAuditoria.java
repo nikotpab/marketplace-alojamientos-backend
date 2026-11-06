@@ -7,7 +7,7 @@ import java.util.List;
 /** Solo inserción (RNF-24): a propósito no ofrece modificar ni borrar. */
 public interface RepositorioAuditoria {
 
-    void insertar(EventoAuditoria evento);
+    void insertar(RegistroAuditoria registro);
 
     List<EventoAuditoria> consultar(FiltrosAuditoria filtros);
 }

@@ -11,10 +11,12 @@ public interface FachadaAuditoria {
     /** CU-27. */
     List<EventoAuditoria> consultar(FiltrosAuditoria filtros);
 
-    record EventoAuditoria(UUID id, UUID actorId, String accion, String entidad, UUID entidadId, String resultado,
-                           Map<String, Object> detalle, String hashRegistro, Instant fecha) {
+    /** @param actor y rol quedan vacíos si el evento lo provocó el sistema */
+    record EventoAuditoria(UUID id, UUID actorId, String actor, String rol, String accion, String entidad, UUID entidadId,
+                           String resultado, Map<String, Object> detalle, String hashRegistro, Instant fecha) {
     }
 
-    record FiltrosAuditoria(UUID actorId, String entidad, LocalDate desde, LocalDate hasta, String resultado) {
+    /** Todos los filtros son opcionales. Las fechas se interpretan en hora de Colombia. */
+    record FiltrosAuditoria(UUID actorId, String accion, String entidad, LocalDate desde, LocalDate hasta, String resultado) {
     }
 }
