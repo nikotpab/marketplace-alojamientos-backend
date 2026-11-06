@@ -6,8 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
+import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
+import com.inversioneslr.marketplace.publicaciones.dominio.RepositorioPublicaciones;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +22,9 @@ class PublicacionesIT extends PruebaIntegracion {
 
     @Autowired
     FachadaPublicaciones publicaciones;
+
+    @Autowired
+    RepositorioPublicaciones repositorio;
 
     @Test
     void entregaLosDatosNecesariosParaReservar() {
@@ -34,6 +40,20 @@ class PublicacionesIT extends PruebaIntegracion {
         assertThat(datos.precioNoche()).isEqualByComparingTo(new BigDecimal("100000"));
         assertThat(datos.politicaCancelacion()).isEqualTo("Flexible");
         assertThat(datos.serviciosAdicionales()).singleElement().satisfies(adicional -> assertThat(adicional.nombre()).isEqualTo("Desayuno"));
+    }
+
+    @Test
+    void guardaYRecuperaUnaPublicacionConSusDetalles() {
+        UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
+        UUID servicio = comoAplicacion.queryForObject("SELECT id FROM servicio LIMIT 1", UUID.class);
+        Publicacion actual = repositorio.buscarPorId(publicacion).orElseThrow();
+        Publicacion editada = new Publicacion(actual.id(), actual.anfitrionId(), actual.tipoAlojamientoId(), actual.politicaCancelacionId(),
+                "Título nuevo", "Descripción", "Medellín", "El Poblado", 6, new BigDecimal("250000.00"),
+                List.of(servicio), List.of("No se permiten fiestas"), List.of("a.jpg", "b.jpg"), actual.estado(), null);
+
+        repositorio.guardar(editada);
+
+        assertThat(repositorio.buscarPorId(publicacion)).contains(editada);
     }
 
     @Test

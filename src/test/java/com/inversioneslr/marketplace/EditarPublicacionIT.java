@@ -1,0 +1,100 @@
+package com.inversioneslr.marketplace;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.inversioneslr.marketplace.compartido.dominio.Rol;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
+
+class EditarPublicacionIT extends PruebaIntegracion {
+
+    private UUID anfitrion;
+    private UUID publicacion;
+    private String cuerpo;
+
+    @BeforeEach
+    void preparar() {
+        anfitrion = crearUsuario(Rol.ANFITRION);
+        publicacion = crearPublicacionActiva(anfitrion);
+        cuerpo = cuerpo(6, "250000");
+    }
+
+    @Test
+    void elPropietarioEditaSinCambiarElEstadoYQuedaEnAuditoria() throws Exception {
+        editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, cuerpo)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titulo").value("Título nuevo"))
+                .andExpect(jsonPath("$.estado").value("ACTIVA"));
+
+        assertThat(comoAplicacion.queryForObject("SELECT capacidad FROM publicacion WHERE id = ?", Integer.class, publicacion)).isEqualTo(6);
+        assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'PublicacionEditada' AND actor_id = ?", publicacion, anfitrion)).isEqualTo(1);
+    }
+
+    @Test
+    void unAdministradorPuedeEditarUnaPublicacionAjena() throws Exception {
+        editar(sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR), publicacion, cuerpo).andExpect(status().isOk());
+
+        assertThat(comoAplicacion.queryForObject("SELECT anfitrion_id FROM publicacion WHERE id = ?", UUID.class, publicacion)).isEqualTo(anfitrion);
+    }
+
+    @Test
+    void otroAnfitrionRecibe403ElIntentoQuedaRegistradoYNoCambiaNada() throws Exception {
+        UUID otro = crearUsuario(Rol.ANFITRION);
+
+        editar(sesionDe(otro, Rol.ANFITRION), publicacion, cuerpo).andExpect(status().isForbidden());
+
+        assertThat(comoAplicacion.queryForObject("SELECT titulo FROM publicacion WHERE id = ?", String.class, publicacion)).isEqualTo("Casa de prueba");
+        assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE actor_id = ? AND accion = 'AccesoDenegado'", otro)).isEqualTo(1);
+    }
+
+    @Test
+    void unHuespedNoPuedeEditar() throws Exception {
+        editar(sesionDe(crearUsuario(Rol.HUESPED), Rol.HUESPED), publicacion, cuerpo).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void publicacionInexistenteResponde404() throws Exception {
+        editar(sesionDe(anfitrion, Rol.ANFITRION), UUID.randomUUID(), cuerpo).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void capacidadYPrecioInvalidosSeRechazanIndicandoElCampo() throws Exception {
+        editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, cuerpo(0, "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.capacidad").value("La capacidad debe ser mayor que cero. Ingresa 1 o más."))
+                .andExpect(jsonPath("$.campos.precioNoche").exists());
+    }
+
+    @Test
+    void unTipoDeAlojamientoInexistenteSeRechaza() throws Exception {
+        String conTipoInexistente = cuerpo.replaceFirst("\"tipoAlojamientoId\":\"[^\"]+\"", "\"tipoAlojamientoId\":\"" + UUID.randomUUID() + "\"");
+
+        editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, conTipoInexistente).andExpect(status().isBadRequest());
+    }
+
+    private ResultActions editar(String sesion, UUID id, String contenido) throws Exception {
+        return mvc.perform(put("/api/v1/publicaciones/{id}", id)
+                .header("Authorization", sesion)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(contenido));
+    }
+
+    private String cuerpo(int capacidad, String precio) {
+        UUID tipo = comoAplicacion.queryForObject("SELECT id FROM tipo_alojamiento LIMIT 1", UUID.class);
+        UUID politica = comoAplicacion.queryForObject("SELECT id FROM politica_cancelacion LIMIT 1", UUID.class);
+        return """
+                {"tipoAlojamientoId":"%s","politicaCancelacionId":"%s","titulo":"Título nuevo","descripcion":"Descripción",
+                 "ciudad":"Medellín","ubicacionTextual":"El Poblado","capacidad":%d,"precioNoche":%s,
+                 "reglas":["No se permiten fiestas"],"imagenes":["a.jpg"]}""".formatted(tipo, politica, capacidad, precio);
+    }
+
+    private long contar(String sql, Object... valores) {
+        return comoAplicacion.queryForObject(sql, Long.class, valores);
+    }
+}
