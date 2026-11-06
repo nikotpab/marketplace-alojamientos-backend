@@ -42,6 +42,15 @@ class LogsIT extends PruebaIntegracion {
     }
 
     @Test
+    void unaSolicitudRechazadaQuedaEnLosLogsConSuCodigo(CapturedOutput salida) throws Exception {
+        mvc.perform(post("/api/v1/auth/registro").contentType(MediaType.APPLICATION_JSON).content("""
+                {"nombre":"Laura","apellido":"Gómez","correo":"%s@prueba.co","telefono":"3001234567","contrasena":"Contrasena-de-prueba-1","rol":"ADMINISTRADOR"}"""
+                .formatted(UUID.randomUUID())));
+
+        assertThat(salida.getOut()).contains("\"codigo\":\"DATOS_INVALIDOS\"", "/api/v1/auth/registro");
+    }
+
+    @Test
     void losLogsEnmascaranLosDatosSensibles(CapturedOutput salida) {
         LoggerFactory.getLogger(LogsIT.class).info("Contacto laura@correo.co con Authorization: Bearer abc.def.ghi");
 

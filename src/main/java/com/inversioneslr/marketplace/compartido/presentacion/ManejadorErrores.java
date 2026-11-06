@@ -4,6 +4,8 @@ import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,6 +21,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 /** Traduce los errores a respuestas HTTP. Los de validación indican el campo afectado (RNF-35). */
 @RestControllerAdvice
 public class ManejadorErrores extends ResponseEntityExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ManejadorErrores.class);
 
     private static final Map<ExcepcionNegocio.Tipo, HttpStatus> ESTADOS = Map.of(
             ExcepcionNegocio.Tipo.DATOS_INVALIDOS, HttpStatus.BAD_REQUEST,
@@ -37,6 +41,11 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ExcepcionNegocio.class)
     ProblemDetail reglaDeNegocio(ExcepcionNegocio excepcion, HttpServletRequest solicitud) {
+        log.atInfo()
+                .addKeyValue("codigo", excepcion.tipo())
+                .addKeyValue("metodo", solicitud.getMethod())
+                .addKeyValue("ruta", solicitud.getRequestURI())
+                .log("Solicitud rechazada: {}", excepcion.getMessage());
         if (excepcion.tipo() == ExcepcionNegocio.Tipo.ACCESO_DENEGADO) {
             denegaciones.registrar(solicitud);
         }
