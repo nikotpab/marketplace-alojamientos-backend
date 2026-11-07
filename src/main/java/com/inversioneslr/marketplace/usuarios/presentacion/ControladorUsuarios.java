@@ -24,7 +24,7 @@ public class ControladorUsuarios {
         this.servicio = servicio;
     }
 
-    @PostMapping("/auth/registro")
+    @PostMapping("/auth/register")
     @ResponseStatus(HttpStatus.CREATED)
     public UsuarioResumen registrar(@Valid @RequestBody ServicioAutenticacion.RegistroComando comando) {
         return servicio.registrar(comando);
