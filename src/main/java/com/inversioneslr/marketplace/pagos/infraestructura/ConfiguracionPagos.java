@@ -11,7 +11,7 @@ import org.springframework.util.Assert;
 public class ConfiguracionPagos {
 
     @Bean
-    PasarelaPagos pasarelaPagos(@Value("${marketplace.pagos.proveedor}") String proveedor,
+    CircuitBreakerPagos pasarelaPagos(@Value("${marketplace.pagos.proveedor}") String proveedor,
                                 @Value("${marketplace.pagos.stripe-clave-secreta}") String claveStripe,
                                 @Value("${marketplace.pagos.stripe-metodo-pago}") String metodoPago) {
         PasarelaPagos adaptador = switch (proveedor) {
