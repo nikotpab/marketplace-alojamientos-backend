@@ -27,6 +27,9 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
     private static final Map<ExcepcionNegocio.Tipo, HttpStatus> ESTADOS = Map.of(
             ExcepcionNegocio.Tipo.DATOS_INVALIDOS, HttpStatus.BAD_REQUEST,
             ExcepcionNegocio.Tipo.CREDENCIALES_INVALIDAS, HttpStatus.UNAUTHORIZED,
+            ExcepcionNegocio.Tipo.CUENTA_BLOQUEADA, HttpStatus.LOCKED,
+            ExcepcionNegocio.Tipo.CUENTA_RESTRINGIDA, HttpStatus.FORBIDDEN,
+            ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, HttpStatus.FORBIDDEN,
             ExcepcionNegocio.Tipo.ACCESO_DENEGADO, HttpStatus.FORBIDDEN,
             ExcepcionNegocio.Tipo.NO_ENCONTRADO, HttpStatus.NOT_FOUND,
             ExcepcionNegocio.Tipo.CONFLICTO, HttpStatus.CONFLICT,

@@ -30,7 +30,7 @@ public class ControladorUsuarios {
         return servicio.registrar(comando);
     }
 
-    @PostMapping("/auth/inicio-sesion")
+    @PostMapping("/auth/login")
     public ServicioAutenticacion.Sesion iniciarSesion(@Valid @RequestBody ServicioAutenticacion.CredencialesComando comando) {
         return servicio.iniciarSesion(comando);
     }
