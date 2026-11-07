@@ -148,8 +148,12 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         return new Perfil(usuario.nombre(), usuario.apellido(), usuario.correo(), usuario.telefono(), usuario.rol(), usuario.cuentaActiva());
     }
 
-    public UsuarioResumen cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
-        throw new UnsupportedOperationException("CU-05");
+    /** CU-05: cada cambio de estado queda en la auditoría. Una cuenta desactivada no puede iniciar sesión. */
+    public Perfil cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
+        Usuario actual = buscar(usuarioId);
+        Usuario usuario = usuarios.guardar(comando.activo() ? actual.activar() : actual.desactivar());
+        eventos.publicar(evento(comando.activo() ? "CuentaActivada" : "CuentaDesactivada", usuario, "EXITO", Map.of()));
+        return perfil(usuario);
     }
 
     @Override
@@ -206,7 +210,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public record Perfil(String nombre, String apellido, String correo, String telefono, Rol rol, boolean activo) {
     }
 
-    public record EstadoCuentaComando(boolean activa) {
+    public record EstadoCuentaComando(@NotNull Boolean activo) {
     }
 
     /** El formato que espera el frontend. */
