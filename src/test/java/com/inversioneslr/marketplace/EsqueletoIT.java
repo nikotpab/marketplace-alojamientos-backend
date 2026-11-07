@@ -24,7 +24,7 @@ class EsqueletoIT extends PruebaIntegracion {
 
     @Test
     void casoDeUsoPendienteResponde501() throws Exception {
-        mvc.perform(get("/api/v1/alojamientos")).andExpect(status().isNotImplemented());
+        mvc.perform(get("/api/v1/catalogos")).andExpect(status().isNotImplemented());
     }
 
     @Test
