@@ -1,11 +1,8 @@
 package com.inversioneslr.marketplace;
 
-import static org.mockito.Mockito.when;
-
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.Tokens;
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,12 +10,14 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-/** Base de las pruebas de integración: Postgres real, usuario de aplicación restringido y sesiones simuladas. */
-@SpringBootTest(properties = {"marketplace.jwt-secreto=solo-para-pruebas", "marketplace.pagos.proveedor=simulado",
+/** Base de las pruebas de integración: Postgres real, usuario de aplicación restringido y tokens JWT reales. */
+@SpringBootTest(properties = {
+        // Solo para pruebas: valor de baja entropía con la longitud mínima que exige TokensJwt.
+        "marketplace.jwt-secreto=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "marketplace.pagos.proveedor=simulado",
         "marketplace.eventos.cron=-"})
 @AutoConfigureMockMvc
 abstract class PruebaIntegracion {
@@ -48,7 +47,7 @@ abstract class PruebaIntegracion {
     @Autowired
     JdbcTemplate comoAplicacion;
 
-    @MockitoBean
+    @Autowired
     Tokens tokens;
 
     UUID crearUsuario(Rol rol) {
@@ -71,10 +70,8 @@ abstract class PruebaIntegracion {
         return publicacion;
     }
 
-    /** @return valor de la cabecera Authorization para ese usuario */
+    /** @return valor de la cabecera Authorization con un JWT real para ese usuario */
     String sesionDe(UUID usuarioId, Rol rol) {
-        String token = UUID.randomUUID().toString();
-        when(tokens.verificar(token)).thenReturn(Optional.of(new UsuarioAutenticado(usuarioId, rol)));
-        return "Bearer " + token;
+        return "Bearer " + tokens.emitir(new UsuarioAutenticado(usuarioId, rol));
     }
 }
