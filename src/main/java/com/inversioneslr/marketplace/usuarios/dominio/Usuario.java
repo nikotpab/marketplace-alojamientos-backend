@@ -33,6 +33,11 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
                 motivoRestriccion, intentosFallidos, bloqueadoHasta);
     }
 
+    public Usuario cambiarContrasena(String nuevoHash) {
+        return new Usuario(id, nombre, apellido, correo, telefono, nuevoHash, rol, cuentaActiva, restringido,
+                motivoRestriccion, intentosFallidos, bloqueadoHasta);
+    }
+
     public Usuario desactivar() {
         return conEstado(false);
     }
