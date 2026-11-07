@@ -8,6 +8,7 @@ import com.inversioneslr.marketplace.busqueda.dominio.RepositorioBusqueda;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,7 +81,52 @@ public class RepositorioBusquedaSql implements RepositorioBusqueda {
 
     @Override
     public Optional<AlojamientoDetalle> buscarDetalle(UUID publicacionId) {
-        throw new UnsupportedOperationException("SQL de búsqueda");
+        return jdbc.sql("""
+                SELECT p.id, p.titulo, p.descripcion, p.ciudad, p.ubicacion_textual, t.codigo AS tipo, p.capacidad, p.precio_noche,
+                       %s AS servicios,
+                       ARRAY(SELECT r.descripcion FROM regla_alojamiento r WHERE r.publicacion_id = p.id ORDER BY r.creado_en, r.descripcion) AS reglas,
+                       ARRAY(SELECT i.ruta FROM imagen_publicacion i WHERE i.publicacion_id = p.id ORDER BY i.orden) AS imagenes,
+                       coalesce(c.descripcion, c.nombre) AS politica,
+                       %s AS calificacion
+                FROM publicacion p
+                JOIN tipo_alojamiento t ON t.id = p.tipo_alojamiento_id
+                JOIN politica_cancelacion c ON c.id = p.politica_cancelacion_id
+                WHERE p.id = :id AND p.estado = 'ACTIVA'""".formatted(SERVICIOS, CALIFICACION))
+                .param("id", publicacionId)
+                .query((fila, numero) -> new AlojamientoDetalle(
+                        fila.getObject("id", UUID.class),
+                        fila.getString("titulo"),
+                        fila.getString("descripcion"),
+                        fila.getString("ciudad"),
+                        fila.getString("ubicacion_textual"),
+                        fila.getString("tipo"),
+                        fila.getInt("capacidad"),
+                        fila.getBigDecimal("precio_noche"),
+                        textos(fila.getArray("servicios")),
+                        textos(fila.getArray("reglas")),
+                        fila.getString("politica"),
+                        textos(fila.getArray("imagenes")),
+                        fila.getBigDecimal("calificacion")))
+                .optional();
+    }
+
+    @Override
+    public List<LocalDate> fechasNoDisponibles(UUID publicacionId, LocalDate desde, LocalDate hasta) {
+        return jdbc.sql("""
+                SELECT dia::date
+                FROM generate_series(CAST(:desde AS date), CAST(:hasta AS date) - 1, interval '1 day') AS dia
+                WHERE NOT EXISTS (SELECT 1 FROM periodo_disponibilidad d
+                                  WHERE d.publicacion_id = :id AND d.tipo = 'DISPONIBLE' AND dia >= d.fecha_inicio AND dia < d.fecha_fin)
+                   OR EXISTS (SELECT 1 FROM periodo_disponibilidad d
+                              WHERE d.publicacion_id = :id AND d.tipo = 'BLOQUEADO' AND dia >= d.fecha_inicio AND dia < d.fecha_fin)
+                   OR EXISTS (SELECT 1 FROM reserva r
+                              WHERE r.publicacion_id = :id AND r.estado = 'CONFIRMADA' AND dia >= r.fecha_llegada AND dia < r.fecha_salida)
+                ORDER BY dia""")
+                .param("id", publicacionId)
+                .param("desde", desde)
+                .param("hasta", hasta)
+                .query(LocalDate.class)
+                .list();
     }
 
     /** Debe tener todos los servicios pedidos. */

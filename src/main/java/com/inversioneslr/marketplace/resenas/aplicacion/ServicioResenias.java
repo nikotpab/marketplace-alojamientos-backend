@@ -32,7 +32,7 @@ public class ServicioResenias implements FachadaResenas {
 
     @Override
     public List<ResenaVisible> listarVisibles(UUID publicacionId) {
-        throw new UnsupportedOperationException("CU-23");
+        return resenas.listarVisibles(publicacionId);
     }
 
     @Override

@@ -12,6 +12,7 @@ public interface FachadaResenas {
     /** CU-26: la reseña se oculta, no se elimina. */
     void ocultar(UUID administradorId, UUID resenaId);
 
-    record ResenaVisible(UUID id, int calificacion, String contenido, Instant fecha) {
+    /** @param autor nombre e inicial del apellido del huésped, para no exponer sus datos */
+    record ResenaVisible(UUID id, String autor, int calificacion, String comentario, Instant fecha) {
     }
 }

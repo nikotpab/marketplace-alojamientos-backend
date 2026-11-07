@@ -19,7 +19,19 @@ mvn spring-boot:run
 curl localhost:8080/actuator/health
 ```
 
-`mvn test` corre las pruebas de arquitectura. `mvn verify` agrega la prueba de integración, que usa Docker.
+`mvn test` corre las pruebas unitarias y de arquitectura. `mvn verify` agrega las de integración, que usan Docker.
+
+### Con el frontend y datos de demostración
+
+```bash
+cp .env.example .env                      # JWT_SECRETO debe tener al menos 32 caracteres
+docker compose up -d --wait db
+SPRING_PROFILES_ACTIVE=demo mvn spring-boot:run
+```
+
+El perfil `demo` carga 8 publicaciones de ejemplo. Para empezar con una base limpia: `docker compose down -v`.
+
+El frontend llama a `/api/...` y el backend responde en `/api/v1/...`. En desarrollo, el proxy de Angular une los dos: reenvía `/api` a `http://localhost:8080` y lo reescribe como `/api/v1`.
 
 ## Estructura
 
