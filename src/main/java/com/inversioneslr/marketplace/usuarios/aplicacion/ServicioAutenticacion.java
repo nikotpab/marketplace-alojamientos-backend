@@ -14,6 +14,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -24,6 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServicioAutenticacion implements FachadaUsuarios {
+
+    /** RNF-23: 5 intentos fallidos seguidos bloquean el inicio de sesión por 30 minutos. */
+    private static final int MAXIMO_INTENTOS = 5;
+    private static final Duration BLOQUEO = Duration.ofMinutes(30);
 
     private final RepositorioUsuarios usuarios;
     private final PasswordEncoder cifrador;
@@ -58,7 +64,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     /**
-     * CU-02: un mensaje general para correo o contraseña incorrectos, y el estado de la cuenta solo
+     * CU-02 · RNF-23: un mensaje general para correo o contraseña incorrectos, y el estado de la cuenta solo
      * después de validar la contraseña. Cada intento queda registrado (RF-31).
      */
     public Sesion iniciarSesion(CredencialesComando comando) {
@@ -67,9 +73,15 @@ public class ServicioAutenticacion implements FachadaUsuarios {
             cifrador.matches(comando.contrasena(), hashDeRelleno);
             throw credencialesInvalidas();
         }
+        Instant ahora = reloj.instant();
+        if (usuario.bloqueadoEn(ahora)) {
+            throw cuentaBloqueada();
+        }
         if (!cifrador.matches(comando.contrasena(), usuario.hashContrasena())) {
+            // Sin transacción a propósito: el intento debe quedar guardado aunque se responda con error.
+            Usuario conIntento = usuarios.guardar(usuario.registrarIntentoFallido(ahora, MAXIMO_INTENTOS, BLOQUEO));
             eventos.publicar(evento("InicioSesionFallido", usuario, "FALLIDO", Map.of()));
-            throw credencialesInvalidas();
+            throw conIntento.bloqueadoEn(ahora) ? cuentaBloqueada() : credencialesInvalidas();
         }
         if (usuario.restringido()) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CUENTA_RESTRINGIDA, "Tu cuenta está restringida y no puede iniciar sesión.");
@@ -77,9 +89,16 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         if (!usuario.cuentaActiva()) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, "Tu cuenta está desactivada.");
         }
+        if (usuario.intentosFallidos() > 0) {
+            usuarios.guardar(usuario.reiniciarIntentos());
+        }
         eventos.publicar(evento("InicioSesionExitoso", usuario, "EXITO", Map.of()));
         return new Sesion(tokens.emitir(new UsuarioAutenticado(usuario.id(), usuario.rol())),
                 new UsuarioSesion(usuario.id(), usuario.nombre(), usuario.correo(), usuario.rol()));
+    }
+
+    private static ExcepcionNegocio cuentaBloqueada() {
+        return new ExcepcionNegocio(ExcepcionNegocio.Tipo.CUENTA_BLOQUEADA, "Cuenta bloqueada por 30 minutos por intentos fallidos.");
     }
 
     private static ExcepcionNegocio credencialesInvalidas() {

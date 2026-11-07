@@ -79,6 +79,28 @@ class InicioSesionIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.codigo").value("CUENTA_DESACTIVADA"));
     }
 
+    @Test
+    void cincoIntentosFallidosSeguidosBloqueanLaCuentaAunqueLuegoLaContrasenaSeaCorrecta() throws Exception {
+        String correo = registrar("HUESPED");
+        for (int intento = 1; intento <= 4; intento++) {
+            iniciarSesion(correo, "otra-contrasena").andExpect(status().isUnauthorized());
+        }
+
+        iniciarSesion(correo, "otra-contrasena").andExpect(status().isLocked()).andExpect(jsonPath("$.codigo").value("CUENTA_BLOQUEADA"));
+        iniciarSesion(correo, CONTRASENA).andExpect(status().isLocked());
+    }
+
+    @Test
+    void unInicioCorrectoReiniciaElConteoDeIntentos() throws Exception {
+        String correo = registrar("HUESPED");
+        for (int intento = 1; intento <= 4; intento++) {
+            iniciarSesion(correo, "otra-contrasena").andExpect(status().isUnauthorized());
+        }
+        iniciarSesion(correo, CONTRASENA).andExpect(status().isOk());
+
+        iniciarSesion(correo, "otra-contrasena").andExpect(status().isUnauthorized());
+    }
+
     String registrar(String rol) throws Exception {
         String correo = UUID.randomUUID() + "@prueba.co";
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
