@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.pagos.infraestructura;
 
+import com.inversioneslr.marketplace.compartido.dominio.ComprobacionEstado;
 import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -9,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 
 /** Decorator (ADR-05): abre tras 5 fallas seguidas, responde de inmediato y prueba de nuevo a los 30 s. */
-class CircuitBreakerPagos implements PasarelaPagos {
+class CircuitBreakerPagos implements PasarelaPagos, ComprobacionEstado {
 
     private static final int FALLAS_SEGUIDAS = 5;
     private static final Duration ESPERA_ABIERTO = Duration.ofSeconds(30);
@@ -50,6 +51,17 @@ class CircuitBreakerPagos implements PasarelaPagos {
         } catch (CallNotPermittedException e) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO, "La devolución no se procesó, intenta de nuevo");
         }
+    }
+
+    @Override
+    public String componente() {
+        return "pasarelaPagos";
+    }
+
+    /** Sin llamar a la pasarela: solo se considera caída si el circuito está abierto por fallas reales. */
+    @Override
+    public boolean disponible() {
+        return circuito.getState() != CircuitBreaker.State.OPEN;
     }
 
     /** Un rechazo es una respuesta válida de la pasarela: no cuenta como falla (SEC-02). */

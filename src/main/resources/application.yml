@@ -24,6 +24,10 @@ spring:
         # RNF-08: hasta 5 exportaciones simultáneas, fuera del camino crítico.
         core-size: 5
         max-size: 5
+    scheduling:
+      pool:
+        # El latido no debe esperar a que terminen las demás tareas programadas.
+        size: 2
 
 server:
   forward-headers-strategy: framework

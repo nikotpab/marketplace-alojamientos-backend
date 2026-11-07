@@ -76,6 +76,19 @@ class CircuitBreakerPagosTest {
         assertThat(circuito.cobrar(BigDecimal.TEN, "clave")).isEqualTo("referencia");
     }
 
+    @Test
+    void reportaLaPasarelaComoNoDisponibleSoloConElCircuitoAbierto() {
+        CircuitBreakerPagos circuito = new CircuitBreakerPagos(pasarela, ESPERA_LARGA);
+        pasarela.fallaCon(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO);
+
+        assertThat(circuito.disponible()).isTrue();
+        for (int intento = 0; intento < 5; intento++) {
+            cobrarSinExito(circuito);
+        }
+
+        assertThat(circuito.disponible()).isFalse();
+    }
+
     private static void cobrarSinExito(CircuitBreakerPagos circuito) {
         assertThatThrownBy(() -> circuito.cobrar(BigDecimal.TEN, "clave")).isInstanceOf(ExcepcionNegocio.class);
     }
