@@ -3,9 +3,8 @@ package com.inversioneslr.marketplace.busqueda.dominio;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
-public record FiltrosBusqueda(String ciudad, LocalDate fechaLlegada, LocalDate fechaSalida, Integer capacidad,
-                              UUID tipoAlojamientoId, BigDecimal precioMinimo, BigDecimal precioMaximo,
-                              List<UUID> servicios) {
+/** Todos los filtros son opcionales. Los nombres coinciden con los parámetros que envía el frontend. */
+public record FiltrosBusqueda(String ciudad, LocalDate llegada, LocalDate salida, Integer huespedes, String tipo,
+                              BigDecimal precioMin, BigDecimal precioMax, List<String> servicios) {
 }
