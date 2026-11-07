@@ -7,6 +7,7 @@ import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.Tokens;
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
+import com.inversioneslr.marketplace.usuarios.dominio.CodigosRecuperacion;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.Usuario;
 import jakarta.validation.constraints.Email;
@@ -36,16 +37,18 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     private final Tokens tokens;
     private final PublicadorEventos eventos;
     private final Clock reloj;
+    private final CodigosRecuperacion codigos;
     /** Se compara contra este hash cuando el correo no existe, para que la respuesta tarde lo mismo. */
     private final String hashDeRelleno;
 
     public ServicioAutenticacion(RepositorioUsuarios usuarios, PasswordEncoder cifrador, Tokens tokens,
-                                 PublicadorEventos eventos, Clock reloj) {
+                                 PublicadorEventos eventos, Clock reloj, CodigosRecuperacion codigos) {
         this.usuarios = usuarios;
         this.cifrador = cifrador;
         this.tokens = tokens;
         this.eventos = eventos;
         this.reloj = reloj;
+        this.codigos = codigos;
         this.hashDeRelleno = cifrador.encode(UUID.randomUUID().toString());
     }
 
@@ -118,13 +121,26 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 usuario.rol(), usuario.cuentaActiva(), usuario.restringido());
     }
 
-    /** CU-03: código simulado; responde igual aunque el correo no exista. */
-    public void solicitarRecuperacion(SolicitudRecuperacionComando comando) {
-        throw new UnsupportedOperationException("CU-03");
+    /**
+     * CU-03 · RF-03: recuperación simulada, sin correo real, así que el código vuelve en la respuesta.
+     * Si el correo no existe, se entrega un código que no sirve, para no revelar qué cuentas existen.
+     */
+    public Recuperacion solicitarRecuperacion(SolicitudRecuperacionComando comando) {
+        return usuarios.buscarPorCorreo(normalizar(comando.correo()))
+                .map(usuario -> {
+                    eventos.publicar(evento("RecuperacionSolicitada", usuario, "EXITO", Map.of()));
+                    return new Recuperacion(codigos.generar(usuario.id()));
+                })
+                .orElseGet(() -> new Recuperacion(codigos.generar(UUID.randomUUID())));
     }
 
-    public void confirmarRecuperacion(RecuperacionComando comando) {
-        throw new UnsupportedOperationException("CU-03");
+    public void restablecerContrasena(RestablecerContrasenaComando comando) {
+        String mensaje = "El código de recuperación no es válido o ya venció. Vuelve a empezar la recuperación.";
+        Usuario usuario = codigos.consumir(comando.token())
+                .flatMap(usuarios::buscarPorId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of("token", mensaje)));
+        usuarios.guardar(usuario.cambiarContrasena(cifrador.encode(comando.contrasenaNueva())));
+        eventos.publicar(evento("ContrasenaRestablecida", usuario, "EXITO", Map.of()));
     }
 
     /** CU-04: cada usuario consulta y modifica solo su propio perfil, identificado por el token. */
@@ -193,13 +209,15 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public record SolicitudRecuperacionComando(@NotBlank @Email String correo) {
     }
 
-    public record RecuperacionComando(@NotBlank @Email String correo,
-                                      @NotBlank String codigo,
-                                      @NotBlank @Size(min = 8, max = 72) String nuevaContrasena) {
+    public record RestablecerContrasenaComando(@NotBlank String token,
+                                               @NotBlank @Size(min = 8, max = 72) String contrasenaNueva) {
         @Override
         public String toString() {
-            return "RecuperacionComando[***]";
+            return "RestablecerContrasenaComando[***]";
         }
+    }
+
+    public record Recuperacion(String token) {
     }
 
     public record PerfilComando(@NotBlank @Size(max = 120) String nombre,

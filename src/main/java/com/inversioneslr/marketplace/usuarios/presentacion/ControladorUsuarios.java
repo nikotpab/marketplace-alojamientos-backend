@@ -36,16 +36,15 @@ public class ControladorUsuarios {
         return servicio.iniciarSesion(comando);
     }
 
-    @PostMapping("/auth/recuperacion")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void solicitarRecuperacion(@Valid @RequestBody ServicioAutenticacion.SolicitudRecuperacionComando comando) {
-        servicio.solicitarRecuperacion(comando);
+    @PostMapping("/auth/password/recover")
+    public ServicioAutenticacion.Recuperacion solicitarRecuperacion(@Valid @RequestBody ServicioAutenticacion.SolicitudRecuperacionComando comando) {
+        return servicio.solicitarRecuperacion(comando);
     }
 
-    @PostMapping("/auth/recuperacion/confirmacion")
+    @PostMapping("/auth/password/reset")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void confirmarRecuperacion(@Valid @RequestBody ServicioAutenticacion.RecuperacionComando comando) {
-        servicio.confirmarRecuperacion(comando);
+    public void restablecerContrasena(@Valid @RequestBody ServicioAutenticacion.RestablecerContrasenaComando comando) {
+        servicio.restablecerContrasena(comando);
     }
 
     @GetMapping("/usuarios/me")
