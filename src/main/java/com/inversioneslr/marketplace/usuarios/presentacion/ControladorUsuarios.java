@@ -48,13 +48,13 @@ public class ControladorUsuarios {
     }
 
     @GetMapping("/usuarios/me")
-    public UsuarioResumen consultarPerfil(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+    public ServicioAutenticacion.Perfil consultarPerfil(@AuthenticationPrincipal UsuarioAutenticado usuario) {
         return servicio.consultarPerfil(usuario.id());
     }
 
     @PutMapping("/usuarios/me")
-    public UsuarioResumen actualizarPerfil(@AuthenticationPrincipal UsuarioAutenticado usuario,
-                                           @Valid @RequestBody ServicioAutenticacion.PerfilComando comando) {
+    public ServicioAutenticacion.Perfil actualizarPerfil(@AuthenticationPrincipal UsuarioAutenticado usuario,
+                                                         @Valid @RequestBody ServicioAutenticacion.PerfilComando comando) {
         return servicio.actualizarPerfil(usuario.id(), comando);
     }
 

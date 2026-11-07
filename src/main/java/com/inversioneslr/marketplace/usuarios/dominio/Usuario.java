@@ -28,6 +28,11 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
                 motivoRestriccion, intentos, hasta);
     }
 
+    public Usuario actualizarDatos(String nuevoNombre, String nuevoApellido, String nuevoTelefono) {
+        return new Usuario(id, nuevoNombre, nuevoApellido, correo, nuevoTelefono, hashContrasena, rol, cuentaActiva, restringido,
+                motivoRestriccion, intentosFallidos, bloqueadoHasta);
+    }
+
     public Usuario desactivar() {
         throw new UnsupportedOperationException("RF-05");
     }
