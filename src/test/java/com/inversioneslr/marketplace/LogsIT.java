@@ -26,7 +26,7 @@ class LogsIT extends PruebaIntegracion {
     void cadaEventoQuedaEnLosLogsConCamposFiltrablesYCorrelationId(CapturedOutput salida) throws Exception {
         String correo = UUID.randomUUID() + "@prueba.co";
 
-        mvc.perform(post("/api/v1/auth/registro").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                 {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"Contrasena-de-prueba-1","rol":"HUESPED"}"""
                 .formatted(correo)));
 
@@ -43,11 +43,11 @@ class LogsIT extends PruebaIntegracion {
 
     @Test
     void unaSolicitudRechazadaQuedaEnLosLogsConSuCodigo(CapturedOutput salida) throws Exception {
-        mvc.perform(post("/api/v1/auth/registro").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                 {"nombre":"Laura","apellido":"Gómez","correo":"%s@prueba.co","telefono":"3001234567","contrasena":"Contrasena-de-prueba-1","rol":"ADMINISTRADOR"}"""
                 .formatted(UUID.randomUUID())));
 
-        assertThat(salida.getOut()).contains("\"codigo\":\"DATOS_INVALIDOS\"", "/api/v1/auth/registro");
+        assertThat(salida.getOut()).contains("\"codigo\":\"DATOS_INVALIDOS\"", "/api/v1/auth/register");
     }
 
     @Test

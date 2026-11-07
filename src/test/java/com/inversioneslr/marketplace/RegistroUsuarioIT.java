@@ -86,7 +86,7 @@ class RegistroUsuarioIT extends PruebaIntegracion {
     }
 
     private ResultActions registrar(String correo, String rol, String contrasena) throws Exception {
-        return mvc.perform(post("/api/v1/auth/registro")
+        return mvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"%s"}"""
