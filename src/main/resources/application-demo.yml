@@ -1,0 +1,5 @@
+# Perfil para la demo local con el frontend: agrega publicaciones, reseñas y reservas de ejemplo.
+# Nunca usarlo en producción.
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo

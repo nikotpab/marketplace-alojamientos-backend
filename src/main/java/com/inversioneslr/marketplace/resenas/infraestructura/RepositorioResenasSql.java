@@ -30,6 +30,20 @@ public class RepositorioResenasSql implements RepositorioResenas {
 
     @Override
     public List<ResenaVisible> listarVisibles(UUID publicacionId) {
-        throw new UnsupportedOperationException("SQL de resena");
+        return jdbc.sql("""
+                SELECT r.id, concat_ws(' ', u.nombre, left(u.apellido, 1) || '.') AS autor, r.calificacion, r.contenido, r.creado_en
+                FROM resena r
+                JOIN reserva rv ON rv.id = r.reserva_id
+                JOIN usuario u ON u.id = rv.huesped_id
+                WHERE rv.publicacion_id = :publicacion AND NOT r.oculta
+                ORDER BY r.creado_en DESC""")
+                .param("publicacion", publicacionId)
+                .query((fila, numero) -> new ResenaVisible(
+                        fila.getObject("id", UUID.class),
+                        fila.getString("autor"),
+                        fila.getInt("calificacion"),
+                        fila.getString("contenido"),
+                        fila.getTimestamp("creado_en").toInstant()))
+                .list();
     }
 }
