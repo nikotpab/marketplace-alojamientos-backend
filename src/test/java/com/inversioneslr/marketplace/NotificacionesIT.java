@@ -12,6 +12,7 @@ import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.SuscriptorAsincrono;
 import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,6 +39,9 @@ class NotificacionesIT extends PruebaIntegracion {
 
     @Autowired
     PlatformTransactionManager transacciones;
+
+    @Autowired
+    Clock reloj;
 
     @Test
     void publicarGuardaAuditoriaYEventoPendiente() {
@@ -69,7 +73,7 @@ class NotificacionesIT extends PruebaIntegracion {
         SuscriptorAsincrono fallido = evento -> {
             throw new IllegalStateException("Componente caído");
         };
-        ProcesadorEventos procesador = new ProcesadorEventos(List.of(fallido), jdbc, json, transacciones);
+        ProcesadorEventos procesador = new ProcesadorEventos(List.of(fallido), jdbc, json, transacciones, reloj);
 
         procesador.procesarPendientes();
 

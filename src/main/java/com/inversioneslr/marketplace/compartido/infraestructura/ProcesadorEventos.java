@@ -1,7 +1,11 @@
 package com.inversioneslr.marketplace.compartido.infraestructura;
 
+import com.inversioneslr.marketplace.compartido.dominio.ComprobacionEstado;
 import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
 import com.inversioneslr.marketplace.compartido.dominio.SuscriptorAsincrono;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -15,26 +19,42 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** Transactional Outbox (ADR-06 · SEC-05, parte 2): entrega los eventos fuera del camino crítico. */
 @Component
-public class ProcesadorEventos {
+public class ProcesadorEventos implements ComprobacionEstado {
 
     private static final Logger log = LoggerFactory.getLogger(ProcesadorEventos.class);
 
     private static final int EVENTOS_POR_CICLO = 100;
     private static final int MAXIMO_INTENTOS = 5;
     private static final int TIEMPO_MAX_SEGUNDOS = 10;
+    private static final Duration ESPERA_MAXIMA_ENTRE_CICLOS = Duration.ofMinutes(1);
 
     private final List<SuscriptorAsincrono> suscriptores;
     private final JdbcClient jdbc;
     private final JsonMapper json;
     private final TransactionTemplate transaccion;
+    private final Clock reloj;
+    private volatile Instant ultimoCiclo;
 
     public ProcesadorEventos(List<SuscriptorAsincrono> suscriptores, JdbcClient jdbc, JsonMapper json,
-                             PlatformTransactionManager transacciones) {
+                             PlatformTransactionManager transacciones, Clock reloj) {
         this.suscriptores = suscriptores;
         this.jdbc = jdbc;
         this.json = json;
         this.transaccion = new TransactionTemplate(transacciones);
         this.transaccion.setTimeout(TIEMPO_MAX_SEGUNDOS);
+        this.reloj = reloj;
+        this.ultimoCiclo = reloj.instant();
+    }
+
+    @Override
+    public String componente() {
+        return "procesadorEventos";
+    }
+
+    /** ADR-06: si los ciclos dejan de terminar, las notificaciones están detenidas aunque la API responda. */
+    @Override
+    public boolean disponible() {
+        return ultimoCiclo.isAfter(reloj.instant().minus(ESPERA_MAXIMA_ENTRE_CICLOS));
     }
 
     @Scheduled(cron = "${marketplace.eventos.cron:*/5 * * * * *}")
@@ -44,6 +64,7 @@ public class ProcesadorEventos {
                 .query(UUID.class)
                 .list()
                 .forEach(this::procesar);
+        ultimoCiclo = reloj.instant();
     }
 
     private void procesar(UUID eventoId) {
