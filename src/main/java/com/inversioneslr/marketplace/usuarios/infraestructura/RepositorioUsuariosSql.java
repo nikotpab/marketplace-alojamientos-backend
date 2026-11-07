@@ -26,7 +26,10 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
 
     @Override
     public Optional<Usuario> buscarPorId(UUID id) {
-        throw new UnsupportedOperationException("SQL de usuario");
+        return jdbc.sql("SELECT * FROM usuario WHERE id = :id")
+                .param("id", id)
+                .query(RepositorioUsuariosSql::aUsuario)
+                .optional();
     }
 
     @Override
