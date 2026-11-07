@@ -1,8 +1,11 @@
 package com.inversioneslr.marketplace.usuarios.infraestructura;
 
 import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.Usuario;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +31,10 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
 
     @Override
     public Optional<Usuario> buscarPorCorreo(String correo) {
-        throw new UnsupportedOperationException("SQL de usuario");
+        return jdbc.sql("SELECT * FROM usuario WHERE correo = :correo")
+                .param("correo", correo)
+                .query(RepositorioUsuariosSql::aUsuario)
+                .optional();
     }
 
     @Override
@@ -73,5 +79,22 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
             String mensaje = "Este correo ya está registrado. Inicia sesión o usa otro correo.";
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, mensaje, Map.of("correo", mensaje));
         }
+    }
+
+    private static Usuario aUsuario(ResultSet fila, int numero) throws SQLException {
+        Timestamp bloqueadoHasta = fila.getTimestamp("bloqueado_hasta");
+        return new Usuario(
+                fila.getObject("id", UUID.class),
+                fila.getString("nombre"),
+                fila.getString("apellido"),
+                fila.getString("correo"),
+                fila.getString("telefono"),
+                fila.getString("hash_contrasena"),
+                Rol.valueOf(fila.getString("rol")),
+                fila.getBoolean("cuenta_activa"),
+                fila.getBoolean("restringido"),
+                fila.getString("motivo_restriccion"),
+                fila.getInt("intentos_fallidos"),
+                bloqueadoHasta == null ? null : bloqueadoHasta.toInstant());
     }
 }

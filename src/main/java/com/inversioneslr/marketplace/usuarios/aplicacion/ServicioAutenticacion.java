@@ -5,6 +5,7 @@ import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.Tokens;
+import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.Usuario;
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -27,13 +29,18 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     private final PasswordEncoder cifrador;
     private final Tokens tokens;
     private final PublicadorEventos eventos;
+    private final Clock reloj;
+    /** Se compara contra este hash cuando el correo no existe, para que la respuesta tarde lo mismo. */
+    private final String hashDeRelleno;
 
     public ServicioAutenticacion(RepositorioUsuarios usuarios, PasswordEncoder cifrador, Tokens tokens,
-                                 PublicadorEventos eventos) {
+                                 PublicadorEventos eventos, Clock reloj) {
         this.usuarios = usuarios;
         this.cifrador = cifrador;
         this.tokens = tokens;
         this.eventos = eventos;
+        this.reloj = reloj;
+        this.hashDeRelleno = cifrador.encode(UUID.randomUUID().toString());
     }
 
     /** CU-01: solo HUESPED o ANFITRION; el rol ADMINISTRADOR lo asigna el equipo. */
@@ -44,21 +51,52 @@ public class ServicioAutenticacion implements FachadaUsuarios {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of("rol", mensaje));
         }
         Usuario usuario = usuarios.guardar(new Usuario(UUID.randomUUID(), comando.nombre(), comando.apellido(),
-                comando.correo().toLowerCase(Locale.ROOT), comando.telefono(), cifrador.encode(comando.contrasena()),
+                normalizar(comando.correo()), comando.telefono(), cifrador.encode(comando.contrasena()),
                 comando.rol(), true, false, null, 0, null));
-        eventos.publicar(new EventoDominio("UsuarioRegistrado", usuario.id(), "usuario", usuario.id(), "EXITO",
-                Map.of("rol", usuario.rol().name()), List.of()));
+        eventos.publicar(evento("UsuarioRegistrado", usuario, "EXITO", Map.of("rol", usuario.rol().name())));
         return resumen(usuario);
+    }
+
+    /**
+     * CU-02: un mensaje general para correo o contraseña incorrectos, y el estado de la cuenta solo
+     * después de validar la contraseña. Cada intento queda registrado (RF-31).
+     */
+    public Sesion iniciarSesion(CredencialesComando comando) {
+        Usuario usuario = usuarios.buscarPorCorreo(normalizar(comando.correo())).orElse(null);
+        if (usuario == null) {
+            cifrador.matches(comando.contrasena(), hashDeRelleno);
+            throw credencialesInvalidas();
+        }
+        if (!cifrador.matches(comando.contrasena(), usuario.hashContrasena())) {
+            eventos.publicar(evento("InicioSesionFallido", usuario, "FALLIDO", Map.of()));
+            throw credencialesInvalidas();
+        }
+        if (usuario.restringido()) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CUENTA_RESTRINGIDA, "Tu cuenta está restringida y no puede iniciar sesión.");
+        }
+        if (!usuario.cuentaActiva()) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, "Tu cuenta está desactivada.");
+        }
+        eventos.publicar(evento("InicioSesionExitoso", usuario, "EXITO", Map.of()));
+        return new Sesion(tokens.emitir(new UsuarioAutenticado(usuario.id(), usuario.rol())),
+                new UsuarioSesion(usuario.id(), usuario.nombre(), usuario.correo(), usuario.rol()));
+    }
+
+    private static ExcepcionNegocio credencialesInvalidas() {
+        return new ExcepcionNegocio(ExcepcionNegocio.Tipo.CREDENCIALES_INVALIDAS, "Correo o contraseña incorrectos.");
+    }
+
+    private static String normalizar(String correo) {
+        return correo.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static EventoDominio evento(String tipo, Usuario usuario, String resultado, Map<String, Object> detalle) {
+        return new EventoDominio(tipo, usuario.id(), "usuario", usuario.id(), resultado, detalle, List.of());
     }
 
     private static UsuarioResumen resumen(Usuario usuario) {
         return new UsuarioResumen(usuario.id(), usuario.nombre(), usuario.apellido(), usuario.correo(), usuario.telefono(),
                 usuario.rol(), usuario.cuentaActiva(), usuario.restringido());
-    }
-
-    /** CU-02: bloquea 30 min tras 5 intentos fallidos seguidos y registra cada intento (RNF-23). */
-    public Sesion iniciarSesion(CredencialesComando comando) {
-        throw new UnsupportedOperationException("CU-02");
     }
 
     /** CU-03: código simulado; responde igual aunque el correo no exista. */
@@ -137,6 +175,10 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public record EstadoCuentaComando(boolean activa) {
     }
 
-    public record Sesion(String token, Rol rol) {
+    /** El formato que espera el frontend. */
+    public record Sesion(String token, UsuarioSesion usuario) {
+    }
+
+    public record UsuarioSesion(UUID id, String nombre, String correo, Rol rol) {
     }
 }
