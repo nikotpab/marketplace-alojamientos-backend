@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -70,9 +71,11 @@ class InicioSesionIT extends PruebaIntegracion {
     }
 
     @Test
-    void unaCuentaDesactivadaNoPuedeIniciarSesion() throws Exception {
+    void unaCuentaDesactivadaDesdeElPerfilNoPuedeIniciarSesion() throws Exception {
         String correo = registrar("HUESPED");
-        comoAplicacion.update("UPDATE usuario SET cuenta_activa = false WHERE correo = ?", correo);
+        String token = JsonPath.read(iniciarSesion(correo, CONTRASENA).andReturn().getResponse().getContentAsString(), "$.token");
+        mvc.perform(patch("/api/v1/usuarios/me/estado").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"activo\":false}")).andExpect(status().isOk());
 
         iniciarSesion(correo, CONTRASENA)
                 .andExpect(status().isForbidden())

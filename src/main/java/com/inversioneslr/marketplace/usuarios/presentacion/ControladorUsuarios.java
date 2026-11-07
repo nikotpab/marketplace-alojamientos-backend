@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -58,9 +59,9 @@ public class ControladorUsuarios {
         return servicio.actualizarPerfil(usuario.id(), comando);
     }
 
-    @PutMapping("/usuarios/me/estado-cuenta")
-    public UsuarioResumen cambiarEstadoCuenta(@AuthenticationPrincipal UsuarioAutenticado usuario,
-                                              @Valid @RequestBody ServicioAutenticacion.EstadoCuentaComando comando) {
+    @PatchMapping("/usuarios/me/estado")
+    public ServicioAutenticacion.Perfil cambiarEstadoCuenta(@AuthenticationPrincipal UsuarioAutenticado usuario,
+                                                            @Valid @RequestBody ServicioAutenticacion.EstadoCuentaComando comando) {
         return servicio.cambiarEstadoCuenta(usuario.id(), comando);
     }
 }
