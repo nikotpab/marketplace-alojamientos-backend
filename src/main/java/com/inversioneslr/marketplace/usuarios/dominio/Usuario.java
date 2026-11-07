@@ -34,7 +34,16 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
     }
 
     public Usuario desactivar() {
-        throw new UnsupportedOperationException("RF-05");
+        return conEstado(false);
+    }
+
+    public Usuario activar() {
+        return conEstado(true);
+    }
+
+    private Usuario conEstado(boolean activa) {
+        return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, activa, restringido,
+                motivoRestriccion, intentosFallidos, bloqueadoHasta);
     }
 
     public Usuario restringir(String motivo) {
