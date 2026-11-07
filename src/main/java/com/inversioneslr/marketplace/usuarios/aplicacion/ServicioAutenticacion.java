@@ -127,12 +127,25 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         throw new UnsupportedOperationException("CU-03");
     }
 
-    public UsuarioResumen consultarPerfil(UUID usuarioId) {
-        throw new UnsupportedOperationException("CU-04");
+    /** CU-04: cada usuario consulta y modifica solo su propio perfil, identificado por el token. */
+    public Perfil consultarPerfil(UUID usuarioId) {
+        return perfil(buscar(usuarioId));
     }
 
-    public UsuarioResumen actualizarPerfil(UUID usuarioId, PerfilComando comando) {
-        throw new UnsupportedOperationException("CU-04");
+    /** CU-04: el correo y el rol no se editan aquí. */
+    public Perfil actualizarPerfil(UUID usuarioId, PerfilComando comando) {
+        Usuario usuario = usuarios.guardar(buscar(usuarioId).actualizarDatos(comando.nombre(), comando.apellido(), comando.telefono()));
+        eventos.publicar(evento("PerfilActualizado", usuario, "EXITO", Map.of()));
+        return perfil(usuario);
+    }
+
+    private Usuario buscar(UUID usuarioId) {
+        return usuarios.buscarPorId(usuarioId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "El usuario no existe."));
+    }
+
+    private static Perfil perfil(Usuario usuario) {
+        return new Perfil(usuario.nombre(), usuario.apellido(), usuario.correo(), usuario.telefono(), usuario.rol(), usuario.cuentaActiva());
     }
 
     public UsuarioResumen cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
@@ -187,8 +200,10 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     public record PerfilComando(@NotBlank @Size(max = 120) String nombre,
                                 @NotBlank @Size(max = 120) String apellido,
-                                @NotBlank @Email @Size(max = 255) String correo,
                                 @NotBlank @Size(max = 30) String telefono) {
+    }
+
+    public record Perfil(String nombre, String apellido, String correo, String telefono, Rol rol, boolean activo) {
     }
 
     public record EstadoCuentaComando(boolean activa) {
