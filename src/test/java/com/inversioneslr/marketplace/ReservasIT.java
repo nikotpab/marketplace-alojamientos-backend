@@ -110,7 +110,7 @@ class ReservasIT extends PruebaIntegracion {
 
     private static Reserva reserva(UUID huesped, UUID publicacion, LocalDate llegada, LocalDate salida) {
         BigDecimal valor = new BigDecimal("100000");
-        return new Reserva(UUID.randomUUID(), huesped, publicacion, llegada, salida, 2, EstadoReserva.CONFIRMADA, 3,
+        return new Reserva(UUID.randomUUID(), null, huesped, publicacion, llegada, salida, 2, EstadoReserva.CONFIRMADA, 3,
                 valor, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, valor);
     }
 }
