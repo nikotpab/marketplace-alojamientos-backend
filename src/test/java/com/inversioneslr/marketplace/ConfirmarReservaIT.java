@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockingDetails;
@@ -22,6 +23,7 @@ import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas.Confir
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -170,17 +172,31 @@ class ConfirmarReservaIT extends PruebaIntegracion {
     }
 
     @Test
+    void laRespuestaTraeElCodigoYLosCamposDelFrontend() throws Exception {
+        String codigoAnual = "LR-" + LocalDate.now(ZoneId.of("America/Bogota")).getYear() + "-";
+
+        confirmar(UUID.randomUUID().toString(), "2030-09-10", "2030-09-13", 2)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.codigo").value(matchesPattern(codigoAnual + "\\d{4,}")))
+                .andExpect(jsonPath("$.estado").value("CONFIRMADA"))
+                .andExpect(jsonPath("$.llegada").value("2030-09-10"))
+                .andExpect(jsonPath("$.salida").value("2030-09-13"))
+                .andExpect(jsonPath("$.huespedes").value(2))
+                .andExpect(jsonPath("$.total").exists());
+    }
+
+    @Test
     void fechasInvalidasSeRechazanIndicandoElCampo() throws Exception {
         confirmar(UUID.randomUUID().toString(), "2030-06-13", "2030-06-10", 2)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.campos.fechaSalida").exists());
+                .andExpect(jsonPath("$.campos.salida").exists());
     }
 
     @Test
     void superarLaCapacidadSeRechazaIndicandoElCampo() throws Exception {
         confirmar(UUID.randomUUID().toString(), "2030-06-10", "2030-06-13", 5)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.campos.numeroHuespedes").exists());
+                .andExpect(jsonPath("$.campos.huespedes").exists());
     }
 
     @Test
@@ -202,7 +218,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
 
     private String cuerpo(String llegada, String salida, int huespedes) {
         return """
-                {"publicacionId":"%s","fechaLlegada":"%s","fechaSalida":"%s","numeroHuespedes":%d}"""
+                {"publicacionId":"%s","llegada":"%s","salida":"%s","huespedes":%d,"adicionales":[]}"""
                 .formatted(publicacion, llegada, salida, huespedes);
     }
 

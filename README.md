@@ -105,6 +105,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 8. **Política de cancelación (temporal).** El frontend la envía como texto libre. Se asocia a la política cuyo nombre aparece en el texto y, si ninguna aparece, a la Flexible. Lo correcto es que el formulario ofrezca las políticas para elegir, porque la devolución se calcula según la política elegida.
 9. **Disponibilidad por defecto (temporal).** El frontend asume que todo está disponible salvo lo bloqueado, y el backend exige periodos disponibles. Una publicación nueva queda disponible dos años desde su creación, y el anfitrión bloquea o libera rangos de días, con ambos extremos incluidos. Al liberar, el rango se une con los periodos disponibles que toca, y así una estancia siempre cabe en un único periodo, como exigen la reserva y la búsqueda.
 10. **Errores por campo.** Los errores por campo van en `campos` y también en `errores`, el nombre que lee el frontend. La información mínima que falta para publicar responde 422.
+11. **Código de reserva.** El frontend muestra un código legible, como `LR-2026-0001`, que no está en el modelo de datos. Se agregó la columna `codigo`, que asigna la base de datos al guardar la reserva. Las peticiones y respuestas de reserva usan los nombres del frontend (`llegada`, `salida`, `huespedes`, `adicionales`).
 
 ## Consultar los logs
 

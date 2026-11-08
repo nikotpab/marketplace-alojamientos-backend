@@ -70,13 +70,15 @@ public class RepositorioReservasSql implements RepositorioReservas {
     }
 
     @Override
-    public void guardar(Reserva reserva, List<AdicionalReservado> adicionales) {
+    public Reserva guardar(Reserva reserva, List<AdicionalReservado> adicionales) {
+        String codigo;
         try {
-            jdbc.sql("""
+            codigo = jdbc.sql("""
                     INSERT INTO reserva (id, huesped_id, publicacion_id, fecha_llegada, fecha_salida, numero_huespedes, estado,
                                          noches, precio_base, tarifa_limpieza, tarifa_servicio, descuento, total)
                     VALUES (:id, :huesped, :publicacion, :llegada, :salida, :huespedes, :estado,
-                            :noches, :precioBase, :limpieza, :servicio, :descuento, :total)""")
+                            :noches, :precioBase, :limpieza, :servicio, :descuento, :total)
+                    RETURNING codigo""")
                     .param("id", reserva.id())
                     .param("huesped", reserva.huespedId())
                     .param("publicacion", reserva.publicacionId())
@@ -90,7 +92,8 @@ public class RepositorioReservasSql implements RepositorioReservas {
                     .param("servicio", reserva.tarifaServicio())
                     .param("descuento", reserva.descuento())
                     .param("total", reserva.total())
-                    .update();
+                    .query(String.class)
+                    .single();
         } catch (DataIntegrityViolationException e) {
             if (String.valueOf(e.getMessage()).contains(RESTRICCION_ANTI_SOLAPE)) {
                 throw new PeriodoNoDisponibleException();
@@ -104,6 +107,7 @@ public class RepositorioReservasSql implements RepositorioReservas {
                 .param("adicional", adicional.servicioAdicionalId())
                 .param("costo", adicional.costoAplicado())
                 .update());
+        return reserva.conCodigo(codigo);
     }
 
     @Override
@@ -112,6 +116,7 @@ public class RepositorioReservasSql implements RepositorioReservas {
                 .param("id", id)
                 .query((fila, numero) -> new Reserva(
                         id,
+                        fila.getString("codigo"),
                         fila.getObject("huesped_id", UUID.class),
                         fila.getObject("publicacion_id", UUID.class),
                         fila.getObject("fecha_llegada", LocalDate.class),

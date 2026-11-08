@@ -80,15 +80,15 @@ public class ServicioReservas implements FachadaReservas {
         validarFechas(comando);
         DatosPublicacion publicacion = publicaciones.datosPublicacion(comando.publicacionId());
         validarPublicacion(publicacion, comando);
-        if (!publicaciones.periodoDisponible(publicacion.id(), comando.fechaLlegada(), comando.fechaSalida())) {
+        if (!publicaciones.periodoDisponible(publicacion.id(), comando.llegada(), comando.salida())) {
             // Puede estar ocupado por esta misma solicitud, si un reintento simultáneo terminó primero.
             return reservas.buscarSolicitud(claveSolicitud)
                     .map(solicitud -> resultadoOriginal(solicitud, huespedId))
                     .orElseThrow(PeriodoNoDisponibleException::new);
         }
-        List<UUID> seleccionados = comando.serviciosAdicionales() == null ? List.of() : comando.serviciosAdicionales();
+        List<UUID> seleccionados = comando.adicionales() == null ? List.of() : comando.adicionales();
         List<AdicionalReservado> adicionales = adicionalesSeleccionados(publicacion, seleccionados);
-        Cotizacion cotizacionFinal = cotizacion.cotizar(publicacion.id(), comando.fechaLlegada(), comando.fechaSalida(), seleccionados);
+        Cotizacion cotizacionFinal = cotizacion.cotizar(publicacion.id(), comando.llegada(), comando.salida(), seleccionados);
         String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud);
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
         try {
@@ -97,12 +97,12 @@ public class ServicioReservas implements FachadaReservas {
                     // Reintento simultáneo: comparte el pago con la solicitud ganadora, así que no se devuelve.
                     return resultadoOriginal(reservas.buscarSolicitud(claveSolicitud).orElseThrow(), huespedId);
                 }
-                reservas.guardar(reserva, adicionales);
-                pagos.registrarPago(reserva.id(), referencia, claveSolicitud, reserva.total());
-                eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", reserva.id(), "EXITO",
-                        Map.of("total", reserva.total()), List.of(huespedId, publicacion.anfitrionId())));
-                reservas.completarSolicitud(claveSolicitud, reserva.id(), json.writeValueAsString(reserva));
-                return reserva;
+                Reserva guardada = reservas.guardar(reserva, adicionales);
+                pagos.registrarPago(guardada.id(), referencia, claveSolicitud, guardada.total());
+                eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", guardada.id(), "EXITO",
+                        Map.of("total", guardada.total(), "codigo", guardada.codigo()), List.of(huespedId, publicacion.anfitrionId())));
+                reservas.completarSolicitud(claveSolicitud, guardada.id(), json.writeValueAsString(guardada));
+                return guardada;
             });
         } catch (PeriodoNoDisponibleException otraReservaGano) {
             devolverCobro(huespedId, publicacion, referencia, reserva);
@@ -142,11 +142,11 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     private void validarFechas(ConfirmarReservaComando comando) {
-        if (!comando.fechaSalida().isAfter(comando.fechaLlegada())) {
-            throw datoInvalido("fechaSalida", "La salida debe ser posterior a la llegada. Elige una fecha de salida más tardía.");
+        if (!comando.salida().isAfter(comando.llegada())) {
+            throw datoInvalido("salida", "La salida debe ser posterior a la llegada. Elige una fecha de salida más tardía.");
         }
-        if (comando.fechaLlegada().isBefore(LocalDate.now(reloj))) {
-            throw datoInvalido("fechaLlegada", "La llegada ya pasó. Elige una fecha de hoy en adelante.");
+        if (comando.llegada().isBefore(LocalDate.now(reloj))) {
+            throw datoInvalido("llegada", "La llegada ya pasó. Elige una fecha de hoy en adelante.");
         }
     }
 
@@ -154,8 +154,8 @@ public class ServicioReservas implements FachadaReservas {
         if (!publicacion.activa()) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "El alojamiento no está disponible.");
         }
-        if (comando.numeroHuespedes() > publicacion.capacidad()) {
-            throw datoInvalido("numeroHuespedes", "El alojamiento admite hasta " + publicacion.capacidad() + " huéspedes. Reduce el número.");
+        if (comando.huespedes() > publicacion.capacidad()) {
+            throw datoInvalido("huespedes", "El alojamiento admite hasta " + publicacion.capacidad() + " huéspedes. Reduce el número.");
         }
     }
 
@@ -165,7 +165,7 @@ public class ServicioReservas implements FachadaReservas {
                 .map(adicional -> new AdicionalReservado(adicional.id(), adicional.costo()))
                 .toList();
         if (adicionales.size() != seleccionados.size()) {
-            throw datoInvalido("serviciosAdicionales", "Algún servicio adicional no pertenece a este alojamiento. Elige solo los que ofrece.");
+            throw datoInvalido("adicionales", "Algún servicio adicional no pertenece a este alojamiento. Elige solo los que ofrece.");
         }
         return adicionales;
     }
@@ -182,8 +182,8 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     private static Reserva nuevaReserva(UUID huespedId, ConfirmarReservaComando comando, Cotizacion cotizacionFinal) {
-        return new Reserva(UUID.randomUUID(), huespedId, comando.publicacionId(), comando.fechaLlegada(), comando.fechaSalida(),
-                comando.numeroHuespedes(), EstadoReserva.CONFIRMADA, cotizacionFinal.noches(), cotizacionFinal.precioBase(),
+        return new Reserva(UUID.randomUUID(), null, huespedId, comando.publicacionId(), comando.llegada(), comando.salida(),
+                comando.huespedes(), EstadoReserva.CONFIRMADA, cotizacionFinal.noches(), cotizacionFinal.precioBase(),
                 cotizacionFinal.tarifaLimpieza(), cotizacionFinal.tarifaServicio(), cotizacionFinal.descuento(), cotizacionFinal.total());
     }
 
@@ -234,11 +234,12 @@ public class ServicioReservas implements FachadaReservas {
         throw new UnsupportedOperationException("CU-24");
     }
 
+    /** Con los nombres que envía el frontend. */
     public record ConfirmarReservaComando(@NotNull UUID publicacionId,
-                                          @NotNull LocalDate fechaLlegada,
-                                          @NotNull LocalDate fechaSalida,
-                                          @NotNull @Positive Integer numeroHuespedes,
-                                          List<UUID> serviciosAdicionales) {
+                                          @NotNull LocalDate llegada,
+                                          @NotNull LocalDate salida,
+                                          @NotNull @Positive Integer huespedes,
+                                          List<UUID> adicionales) {
     }
 
     public record ReservaVista(Reserva reserva, FachadaUsuarios.DatosContacto contactoHuesped) {

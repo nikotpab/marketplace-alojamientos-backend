@@ -7,7 +7,8 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /** Conserva el desglose cobrado: los cambios de tarifas no afectan reservas ya confirmadas. */
-public record Reserva(UUID id, UUID huespedId, UUID publicacionId, LocalDate fechaLlegada, LocalDate fechaSalida,
+/** @param codigo lo asigna la base de datos al guardarla; null antes */
+public record Reserva(UUID id, String codigo, UUID huespedId, UUID publicacionId, LocalDate fechaLlegada, LocalDate fechaSalida,
                       int numeroHuespedes, EstadoReserva estado, int noches, BigDecimal precioBase,
                       BigDecimal tarifaLimpieza, BigDecimal tarifaServicio, BigDecimal descuento, BigDecimal total) {
 
@@ -16,7 +17,12 @@ public record Reserva(UUID id, UUID huespedId, UUID publicacionId, LocalDate fec
         if (estado != EstadoReserva.CONFIRMADA) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La reserva está en estado " + estado + " y no se puede cancelar.");
         }
-        return new Reserva(id, huespedId, publicacionId, fechaLlegada, fechaSalida, numeroHuespedes, EstadoReserva.CANCELADA,
+        return new Reserva(id, codigo, huespedId, publicacionId, fechaLlegada, fechaSalida, numeroHuespedes, EstadoReserva.CANCELADA,
+                noches, precioBase, tarifaLimpieza, tarifaServicio, descuento, total);
+    }
+
+    public Reserva conCodigo(String asignado) {
+        return new Reserva(id, asignado, huespedId, publicacionId, fechaLlegada, fechaSalida, numeroHuespedes, estado,
                 noches, precioBase, tarifaLimpieza, tarifaServicio, descuento, total);
     }
 

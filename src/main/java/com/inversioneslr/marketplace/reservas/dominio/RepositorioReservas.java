@@ -23,7 +23,8 @@ public interface RepositorioReservas {
     void eliminarSolicitudesVencidas(Instant ahora);
 
     /** @throws PeriodoNoDisponibleException si la restricción anti-solape rechaza la reserva */
-    void guardar(Reserva reserva, List<AdicionalReservado> adicionales);
+    /** @return la reserva con el código que le asignó la base de datos */
+    Reserva guardar(Reserva reserva, List<AdicionalReservado> adicionales);
 
     Optional<Reserva> buscarPorId(UUID id);
 
