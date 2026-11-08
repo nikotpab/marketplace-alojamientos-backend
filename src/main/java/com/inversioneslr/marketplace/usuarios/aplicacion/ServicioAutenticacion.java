@@ -184,7 +184,9 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     @Override
     public DatosContacto datosContacto(UUID usuarioId) {
-        throw new UnsupportedOperationException("RNF-21");
+        return usuarios.buscarPorId(usuarioId)
+                .map(u -> new DatosContacto(u.telefono(), u.correo()))
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "El usuario no existe."));
     }
 
     public record RegistroComando(@NotBlank @Size(max = 120) String nombre,

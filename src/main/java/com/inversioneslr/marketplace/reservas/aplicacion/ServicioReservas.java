@@ -3,6 +3,7 @@ package com.inversioneslr.marketplace.reservas.aplicacion;
 import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
 import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.cotizacion.api.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.api.FachadaCotizacion;
@@ -15,6 +16,7 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
+import com.inversioneslr.marketplace.reservas.dominio.ResumenReserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
@@ -22,6 +24,7 @@ import jakarta.validation.constraints.Positive;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -193,7 +196,30 @@ public class ServicioReservas implements FachadaReservas {
 
     /** CU-18: el contacto del huésped solo llega al anfitrión si la reserva está confirmada (RNF-21). */
     public List<ReservaVista> consultarHistorial(UsuarioAutenticado usuario, EstadoReserva estado) {
-        throw new UnsupportedOperationException("CU-18");
+        LocalDate hoy = LocalDate.now(reloj.withZone(ZoneId.of("America/Bogota")));
+        if (usuario.rol() == Rol.HUESPED) {
+            return reservas.listarPorHuesped(usuario.id(), estado).stream()
+                    .map(r -> new ReservaVista(r, null, grupo(r, hoy)))
+                    .toList();
+        }
+        // ANFITRION: contacto solo si la reserva está CONFIRMADA
+        return reservas.listarPorAnfitrion(usuario.id(), estado).stream()
+                .map(r -> {
+                    var contacto = r.estado() == EstadoReserva.CONFIRMADA
+                            ? usuarios.datosContacto(r.huespedId())
+                            : null;
+                    return new ReservaVista(r, contacto, grupo(r, hoy));
+                })
+                .toList();
+    }
+
+    private static Grupo grupo(ResumenReserva r, LocalDate hoy) {
+        return switch (r.estado()) {
+            case CONFIRMADA -> r.fechaSalida().isBefore(hoy) ? Grupo.COMPLETADA : Grupo.PROXIMA;
+            case EN_REVISION -> Grupo.PROXIMA;
+            case COMPLETADA -> Grupo.COMPLETADA;
+            case CANCELADA -> Grupo.CANCELADA;
+        };
     }
 
     /** ADR-04: las claves se conservan 24 h, tiempo suficiente para los reintentos de un cliente. */
@@ -231,7 +257,7 @@ public class ServicioReservas implements FachadaReservas {
 
     @Override
     public void marcarFuturasEnRevision(UUID publicacionId) {
-        throw new UnsupportedOperationException("CU-24");
+        reservas.marcarFuturasEnRevision(publicacionId);
     }
 
     public record ConfirmarReservaComando(@NotNull UUID publicacionId,
@@ -241,6 +267,8 @@ public class ServicioReservas implements FachadaReservas {
                                           List<UUID> serviciosAdicionales) {
     }
 
-    public record ReservaVista(Reserva reserva, FachadaUsuarios.DatosContacto contactoHuesped) {
+    public enum Grupo { PROXIMA, COMPLETADA, CANCELADA }
+
+    public record ReservaVista(ResumenReserva reserva, FachadaUsuarios.DatosContacto contactoHuesped, Grupo grupo) {
     }
 }

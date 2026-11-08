@@ -5,7 +5,10 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
+import com.inversioneslr.marketplace.reservas.dominio.ResumenReserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -128,13 +131,61 @@ public class RepositorioReservasSql implements RepositorioReservas {
     }
 
     @Override
-    public List<Reserva> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
-        throw new UnsupportedOperationException(PENDIENTE);
+    public List<ResumenReserva> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
+        String sql = """
+                SELECT r.id, r.huesped_id, r.publicacion_id, r.fecha_llegada, r.fecha_salida,
+                       r.numero_huespedes, r.estado, r.noches, r.precio_base, r.tarifa_limpieza,
+                       r.tarifa_servicio, r.descuento, r.total, p.titulo, p.ciudad
+                FROM reserva r
+                JOIN publicacion p ON p.id = r.publicacion_id
+                WHERE r.huesped_id = :huespedId"""
+                + (estado != null ? " AND r.estado = :estado" : "")
+                + "\nORDER BY r.fecha_llegada DESC";
+        JdbcClient.StatementSpec spec = jdbc.sql(sql).param("huespedId", huespedId);
+        if (estado != null) {
+            spec = spec.param("estado", estado.name());
+        }
+        return spec.query((fila, num) -> mapResumen(fila, false)).list();
     }
 
     @Override
-    public List<Reserva> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado) {
-        throw new UnsupportedOperationException(PENDIENTE);
+    public List<ResumenReserva> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado) {
+        String sql = """
+                SELECT r.id, r.huesped_id, r.publicacion_id, r.fecha_llegada, r.fecha_salida,
+                       r.numero_huespedes, r.estado, r.noches, r.precio_base, r.tarifa_limpieza,
+                       r.tarifa_servicio, r.descuento, r.total, p.titulo, p.ciudad,
+                       u.nombre || ' ' || u.apellido AS nombre_huesped
+                FROM reserva r
+                JOIN publicacion p ON p.id = r.publicacion_id
+                JOIN usuario u ON u.id = r.huesped_id
+                WHERE p.anfitrion_id = :anfitrionId"""
+                + (estado != null ? " AND r.estado = :estado" : "")
+                + "\nORDER BY r.fecha_llegada DESC";
+        JdbcClient.StatementSpec spec = jdbc.sql(sql).param("anfitrionId", anfitrionId);
+        if (estado != null) {
+            spec = spec.param("estado", estado.name());
+        }
+        return spec.query((fila, num) -> mapResumen(fila, true)).list();
+    }
+
+    private static ResumenReserva mapResumen(ResultSet fila, boolean conNombre) throws SQLException {
+        return new ResumenReserva(
+                fila.getObject("id", UUID.class),
+                fila.getObject("huesped_id", UUID.class),
+                fila.getObject("publicacion_id", UUID.class),
+                fila.getObject("fecha_llegada", LocalDate.class),
+                fila.getObject("fecha_salida", LocalDate.class),
+                fila.getInt("numero_huespedes"),
+                EstadoReserva.valueOf(fila.getString("estado")),
+                fila.getInt("noches"),
+                fila.getBigDecimal("precio_base"),
+                fila.getBigDecimal("tarifa_limpieza"),
+                fila.getBigDecimal("tarifa_servicio"),
+                fila.getBigDecimal("descuento"),
+                fila.getBigDecimal("total"),
+                fila.getString("titulo"),
+                fila.getString("ciudad"),
+                conNombre ? fila.getString("nombre_huesped") : null);
     }
 
     @Override
@@ -147,6 +198,12 @@ public class RepositorioReservasSql implements RepositorioReservas {
 
     @Override
     public void marcarFuturasEnRevision(UUID publicacionId) {
-        throw new UnsupportedOperationException(PENDIENTE);
+        jdbc.sql("""
+                UPDATE reserva SET estado = 'EN_REVISION'
+                WHERE publicacion_id = :publicacionId
+                  AND estado = 'CONFIRMADA'
+                  AND fecha_llegada > CURRENT_DATE""")
+                .param("publicacionId", publicacionId)
+                .update();
     }
 }

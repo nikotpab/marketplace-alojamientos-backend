@@ -27,9 +27,9 @@ public interface RepositorioReservas {
 
     Optional<Reserva> buscarPorId(UUID id);
 
-    List<Reserva> listarPorHuesped(UUID huespedId, EstadoReserva estado);
+    List<ResumenReserva> listarPorHuesped(UUID huespedId, EstadoReserva estado);
 
-    List<Reserva> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado);
+    List<ResumenReserva> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado);
 
     void actualizarEstado(UUID id, EstadoReserva estado);
 
