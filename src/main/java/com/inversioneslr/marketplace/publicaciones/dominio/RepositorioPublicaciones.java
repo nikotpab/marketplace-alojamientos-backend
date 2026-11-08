@@ -25,8 +25,17 @@ public interface RepositorioPublicaciones {
 
     Publicacion guardar(Publicacion publicacion);
 
-    /** Periodos definidos por el anfitrión más los ocupados por reservas confirmadas. */
-    List<PeriodoDisponibilidad> calendario(UUID publicacionId);
+    /** Entre {@code desde} y {@code hasta}, ambos incluidos. */
+    Disponibilidad disponibilidad(UUID publicacionId, LocalDate desde, LocalDate hasta);
+
+    /** Si alguna reserva confirmada ocupa una noche de [inicio, fin). */
+    boolean hayReservasConfirmadas(UUID publicacionId, LocalDate inicio, LocalDate fin);
+
+    /**
+     * Deja disponible [inicio, fin): recorta los bloqueos que se crucen y une el rango con los periodos disponibles
+     * que se crucen o lo toquen, para que la estancia quede siempre dentro de un único periodo.
+     */
+    void liberar(UUID publicacionId, LocalDate inicio, LocalDate fin);
 
     boolean periodoDisponible(UUID publicacionId, LocalDate llegada, LocalDate salida);
 

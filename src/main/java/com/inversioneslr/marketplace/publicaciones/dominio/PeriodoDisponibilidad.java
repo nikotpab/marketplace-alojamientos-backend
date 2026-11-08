@@ -6,6 +6,6 @@ import java.util.UUID;
 public record PeriodoDisponibilidad(UUID id, UUID publicacionId, LocalDate fechaInicio, LocalDate fechaFin, Tipo tipo) {
 
     public enum Tipo {
-        DISPONIBLE, BLOQUEADO, RESERVADO
+        DISPONIBLE, BLOQUEADO
     }
 }
