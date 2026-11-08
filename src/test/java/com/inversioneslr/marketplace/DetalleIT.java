@@ -40,6 +40,7 @@ class DetalleIT extends PruebaIntegracion {
         mvc.perform(get("/api/v1/alojamientos/{id}", publicacion))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(publicacion.toString()))
+                .andExpect(jsonPath("$.estado").value("ACTIVA"))
                 .andExpect(jsonPath("$.titulo").value("Apartamento con vista al mar"))
                 .andExpect(jsonPath("$.descripcion").value("Frente a la playa"))
                 .andExpect(jsonPath("$.direccion").value("El Rodadero, carrera 1"))

@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 public class ServicioBusqueda {
 
     private static final int TAMANO_MAXIMO = 50;
+    /** El detalle solo muestra publicaciones activas. */
+    private static final String ESTADO_VISIBLE = "ACTIVA";
     /** Hasta dónde se calculan los días no disponibles del calendario. */
     private static final Period HORIZONTE_CALENDARIO = Period.ofYears(1);
 
@@ -62,7 +64,7 @@ public class ServicioBusqueda {
         AlojamientoDetalle alojamiento = busqueda.buscarDetalle(publicacionId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "Este alojamiento no existe o ya no está disponible."));
         LocalDate hoy = LocalDate.now(reloj);
-        return new Detalle(alojamiento.id(), alojamiento.titulo(), alojamiento.descripcion(), alojamiento.ciudad(),
+        return new Detalle(alojamiento.id(), ESTADO_VISIBLE, alojamiento.titulo(), alojamiento.descripcion(), alojamiento.ciudad(),
                 alojamiento.direccion(), alojamiento.tipo(), alojamiento.capacidad(), alojamiento.precioNoche(),
                 alojamiento.servicios(), alojamiento.reglas(), alojamiento.politicaCancelacion(), alojamiento.imagenes(),
                 alojamiento.calificacionPromedio(), resenas.listarVisibles(publicacionId),
@@ -70,7 +72,8 @@ public class ServicioBusqueda {
     }
 
     /** El formato que espera la pantalla de detalle. */
-    public record Detalle(UUID id, String titulo, String descripcion, String ciudad, String direccion, String tipo,
+    /** @param estado siempre ACTIVA; el frontend lo usa para mostrar el calendario y la reserva */
+    public record Detalle(UUID id, String estado, String titulo, String descripcion, String ciudad, String direccion, String tipo,
                           int capacidad, BigDecimal precioNoche, List<String> servicios, List<String> reglas,
                           String politicaCancelacion, List<String> imagenes, BigDecimal calificacionPromedio,
                           List<FachadaResenas.ResenaVisible> resenas, List<LocalDate> fechasNoDisponibles) {
