@@ -39,9 +39,9 @@ public class ControladorPublicaciones {
     }
 
     @PutMapping("/publicaciones/{id}")
-    public Publicacion editar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable UUID id,
-                              @Valid @RequestBody ServicioPublicaciones.PublicacionComando comando) {
-        return servicio.editar(usuario, id, comando);
+    public PublicacionVista editar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable UUID id,
+                                   @Valid @RequestBody ServicioPublicaciones.DatosPublicacionComando datos) {
+        return servicio.editar(usuario, id, datos);
     }
 
     @PostMapping("/publicaciones/{id}/solicitud-activacion")
