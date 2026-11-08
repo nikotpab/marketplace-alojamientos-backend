@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace.publicaciones.presentacion;
 
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.aplicacion.ServicioPublicaciones;
+import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -58,9 +60,19 @@ public class ControladorPublicaciones {
         return servicio.pausar(anfitrion.id(), id);
     }
 
-    @GetMapping("/publicaciones")
-    public List<Publicacion> consultar(@AuthenticationPrincipal UsuarioAutenticado usuario) {
-        return servicio.consultar(usuario);
+    @GetMapping("/publicaciones/mias")
+    public List<PublicacionVista> mias(@AuthenticationPrincipal UsuarioAutenticado anfitrion) {
+        return servicio.listarDelAnfitrion(anfitrion.id());
+    }
+
+    @GetMapping("/publicaciones/{id}")
+    public PublicacionVista consultar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable UUID id) {
+        return servicio.consultar(usuario, id);
+    }
+
+    @GetMapping("/admin/publicaciones")
+    public List<PublicacionVista> todas(@RequestParam(required = false) EstadoPublicacion estado) {
+        return servicio.listarTodas(estado);
     }
 
     @PostMapping("/publicaciones/{id}/periodos")

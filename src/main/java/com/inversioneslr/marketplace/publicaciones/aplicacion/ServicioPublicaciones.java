@@ -140,11 +140,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
      */
     @Transactional
     public Publicacion editar(UsuarioAutenticado usuario, UUID publicacionId, PublicacionComando comando) {
-        Publicacion actual = publicaciones.buscarPorId(publicacionId)
-                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La publicación no existe."));
-        if (usuario.rol() != Rol.ADMINISTRADOR && !actual.anfitrionId().equals(usuario.id())) {
-            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta publicación no es tuya.");
-        }
+        Publicacion actual = propia(usuario, publicacionId);
         Publicacion editada = publicaciones.guardar(new Publicacion(actual.id(), actual.anfitrionId(),
                 comando.tipoAlojamientoId(), comando.politicaCancelacionId(), comando.titulo(), comando.descripcion(),
                 comando.ciudad(), comando.ubicacionTextual(), comando.capacidad(), comando.precioNoche(),
@@ -170,9 +166,29 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         throw new UnsupportedOperationException("CU-10");
     }
 
-    /** CU-11: anfitrión, las suyas; administrador, todas; huésped, solo las activas. */
-    public List<Publicacion> consultar(UsuarioAutenticado usuario) {
-        throw new UnsupportedOperationException("CU-11");
+    /** CU-11: el anfitrión ve las suyas en cualquier estado. El huésped ve las activas en la búsqueda. */
+    public List<PublicacionVista> listarDelAnfitrion(UUID anfitrionId) {
+        return publicaciones.listarVistas(anfitrionId, null);
+    }
+
+    /** CU-11: el administrador ve todas. */
+    public List<PublicacionVista> listarTodas(EstadoPublicacion estado) {
+        return publicaciones.listarVistas(null, estado);
+    }
+
+    /** Para editarla: solo el propietario o un administrador. */
+    public PublicacionVista consultar(UsuarioAutenticado usuario, UUID publicacionId) {
+        return vista(propia(usuario, publicacionId).id());
+    }
+
+    /** ADR-07: la publicación existe y es del usuario, salvo que sea administrador. */
+    private Publicacion propia(UsuarioAutenticado usuario, UUID publicacionId) {
+        Publicacion publicacion = publicaciones.buscarPorId(publicacionId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La publicación no existe."));
+        if (usuario.rol() != Rol.ADMINISTRADOR && !publicacion.anfitrionId().equals(usuario.id())) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta publicación no es tuya.");
+        }
+        return publicacion;
     }
 
     /** CU-12: no se pueden alterar los periodos con una reserva confirmada (RF-13). */

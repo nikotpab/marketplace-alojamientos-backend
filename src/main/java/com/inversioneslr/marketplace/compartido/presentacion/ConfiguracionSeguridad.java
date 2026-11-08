@@ -55,6 +55,9 @@ public class ConfiguracionSeguridad {
                                 "/api/v1/publicaciones/*/solicitud-activacion",
                                 "/api/v1/publicaciones/*/pausa",
                                 "/api/v1/publicaciones/*/periodos").hasRole(ANFITRION)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/publicaciones/mias").hasRole(ANFITRION)
+                        // Después de /mias, que también encaja en /publicaciones/*
+                        .requestMatchers(HttpMethod.GET, "/api/v1/publicaciones/*").hasAnyRole(ANFITRION, ADMINISTRADOR)
                         .requestMatchers(HttpMethod.PUT, "/api/v1/publicaciones/*").hasAnyRole(ANFITRION, ADMINISTRADOR)
 
                         // Huésped
@@ -65,8 +68,7 @@ public class ConfiguracionSeguridad {
 
                         // Cualquier usuario con sesión
                         .requestMatchers("/api/v1/usuarios/me/**", "/api/v1/notificaciones/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/publicaciones",
-                                "/api/v1/publicaciones/*/resenas").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/publicaciones/*/resenas").authenticated()
 
                         .anyRequest().denyAll())
                 .build();

@@ -110,8 +110,15 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     }
 
     @Override
-    public List<Publicacion> listar(UUID anfitrionId, EstadoPublicacion estado) {
-        throw new UnsupportedOperationException(PENDIENTE);
+    public List<PublicacionVista> listarVistas(UUID anfitrionId, EstadoPublicacion estado) {
+        return jdbc.sql(VISTA + """
+                WHERE (CAST(:anfitrion AS uuid) IS NULL OR p.anfitrion_id = :anfitrion)
+                  AND (CAST(:estado AS text) IS NULL OR p.estado = :estado)
+                ORDER BY p.actualizado_en DESC, p.id""")
+                .param("anfitrion", anfitrionId)
+                .param("estado", estado == null ? null : estado.name())
+                .query(RepositorioPublicacionesSql::aVista)
+                .list();
     }
 
     @Override

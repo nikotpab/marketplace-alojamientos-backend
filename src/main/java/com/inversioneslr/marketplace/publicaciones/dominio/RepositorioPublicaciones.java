@@ -15,8 +15,13 @@ public interface RepositorioPublicaciones {
 
     Optional<DatosPublicacion> buscarDatos(UUID id);
 
-    /** @param anfitrionId null para no filtrar por anfitrión */
-    List<Publicacion> listar(UUID anfitrionId, EstadoPublicacion estado);
+    /**
+     * De la modificada más recientemente a la más antigua.
+     *
+     * @param anfitrionId null para no filtrar por anfitrión
+     * @param estado      null para no filtrar por estado
+     */
+    List<PublicacionVista> listarVistas(UUID anfitrionId, EstadoPublicacion estado);
 
     Publicacion guardar(Publicacion publicacion);
 
