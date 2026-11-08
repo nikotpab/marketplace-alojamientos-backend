@@ -14,7 +14,6 @@ import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
 import com.inversioneslr.marketplace.publicaciones.dominio.RepositorioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.Servicio;
 import com.inversioneslr.marketplace.publicaciones.dominio.TipoConfigurado;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -139,15 +138,11 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
      * activa debe devolverla a revisión sigue sin definirse (pendiente 12 del README).
      */
     @Transactional
-    public Publicacion editar(UsuarioAutenticado usuario, UUID publicacionId, PublicacionComando comando) {
+    public PublicacionVista editar(UsuarioAutenticado usuario, UUID publicacionId, DatosPublicacionComando datos) {
         Publicacion actual = propia(usuario, publicacionId);
-        Publicacion editada = publicaciones.guardar(new Publicacion(actual.id(), actual.anfitrionId(),
-                comando.tipoAlojamientoId(), comando.politicaCancelacionId(), comando.titulo(), comando.descripcion(),
-                comando.ciudad(), comando.ubicacionTextual(), comando.capacidad(), comando.precioNoche(),
-                listaOVacia(comando.servicios()), listaOVacia(comando.reglas()), listaOVacia(comando.imagenes()),
-                actual.estado(), actual.motivoEstado()));
+        publicaciones.guardar(aPublicacion(actual.id(), actual.anfitrionId(), datos, actual.estado(), actual.motivoEstado()));
         eventos.publicar(new EventoDominio("PublicacionEditada", usuario.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
-        return editada;
+        return vista(publicacionId);
     }
 
     private static <T> List<T> listaOVacia(List<T> lista) {
@@ -246,21 +241,6 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
             List<String> reglas,
             List<String> imagenes,
             String politicaCancelacion) {
-    }
-
-    public record PublicacionComando(
-            @NotNull UUID tipoAlojamientoId,
-            @NotNull UUID politicaCancelacionId,
-            @NotBlank @Size(max = 180) String titulo,
-            @NotBlank String descripcion,
-            @NotBlank @Size(max = 120) String ciudad,
-            @NotBlank @Size(max = 255) String ubicacionTextual,
-            @NotNull @Positive(message = "La capacidad debe ser mayor que cero. Ingresa 1 o más.") Integer capacidad,
-            @NotNull @Positive(message = "El precio por noche debe ser positivo. Ingresa un valor mayor que cero.") BigDecimal precioNoche,
-            List<UUID> servicios,
-            List<String> reglas,
-            List<String> imagenes,
-            List<ServicioAdicional> serviciosAdicionales) {
     }
 
     public record RevisionComando(boolean aprobar, String motivo) {
