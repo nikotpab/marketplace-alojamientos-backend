@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.cotizacion.api.Cotizacion;
-import com.inversioneslr.marketplace.cotizacion.api.FachadaCotizacion;
+import com.inversioneslr.marketplace.cotizacion.aplicacion.ServicioCotizacion;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas.ConfirmarReservaComando;
@@ -45,8 +45,9 @@ class ConfirmarReservaIT extends PruebaIntegracion {
     @Autowired
     ServicioReservas reservas;
 
+    /** Con un total fijo, para que estas pruebas no dependan del cálculo de la cotización. */
     @MockitoBean
-    FachadaCotizacion cotizacion;
+    ServicioCotizacion cotizacion;
 
     @MockitoBean
     PasarelaPagos pasarela;
