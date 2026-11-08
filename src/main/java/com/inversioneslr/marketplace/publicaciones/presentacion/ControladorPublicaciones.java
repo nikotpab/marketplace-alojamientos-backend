@@ -4,6 +4,7 @@ import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.aplicacion.ServicioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
+import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -30,9 +31,9 @@ public class ControladorPublicaciones {
 
     @PostMapping("/publicaciones")
     @ResponseStatus(HttpStatus.CREATED)
-    public Publicacion crear(@AuthenticationPrincipal UsuarioAutenticado anfitrion,
-                             @Valid @RequestBody ServicioPublicaciones.PublicacionComando comando) {
-        return servicio.crear(anfitrion.id(), comando);
+    public PublicacionVista crear(@AuthenticationPrincipal UsuarioAutenticado anfitrion,
+                                  @Valid @RequestBody ServicioPublicaciones.DatosPublicacionComando datos) {
+        return servicio.crear(anfitrion.id(), datos);
     }
 
     @PutMapping("/publicaciones/{id}")

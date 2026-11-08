@@ -58,7 +58,9 @@ public class RepositorioBusquedaSql implements RepositorioBusqueda {
                 WHERE p.estado = 'ACTIVA'""".formatted(CALIFICACION, SERVICIOS));
         Map<String, Object> parametros = new HashMap<>();
         if (filtros.ciudad() != null && !filtros.ciudad().isBlank()) {
-            filtrar(sql, parametros, "unaccent(lower(p.ciudad)) = unaccent(lower(:ciudad))", "ciudad", filtros.ciudad().trim());
+            // También busca en la ubicación, porque el formulario del frontend no pide la ciudad aparte (ajuste 7 del README).
+            filtrar(sql, parametros, "(unaccent(lower(p.ciudad)) = unaccent(lower(:ciudad))"
+                    + " OR unaccent(lower(p.ubicacion_textual)) LIKE '%' || unaccent(lower(:ciudad)) || '%')", "ciudad", filtros.ciudad().trim());
         }
         filtrar(sql, parametros, "p.capacidad >= :huespedes", "huespedes", filtros.huespedes());
         filtrar(sql, parametros, "t.codigo = :tipo", "tipo", vacioComoNulo(filtros.tipo()));
@@ -84,7 +86,7 @@ public class RepositorioBusquedaSql implements RepositorioBusqueda {
         return jdbc.sql("""
                 SELECT p.id, p.titulo, p.descripcion, p.ciudad, p.ubicacion_textual, t.codigo AS tipo, p.capacidad, p.precio_noche,
                        %s AS servicios,
-                       ARRAY(SELECT r.descripcion FROM regla_alojamiento r WHERE r.publicacion_id = p.id ORDER BY r.creado_en, r.descripcion) AS reglas,
+                       ARRAY(SELECT r.descripcion FROM regla_alojamiento r WHERE r.publicacion_id = p.id ORDER BY r.orden, r.creado_en) AS reglas,
                        ARRAY(SELECT i.ruta FROM imagen_publicacion i WHERE i.publicacion_id = p.id ORDER BY i.orden) AS imagenes,
                        coalesce(c.descripcion, c.nombre) AS politica,
                        %s AS calificacion
