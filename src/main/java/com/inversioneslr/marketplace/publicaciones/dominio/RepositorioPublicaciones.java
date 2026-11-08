@@ -27,6 +27,8 @@ public interface RepositorioPublicaciones {
 
     List<TipoAlojamiento> listarTipos();
 
+    List<TipoConfigurado> listarTiposActivos();
+
     TipoAlojamiento guardarTipo(TipoAlojamiento tipo);
 
     List<Servicio> listarServicios();

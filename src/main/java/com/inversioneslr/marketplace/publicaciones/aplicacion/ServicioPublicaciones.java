@@ -11,6 +11,7 @@ import com.inversioneslr.marketplace.publicaciones.dominio.PoliticaOfrecida;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.RepositorioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.Servicio;
+import com.inversioneslr.marketplace.publicaciones.dominio.TipoConfigurado;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -87,6 +88,10 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     public List<PeriodoDisponibilidad> consultarCalendario(UUID publicacionId) {
         throw new UnsupportedOperationException("CU-13");
+    }
+
+    public List<TipoConfigurado> listarTiposActivos() {
+        return publicaciones.listarTiposActivos();
     }
 
     public Catalogos consultarCatalogos() {

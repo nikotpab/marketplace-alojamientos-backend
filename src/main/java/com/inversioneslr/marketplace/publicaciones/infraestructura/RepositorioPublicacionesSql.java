@@ -10,6 +10,7 @@ import com.inversioneslr.marketplace.publicaciones.dominio.PoliticaOfrecida;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.RepositorioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.Servicio;
+import com.inversioneslr.marketplace.publicaciones.dominio.TipoConfigurado;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -175,6 +176,13 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     @Override
     public List<TipoAlojamiento> listarTipos() {
         throw new UnsupportedOperationException(PENDIENTE);
+    }
+
+    @Override
+    public List<TipoConfigurado> listarTiposActivos() {
+        return jdbc.sql("SELECT codigo, nombre FROM tipo_alojamiento WHERE activo ORDER BY nombre")
+                .query((fila, numero) -> new TipoConfigurado(fila.getString("codigo"), fila.getString("nombre")))
+                .list();
     }
 
     @Override
