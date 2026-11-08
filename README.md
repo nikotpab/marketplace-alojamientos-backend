@@ -31,6 +31,15 @@ SPRING_PROFILES_ACTIVE=demo mvn spring-boot:run
 
 El perfil `demo` carga 8 publicaciones de ejemplo. Para empezar con una base limpia: `docker compose down -v`.
 
+Para aprobar publicaciones hace falta un administrador. Ese rol no se elige al registrarse (CU-01): regístrate con cualquier rol y ejecuta
+
+```bash
+docker compose exec db psql -U marketplace_owner -d marketplace \
+  -c "UPDATE marketplace.usuario SET rol = 'ADMINISTRADOR' WHERE correo = 'tu-correo@ejemplo.com'"
+```
+
+Luego vuelve a iniciar sesión, porque el rol va en el token.
+
 El frontend llama a `/api/...` y el backend responde en `/api/v1/...`. En desarrollo, el proxy de Angular une los dos: reenvía `/api` a `http://localhost:8080` y lo reescribe como `/api/v1`.
 
 ## Estructura
