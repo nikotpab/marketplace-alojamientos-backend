@@ -115,6 +115,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 9. **Disponibilidad por defecto (temporal).** El frontend asume que todo está disponible salvo lo bloqueado, y el backend exige periodos disponibles. Una publicación nueva queda disponible dos años desde su creación, y el anfitrión bloquea o libera rangos de días, con ambos extremos incluidos. Al liberar, el rango se une con los periodos disponibles que toca, y así una estancia siempre cabe en un único periodo, como exigen la reserva y la búsqueda.
 10. **Errores por campo.** Los errores por campo van en `campos` y también en `errores`, el nombre que lee el frontend. La información mínima que falta para publicar responde 422.
 11. **Código de reserva.** El frontend muestra un código legible, como `LR-2026-0001`, que no está en el modelo de datos. Se agregó la columna `codigo`, que asigna la base de datos al guardar la reserva. Las peticiones y respuestas de reserva usan los nombres del frontend (`llegada`, `salida`, `huespedes`, `adicionales`).
+12. **Base de la cotización.** RF-17 no dice sobre qué monto se aplican los porcentajes. Como en el mockup, la tarifa de servicio y los descuentos se calculan sobre el subtotal (precio por noche × noches) y se redondean al peso. El descuento promocional y el de estancia larga se suman.
 
 ## Consultar los logs
 
@@ -173,7 +174,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Faltan reglas o datos**
 
-5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`.
+5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`. Mientras no se defina, la cotización la cobra en 0.
 6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase.
 7. **Código de recuperación (CU-03).** No hay tabla donde guardarlo. Por ahora vive en memoria 15 minutos y, como la recuperación es simulada, la API lo devuelve en la respuesta. **Cualquiera que conozca un correo puede cambiar esa contraseña: no debe llegar a producción así.**
 8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.

@@ -1,9 +1,9 @@
 package com.inversioneslr.marketplace.cotizacion.presentacion;
 
-import com.inversioneslr.marketplace.cotizacion.api.Cotizacion;
-import com.inversioneslr.marketplace.cotizacion.api.FachadaCotizacion;
+import com.inversioneslr.marketplace.cotizacion.aplicacion.ServicioCotizacion;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -16,21 +16,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/cotizaciones")
 public class ControladorCotizacion {
 
-    private final FachadaCotizacion cotizacion;
+    private final ServicioCotizacion cotizacion;
 
-    public ControladorCotizacion(FachadaCotizacion cotizacion) {
+    public ControladorCotizacion(ServicioCotizacion cotizacion) {
         this.cotizacion = cotizacion;
     }
 
     @PostMapping
-    public Cotizacion cotizar(@Valid @RequestBody SolicitudCotizacion solicitud) {
-        return cotizacion.cotizar(solicitud.publicacionId(), solicitud.fechaLlegada(), solicitud.fechaSalida(),
-                solicitud.serviciosAdicionales());
+    public ServicioCotizacion.Desglose cotizar(@Valid @RequestBody SolicitudCotizacion solicitud) {
+        return cotizacion.cotizarParaHuesped(solicitud.publicacionId(), solicitud.llegada(), solicitud.salida(),
+                solicitud.huespedes(), solicitud.adicionales());
     }
 
+    /** Con los nombres que envía el frontend. */
     public record SolicitudCotizacion(@NotNull UUID publicacionId,
-                                      @NotNull LocalDate fechaLlegada,
-                                      @NotNull LocalDate fechaSalida,
-                                      List<UUID> serviciosAdicionales) {
+                                      @NotNull LocalDate llegada,
+                                      @NotNull LocalDate salida,
+                                      @NotNull @Positive Integer huespedes,
+                                      List<UUID> adicionales) {
     }
 }
