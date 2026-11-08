@@ -154,8 +154,12 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return lista == null ? List.of() : lista;
     }
 
-    public Publicacion solicitarActivacion(UUID anfitrionId, UUID publicacionId) {
-        throw new UnsupportedOperationException("CU-08");
+    /** CU-08: pasa a PENDIENTE_REVISION para que la revise un administrador. */
+    @Transactional
+    public PublicacionVista solicitarActivacion(UsuarioAutenticado anfitrion, UUID publicacionId) {
+        publicaciones.guardar(propia(anfitrion, publicacionId).solicitarActivacion());
+        eventos.publicar(new EventoDominio("PublicacionEnviadaARevision", anfitrion.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        return vista(publicacionId);
     }
 
     public Publicacion revisar(UUID administradorId, UUID publicacionId, RevisionComando comando) {
