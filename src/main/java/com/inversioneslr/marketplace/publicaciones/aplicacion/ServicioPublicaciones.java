@@ -135,12 +135,17 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     /**
      * CU-07: solo el anfitrión propietario o un administrador. Conserva el estado: si editar una publicación
-     * activa debe devolverla a revisión sigue sin definirse (pendiente 12 del README).
+     * activa debe devolverla a revisión sigue sin definirse (pendiente 12 del README). Solo un borrador
+     * puede quedar incompleto.
      */
     @Transactional
     public PublicacionVista editar(UsuarioAutenticado usuario, UUID publicacionId, DatosPublicacionComando datos) {
         Publicacion actual = propia(usuario, publicacionId);
-        publicaciones.guardar(aPublicacion(actual.id(), actual.anfitrionId(), datos, actual.estado(), actual.motivoEstado()));
+        Publicacion editada = aPublicacion(actual.id(), actual.anfitrionId(), datos, actual.estado(), actual.motivoEstado());
+        if (editada.estado() != EstadoPublicacion.BORRADOR) {
+            editada.exigirInformacionMinima();
+        }
+        publicaciones.guardar(editada);
         eventos.publicar(new EventoDominio("PublicacionEditada", usuario.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
         return vista(publicacionId);
     }

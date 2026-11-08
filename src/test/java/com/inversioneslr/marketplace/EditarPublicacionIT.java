@@ -71,7 +71,20 @@ class EditarPublicacionIT extends PruebaIntegracion {
         editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, cuerpo(0, "-1"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.capacidad").value("La capacidad debe ser mayor que cero. Ingresa 1 o más."))
-                .andExpect(jsonPath("$.campos.precioNoche").exists());
+                .andExpect(jsonPath("$.campos.precioNoche").exists())
+                .andExpect(jsonPath("$.errores.capacidad").value("La capacidad debe ser mayor que cero. Ingresa 1 o más."));
+    }
+
+    @Test
+    void unaPublicacionQueNoEsBorradorNoPuedeQuedarIncompleta() throws Exception {
+        editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, cuerpo.replace("\"Título nuevo\"", "\"\"").replace("[\"a.jpg\"]", "[]"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.codigo").value("INFORMACION_INCOMPLETA"))
+                .andExpect(jsonPath("$.errores.titulo").value("Agrega un título para la publicación."))
+                .andExpect(jsonPath("$.errores.imagenes").value("Agrega al menos una referencia de imagen (URL)."))
+                .andExpect(jsonPath("$.errores.descripcion").doesNotExist());
+
+        assertThat(comoAplicacion.queryForObject("SELECT titulo FROM publicacion WHERE id = ?", String.class, publicacion)).isEqualTo("Casa de prueba");
     }
 
     @Test

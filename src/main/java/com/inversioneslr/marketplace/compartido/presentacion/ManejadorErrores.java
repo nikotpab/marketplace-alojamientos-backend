@@ -24,17 +24,18 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ManejadorErrores.class);
 
-    private static final Map<ExcepcionNegocio.Tipo, HttpStatus> ESTADOS = Map.of(
-            ExcepcionNegocio.Tipo.DATOS_INVALIDOS, HttpStatus.BAD_REQUEST,
-            ExcepcionNegocio.Tipo.CREDENCIALES_INVALIDAS, HttpStatus.UNAUTHORIZED,
-            ExcepcionNegocio.Tipo.CUENTA_BLOQUEADA, HttpStatus.LOCKED,
-            ExcepcionNegocio.Tipo.CUENTA_RESTRINGIDA, HttpStatus.FORBIDDEN,
-            ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, HttpStatus.FORBIDDEN,
-            ExcepcionNegocio.Tipo.ACCESO_DENEGADO, HttpStatus.FORBIDDEN,
-            ExcepcionNegocio.Tipo.NO_ENCONTRADO, HttpStatus.NOT_FOUND,
-            ExcepcionNegocio.Tipo.CONFLICTO, HttpStatus.CONFLICT,
-            ExcepcionNegocio.Tipo.PAGO_RECHAZADO, HttpStatus.PAYMENT_REQUIRED,
-            ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO, HttpStatus.SERVICE_UNAVAILABLE);
+    private static final Map<ExcepcionNegocio.Tipo, HttpStatus> ESTADOS = Map.ofEntries(
+            Map.entry(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, HttpStatus.BAD_REQUEST),
+            Map.entry(ExcepcionNegocio.Tipo.CREDENCIALES_INVALIDAS, HttpStatus.UNAUTHORIZED),
+            Map.entry(ExcepcionNegocio.Tipo.CUENTA_BLOQUEADA, HttpStatus.LOCKED),
+            Map.entry(ExcepcionNegocio.Tipo.CUENTA_RESTRINGIDA, HttpStatus.FORBIDDEN),
+            Map.entry(ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, HttpStatus.FORBIDDEN),
+            Map.entry(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, HttpStatus.FORBIDDEN),
+            Map.entry(ExcepcionNegocio.Tipo.NO_ENCONTRADO, HttpStatus.NOT_FOUND),
+            Map.entry(ExcepcionNegocio.Tipo.CONFLICTO, HttpStatus.CONFLICT),
+            Map.entry(ExcepcionNegocio.Tipo.PAGO_RECHAZADO, HttpStatus.PAYMENT_REQUIRED),
+            Map.entry(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO, HttpStatus.SERVICE_UNAVAILABLE),
+            Map.entry(ExcepcionNegocio.Tipo.INFORMACION_INCOMPLETA, HttpStatus.UNPROCESSABLE_CONTENT));
 
     private final ManejadorDenegaciones denegaciones;
 
@@ -55,9 +56,15 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
         ProblemDetail problema = ProblemDetail.forStatusAndDetail(ESTADOS.get(excepcion.tipo()), excepcion.getMessage());
         problema.setProperty("codigo", excepcion.tipo());
         if (!excepcion.campos().isEmpty()) {
-            problema.setProperty("campos", excepcion.campos());
+            agregarCampos(problema, excepcion.campos());
         }
         return problema;
+    }
+
+    /** El frontend lee los errores por campo en {@code errores}; se mantiene {@code campos} (ajuste 10 del README). */
+    private static void agregarCampos(ProblemDetail problema, Map<String, String> campos) {
+        problema.setProperty("campos", campos);
+        problema.setProperty("errores", campos);
     }
 
     /** Caso de uso aún sin implementar en el esqueleto. */
@@ -74,7 +81,7 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
         ProblemDetail problema = excepcion.getBody();
         problema.setDetail("Hay datos inválidos. Revisa los campos indicados.");
         problema.setProperty("codigo", ExcepcionNegocio.Tipo.DATOS_INVALIDOS);
-        problema.setProperty("campos", campos);
+        agregarCampos(problema, campos);
         return handleExceptionInternal(excepcion, problema, cabeceras, estado, solicitud);
     }
 }
