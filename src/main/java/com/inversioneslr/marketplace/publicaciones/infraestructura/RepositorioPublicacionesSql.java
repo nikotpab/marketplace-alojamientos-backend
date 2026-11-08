@@ -8,9 +8,13 @@ import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.PoliticaOfrecida;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
+import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
 import com.inversioneslr.marketplace.publicaciones.dominio.RepositorioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.Servicio;
 import com.inversioneslr.marketplace.publicaciones.dominio.TipoConfigurado;
+import java.sql.Array;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +28,21 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
 
     private static final String PENDIENTE = "SQL de publicaciones";
 
+    /** Consulta base de la vista para el frontend; se completa con el filtro y el orden. */
+    private static final String VISTA = """
+            SELECT p.id, p.estado, p.actualizado_en, p.motivo_estado, concat_ws(' ', u.nombre, u.apellido) AS anfitrion,
+                   p.titulo, p.descripcion, p.ubicacion_textual, t.codigo AS tipo, p.capacidad, p.precio_noche,
+                   ARRAY(SELECT s.nombre FROM publicacion_servicio ps JOIN servicio s ON s.id = ps.servicio_id
+                         WHERE ps.publicacion_id = p.id ORDER BY s.nombre) AS servicios,
+                   ARRAY(SELECT r.descripcion FROM regla_alojamiento r WHERE r.publicacion_id = p.id ORDER BY r.orden, r.creado_en) AS reglas,
+                   ARRAY(SELECT i.ruta FROM imagen_publicacion i WHERE i.publicacion_id = p.id ORDER BY i.orden) AS imagenes,
+                   c.nombre AS politica
+            FROM publicacion p
+            JOIN usuario u ON u.id = p.anfitrion_id
+            LEFT JOIN tipo_alojamiento t ON t.id = p.tipo_alojamiento_id
+            LEFT JOIN politica_cancelacion c ON c.id = p.politica_cancelacion_id
+            """;
+
     private final JdbcClient jdbc;
 
     public RepositorioPublicacionesSql(JdbcClient jdbc) {
@@ -34,7 +53,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     public Optional<Publicacion> buscarPorId(UUID id) {
         List<UUID> servicios = jdbc.sql("SELECT servicio_id FROM publicacion_servicio WHERE publicacion_id = :id")
                 .param("id", id).query(UUID.class).list();
-        List<String> reglas = jdbc.sql("SELECT descripcion FROM regla_alojamiento WHERE publicacion_id = :id ORDER BY creado_en, descripcion")
+        List<String> reglas = jdbc.sql("SELECT descripcion FROM regla_alojamiento WHERE publicacion_id = :id ORDER BY orden, creado_en")
                 .param("id", id).query(String.class).list();
         List<String> imagenes = jdbc.sql("SELECT ruta FROM imagen_publicacion WHERE publicacion_id = :id ORDER BY orden")
                 .param("id", id).query(String.class).list();
@@ -60,6 +79,14 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     }
 
     @Override
+    public Optional<PublicacionVista> buscarVista(UUID id) {
+        return jdbc.sql(VISTA + "WHERE p.id = :id")
+                .param("id", id)
+                .query(RepositorioPublicacionesSql::aVista)
+                .optional();
+    }
+
+    @Override
     public Optional<DatosPublicacion> buscarDatos(UUID id) {
         List<ServicioAdicional> adicionales = jdbc.sql("SELECT id, nombre, costo FROM servicio_adicional WHERE publicacion_id = :id")
                 .param("id", id)
@@ -68,7 +95,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
         return jdbc.sql("""
                 SELECT p.anfitrion_id, p.estado, p.precio_noche, p.capacidad, c.nombre AS politica
                 FROM publicacion p
-                JOIN politica_cancelacion c ON c.id = p.politica_cancelacion_id
+                LEFT JOIN politica_cancelacion c ON c.id = p.politica_cancelacion_id
                 WHERE p.id = :id""")
                 .param("id", id)
                 .query((fila, numero) -> new DatosPublicacion(
@@ -105,7 +132,8 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                         capacidad = EXCLUDED.capacidad,
                         precio_noche = EXCLUDED.precio_noche,
                         estado = EXCLUDED.estado,
-                        motivo_estado = EXCLUDED.motivo_estado""")
+                        motivo_estado = EXCLUDED.motivo_estado,
+                        actualizado_en = now()""")
                     .param("id", publicacion.id())
                     .param("anfitrion", publicacion.anfitrionId())
                     .param("tipo", publicacion.tipoAlojamientoId())
@@ -135,9 +163,10 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
         publicacion.servicios().forEach(servicio ->
                 jdbc.sql("INSERT INTO publicacion_servicio (publicacion_id, servicio_id) VALUES (:id, :servicio)")
                         .param("id", id).param("servicio", servicio).update());
-        publicacion.reglas().forEach(regla ->
-                jdbc.sql("INSERT INTO regla_alojamiento (publicacion_id, descripcion) VALUES (:id, :regla)")
-                        .param("id", id).param("regla", regla).update());
+        for (int orden = 0; orden < publicacion.reglas().size(); orden++) {
+            jdbc.sql("INSERT INTO regla_alojamiento (publicacion_id, descripcion, orden) VALUES (:id, :regla, :orden)")
+                    .param("id", id).param("regla", publicacion.reglas().get(orden)).param("orden", orden).update();
+        }
         for (int orden = 0; orden < publicacion.imagenes().size(); orden++) {
             jdbc.sql("INSERT INTO imagen_publicacion (publicacion_id, ruta, orden) VALUES (:id, :ruta, :orden)")
                     .param("id", id).param("ruta", publicacion.imagenes().get(orden)).param("orden", orden).update();
@@ -170,7 +199,14 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
 
     @Override
     public PeriodoDisponibilidad guardarPeriodo(PeriodoDisponibilidad periodo) {
-        throw new UnsupportedOperationException(PENDIENTE);
+        jdbc.sql("INSERT INTO periodo_disponibilidad (id, publicacion_id, fecha_inicio, fecha_fin, tipo) VALUES (:id, :publicacion, :inicio, :fin, :tipo)")
+                .param("id", periodo.id())
+                .param("publicacion", periodo.publicacionId())
+                .param("inicio", periodo.fechaInicio())
+                .param("fin", periodo.fechaFin())
+                .param("tipo", periodo.tipo().name())
+                .update();
+        return periodo;
     }
 
     @Override
@@ -186,17 +222,53 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     }
 
     @Override
+    public Optional<UUID> buscarTipoPorCodigo(String codigo) {
+        return jdbc.sql("SELECT id FROM tipo_alojamiento WHERE codigo = :codigo AND activo")
+                .param("codigo", codigo)
+                .query(UUID.class)
+                .optional();
+    }
+
+    @Override
     public TipoAlojamiento guardarTipo(TipoAlojamiento tipo) {
         throw new UnsupportedOperationException(PENDIENTE);
     }
 
     @Override
     public List<Servicio> listarServicios() {
-        throw new UnsupportedOperationException(PENDIENTE);
+        return jdbc.sql("SELECT id, nombre FROM servicio ORDER BY nombre")
+                .query((fila, numero) -> new Servicio(fila.getObject("id", UUID.class), fila.getString("nombre")))
+                .list();
     }
 
     @Override
     public List<PoliticaOfrecida> listarPoliticas() {
-        throw new UnsupportedOperationException(PENDIENTE);
+        return jdbc.sql("SELECT id, nombre FROM politica_cancelacion ORDER BY nombre")
+                .query((fila, numero) -> new PoliticaOfrecida(fila.getObject("id", UUID.class), fila.getString("nombre")))
+                .list();
+    }
+
+    private static PublicacionVista aVista(ResultSet fila, int numero) throws SQLException {
+        EstadoPublicacion estado = EstadoPublicacion.valueOf(fila.getString("estado"));
+        return new PublicacionVista(
+                fila.getObject("id", UUID.class),
+                estado,
+                fila.getTimestamp("actualizado_en").toInstant(),
+                estado == EstadoPublicacion.BORRADOR ? fila.getString("motivo_estado") : null,
+                fila.getString("anfitrion"),
+                fila.getString("titulo"),
+                fila.getString("descripcion"),
+                fila.getString("ubicacion_textual"),
+                fila.getString("tipo"),
+                fila.getObject("capacidad", Integer.class),
+                fila.getBigDecimal("precio_noche"),
+                textos(fila.getArray("servicios")),
+                textos(fila.getArray("reglas")),
+                textos(fila.getArray("imagenes")),
+                fila.getString("politica"));
+    }
+
+    private static List<String> textos(Array arreglo) throws SQLException {
+        return arreglo == null ? List.of() : List.of((String[]) arreglo.getArray());
     }
 }

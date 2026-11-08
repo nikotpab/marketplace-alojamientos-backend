@@ -100,6 +100,10 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 3. **`NOT NULL`.** El modelo de datos solo lo marca en claves y `creado_en`. Se agregó donde la integridad lo exige, por ejemplo en las fechas de `reserva`: con fechas nulas, la restricción anti-solape bloquearía todo el calendario.
 4. **Cruces entre módulos.** `Reserva.cancelar()` no devuelve una `Cancelacion`, porque está en otro módulo. `calcularDevolucion` recibe `(reserva, fecha)` como en SEC-04, no solo la reserva como en el diagrama de clases.
 5. **Nombres.** Se usan los del modelo de datos (`solicitud_procesada`, `evento_pendiente`) y `RepositorioBusqueda` del Patrón 1, no `RepositorioPublicaciones` de SEC-06.
+6. **Borradores incompletos.** CU-06 pide rechazar un borrador sin datos obligatorios, pero el frontend permite guardarlo incompleto y RF-08 valida la información mínima al solicitar la activación. Se sigue a RF-08: el tipo y la política son opcionales en un borrador.
+7. **Ciudad (temporal).** El formulario del frontend no pide ciudad. Se toma lo que va después de la última coma de la ubicación, y la búsqueda también busca la ciudad en la ubicación. Lo correcto es agregar el campo en el formulario.
+8. **Política de cancelación (temporal).** El frontend la envía como texto libre. Se asocia a la política cuyo nombre aparece en el texto y, si ninguna aparece, a la Flexible. Lo correcto es que el formulario ofrezca las políticas para elegir, porque la devolución se calcula según la política elegida.
+9. **Disponibilidad por defecto (temporal).** El frontend asume que todo está disponible salvo lo bloqueado, y el backend exige periodos disponibles. Una publicación nueva queda disponible dos años desde su creación, y el anfitrión bloquea o libera rangos.
 
 ## Consultar los logs
 

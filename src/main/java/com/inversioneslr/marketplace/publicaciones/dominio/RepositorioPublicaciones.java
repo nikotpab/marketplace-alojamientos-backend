@@ -11,6 +11,8 @@ public interface RepositorioPublicaciones {
 
     Optional<Publicacion> buscarPorId(UUID id);
 
+    Optional<PublicacionVista> buscarVista(UUID id);
+
     Optional<DatosPublicacion> buscarDatos(UUID id);
 
     /** @param anfitrionId null para no filtrar por anfitrión */
@@ -28,6 +30,9 @@ public interface RepositorioPublicaciones {
     List<TipoAlojamiento> listarTipos();
 
     List<TipoConfigurado> listarTiposActivos();
+
+    /** Solo entre los tipos activos. */
+    Optional<UUID> buscarTipoPorCodigo(String codigo);
 
     TipoAlojamiento guardarTipo(TipoAlojamiento tipo);
 
