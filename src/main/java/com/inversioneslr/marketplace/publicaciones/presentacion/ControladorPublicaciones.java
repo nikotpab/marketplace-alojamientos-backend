@@ -44,9 +44,9 @@ public class ControladorPublicaciones {
         return servicio.editar(usuario, id, datos);
     }
 
-    @PostMapping("/publicaciones/{id}/solicitud-activacion")
-    public Publicacion solicitarActivacion(@AuthenticationPrincipal UsuarioAutenticado anfitrion, @PathVariable UUID id) {
-        return servicio.solicitarActivacion(anfitrion.id(), id);
+    @PostMapping("/publicaciones/{id}/solicitar-activacion")
+    public PublicacionVista solicitarActivacion(@AuthenticationPrincipal UsuarioAutenticado anfitrion, @PathVariable UUID id) {
+        return servicio.solicitarActivacion(anfitrion, id);
     }
 
     @PostMapping("/publicaciones/{id}/revision")

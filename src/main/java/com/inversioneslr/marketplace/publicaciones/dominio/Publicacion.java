@@ -49,8 +49,13 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         }
     }
 
+    /** RF-08: solo un borrador completo pasa a revisión. Se borra el motivo del rechazo anterior. */
     public Publicacion solicitarActivacion() {
-        throw new UnsupportedOperationException("RF-08");
+        if (estado != EstadoPublicacion.BORRADOR) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo un borrador puede enviarse a revisión.");
+        }
+        exigirInformacionMinima();
+        return conEstado(EstadoPublicacion.PENDIENTE_REVISION, null);
     }
 
     public Publicacion aprobar() {
@@ -67,6 +72,11 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
 
     public Publicacion bloquear(String motivo) {
         throw new UnsupportedOperationException("RF-27");
+    }
+
+    private Publicacion conEstado(EstadoPublicacion nuevo, String motivo) {
+        return new Publicacion(id, anfitrionId, tipoAlojamientoId, politicaCancelacionId, titulo, descripcion, ciudad,
+                ubicacionTextual, capacidad, precioNoche, servicios, reglas, imagenes, nuevo, motivo);
     }
 
     private static boolean vacio(String texto) {
