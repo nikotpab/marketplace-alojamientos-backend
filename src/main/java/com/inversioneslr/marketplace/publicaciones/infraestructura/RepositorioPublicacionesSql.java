@@ -4,6 +4,7 @@ import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.DatosPublicacion;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.ServicioAdicional;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.TipoAlojamiento;
+import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.PoliticaOfrecida;
@@ -16,6 +17,7 @@ import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -181,8 +183,66 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     }
 
     @Override
-    public List<PeriodoDisponibilidad> calendario(UUID publicacionId) {
-        throw new UnsupportedOperationException(PENDIENTE);
+    public Disponibilidad disponibilidad(UUID publicacionId, LocalDate desde, LocalDate hasta) {
+        List<LocalDate> bloqueados = new ArrayList<>();
+        List<LocalDate> reservados = new ArrayList<>();
+        jdbc.sql("""
+                SELECT dia::date AS dia,
+                       EXISTS (SELECT 1 FROM reserva r WHERE r.publicacion_id = :id AND r.estado = 'CONFIRMADA'
+                                 AND dia >= r.fecha_llegada AND dia < r.fecha_salida) AS reservado
+                FROM generate_series(CAST(:desde AS date), CAST(:hasta AS date), interval '1 day') AS dia
+                WHERE NOT EXISTS (SELECT 1 FROM periodo_disponibilidad d WHERE d.publicacion_id = :id AND d.tipo = 'DISPONIBLE'
+                                    AND dia >= d.fecha_inicio AND dia < d.fecha_fin)
+                   OR EXISTS (SELECT 1 FROM periodo_disponibilidad d WHERE d.publicacion_id = :id AND d.tipo = 'BLOQUEADO'
+                                AND dia >= d.fecha_inicio AND dia < d.fecha_fin)
+                   OR EXISTS (SELECT 1 FROM reserva r WHERE r.publicacion_id = :id AND r.estado = 'CONFIRMADA'
+                                AND dia >= r.fecha_llegada AND dia < r.fecha_salida)
+                ORDER BY dia""")
+                .param("id", publicacionId)
+                .param("desde", desde)
+                .param("hasta", hasta)
+                .query(fila -> {
+                    (fila.getBoolean("reservado") ? reservados : bloqueados).add(fila.getObject("dia", LocalDate.class));
+                });
+        return new Disponibilidad(bloqueados, reservados);
+    }
+
+    @Override
+    public boolean hayReservasConfirmadas(UUID publicacionId, LocalDate inicio, LocalDate fin) {
+        return jdbc.sql("""
+                SELECT EXISTS (SELECT 1 FROM reserva WHERE publicacion_id = :id AND estado = 'CONFIRMADA'
+                                 AND daterange(fecha_llegada, fecha_salida, '[)') && daterange(CAST(:inicio AS date), CAST(:fin AS date), '[)'))""")
+                .param("id", publicacionId)
+                .param("inicio", inicio)
+                .param("fin", fin)
+                .query(Boolean.class)
+                .single();
+    }
+
+    @Override
+    public void liberar(UUID publicacionId, LocalDate inicio, LocalDate fin) {
+        // Conserva las partes de cada bloqueo que quedan antes y después del rango, y borra el resto.
+        jdbc.sql("""
+                INSERT INTO periodo_disponibilidad (publicacion_id, fecha_inicio, fecha_fin, tipo)
+                SELECT publicacion_id, fecha_inicio, :inicio, 'BLOQUEADO' FROM periodo_disponibilidad
+                WHERE publicacion_id = :id AND tipo = 'BLOQUEADO' AND fecha_inicio < :inicio AND fecha_fin > :inicio
+                UNION ALL
+                SELECT publicacion_id, :fin, fecha_fin, 'BLOQUEADO' FROM periodo_disponibilidad
+                WHERE publicacion_id = :id AND tipo = 'BLOQUEADO' AND fecha_inicio < :fin AND fecha_fin > :fin""")
+                .param("id", publicacionId).param("inicio", inicio).param("fin", fin).update();
+        jdbc.sql("""
+                DELETE FROM periodo_disponibilidad
+                WHERE publicacion_id = :id AND tipo = 'BLOQUEADO' AND fecha_inicio < :fin AND fecha_fin > :inicio""")
+                .param("id", publicacionId).param("inicio", inicio).param("fin", fin).update();
+        jdbc.sql("""
+                WITH unidos AS (
+                    DELETE FROM periodo_disponibilidad
+                    WHERE publicacion_id = :id AND tipo = 'DISPONIBLE' AND fecha_inicio <= :fin AND fecha_fin >= :inicio
+                    RETURNING fecha_inicio, fecha_fin)
+                INSERT INTO periodo_disponibilidad (publicacion_id, fecha_inicio, fecha_fin, tipo)
+                SELECT :id, LEAST(CAST(:inicio AS date), min(fecha_inicio)), GREATEST(CAST(:fin AS date), max(fecha_fin)), 'DISPONIBLE'
+                FROM unidos""")
+                .param("id", publicacionId).param("inicio", inicio).param("fin", fin).update();
     }
 
     @Override

@@ -44,7 +44,7 @@ public class ConfiguracionSeguridad {
                         // Sin sesión
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/alojamientos/**", "/api/v1/catalogos", "/api/v1/configuracion/tipos-alojamiento",
-                                "/api/v1/publicaciones/*/calendario").permitAll()
+                                "/api/v1/publicaciones/*/disponibilidad").permitAll()
 
                         // Administrador
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMINISTRADOR)
@@ -54,8 +54,8 @@ public class ConfiguracionSeguridad {
                         .requestMatchers(HttpMethod.POST, "/api/v1/publicaciones",
                                 "/api/v1/publicaciones/*/solicitar-activacion",
                                 "/api/v1/publicaciones/*/pausar",
-                                "/api/v1/publicaciones/*/reactivar",
-                                "/api/v1/publicaciones/*/periodos").hasRole(ANFITRION)
+                                "/api/v1/publicaciones/*/reactivar").hasRole(ANFITRION)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/publicaciones/*/disponibilidad").hasRole(ANFITRION)
                         .requestMatchers(HttpMethod.GET, "/api/v1/publicaciones/mias").hasRole(ANFITRION)
                         // Después de /mias, que también encaja en /publicaciones/*
                         .requestMatchers(HttpMethod.GET, "/api/v1/publicaciones/*").hasAnyRole(ANFITRION, ADMINISTRADOR)

@@ -3,10 +3,11 @@ package com.inversioneslr.marketplace.publicaciones.presentacion;
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.aplicacion.ServicioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
-import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
+import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -80,16 +81,17 @@ public class ControladorPublicaciones {
         return servicio.listarTodas(estado);
     }
 
-    @PostMapping("/publicaciones/{id}/periodos")
-    @ResponseStatus(HttpStatus.CREATED)
-    public PeriodoDisponibilidad definirPeriodo(@AuthenticationPrincipal UsuarioAutenticado anfitrion, @PathVariable UUID id,
-                                                @Valid @RequestBody ServicioPublicaciones.PeriodoComando comando) {
-        return servicio.definirPeriodo(anfitrion.id(), id, comando);
+    /** Sin sesión, {@code usuario} llega en null. */
+    @GetMapping("/publicaciones/{id}/disponibilidad")
+    public Disponibilidad disponibilidad(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable UUID id,
+                                         @RequestParam LocalDate desde, @RequestParam LocalDate hasta) {
+        return servicio.consultarDisponibilidad(usuario, id, desde, hasta);
     }
 
-    @GetMapping("/publicaciones/{id}/calendario")
-    public List<PeriodoDisponibilidad> consultarCalendario(@PathVariable UUID id) {
-        return servicio.consultarCalendario(id);
+    @PutMapping("/publicaciones/{id}/disponibilidad")
+    public Disponibilidad cambiarDisponibilidad(@AuthenticationPrincipal UsuarioAutenticado anfitrion, @PathVariable UUID id,
+                                                @Valid @RequestBody ServicioPublicaciones.CambioDisponibilidad cambio) {
+        return servicio.cambiarDisponibilidad(anfitrion, id, cambio);
     }
 
     @GetMapping("/catalogos")

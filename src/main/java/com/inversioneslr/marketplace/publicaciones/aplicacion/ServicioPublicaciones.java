@@ -6,6 +6,7 @@ import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.dominio.Rol;
 import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
+import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.PoliticaOfrecida;
@@ -22,6 +23,7 @@ import java.text.Normalizer;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -39,6 +41,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     /** La única política implementada. */
     private static final String POLITICA_POR_DEFECTO = "Flexible";
     private static final int LARGO_CIUDAD = 120;
+    private static final int MAXIMO_DIAS_RANGO = 366;
 
     private final RepositorioPublicaciones publicaciones;
     private final PublicadorEventos eventos;
@@ -206,13 +209,61 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return publicacion;
     }
 
-    /** CU-12: no se pueden alterar los periodos con una reserva confirmada (RF-13). */
-    public PeriodoDisponibilidad definirPeriodo(UUID anfitrionId, UUID publicacionId, PeriodoComando comando) {
-        throw new UnsupportedOperationException("CU-12");
+    /**
+     * CU-13: la de una publicación activa es pública; la de las demás solo la ven el propietario y un administrador.
+     *
+     * @param usuario null si no hay sesión
+     */
+    public Disponibilidad consultarDisponibilidad(UsuarioAutenticado usuario, UUID publicacionId, LocalDate desde, LocalDate hasta) {
+        Publicacion publicacion = publicaciones.buscarPorId(publicacionId).orElseThrow(ServicioPublicaciones::noExiste);
+        boolean puedeVerla = publicacion.estado() == EstadoPublicacion.ACTIVA
+                || usuario != null && (usuario.rol() == Rol.ADMINISTRADOR || publicacion.anfitrionId().equals(usuario.id()));
+        if (!puedeVerla) {
+            throw noExiste();
+        }
+        validarRango(desde, hasta);
+        return publicaciones.disponibilidad(publicacionId, desde, hasta);
     }
 
-    public List<PeriodoDisponibilidad> consultarCalendario(UUID publicacionId) {
-        throw new UnsupportedOperationException("CU-13");
+    /**
+     * CU-12: el rango es de días, con ambos extremos incluidos. No se cambian días con reservas confirmadas (RF-13).
+     * La respuesta cubre desde el mes anterior al del inicio hasta el mes siguiente al del fin, para que el
+     * calendario de dos meses del frontend se vuelva a pintar completo.
+     */
+    @Transactional
+    public Disponibilidad cambiarDisponibilidad(UsuarioAutenticado anfitrion, UUID publicacionId, CambioDisponibilidad cambio) {
+        propia(anfitrion, publicacionId);
+        validarRango(cambio.desde(), cambio.hasta());
+        if (cambio.desde().isBefore(LocalDate.now(reloj))) {
+            throw datoInvalido("desde", "No se pueden cambiar fechas pasadas. Elige desde hoy en adelante.");
+        }
+        LocalDate fin = cambio.hasta().plusDays(1);
+        if (publicaciones.hayReservasConfirmadas(publicacionId, cambio.desde(), fin)) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO,
+                    "El rango incluye días con reservas confirmadas. Elige un rango sin días reservados.");
+        }
+        if (cambio.estado() == PeriodoDisponibilidad.Tipo.BLOQUEADO) {
+            publicaciones.guardarPeriodo(new PeriodoDisponibilidad(UUID.randomUUID(), publicacionId, cambio.desde(), fin, PeriodoDisponibilidad.Tipo.BLOQUEADO));
+        } else {
+            publicaciones.liberar(publicacionId, cambio.desde(), fin);
+        }
+        eventos.publicar(new EventoDominio("DisponibilidadModificada", anfitrion.id(), "publicacion", publicacionId, "EXITO",
+                Map.of("desde", cambio.desde().toString(), "hasta", cambio.hasta().toString(), "estado", cambio.estado().name()), List.of()));
+        return publicaciones.disponibilidad(publicacionId, cambio.desde().withDayOfMonth(1).minusMonths(1),
+                cambio.hasta().plusMonths(2).withDayOfMonth(1).minusDays(1));
+    }
+
+    private static void validarRango(LocalDate desde, LocalDate hasta) {
+        if (hasta.isBefore(desde)) {
+            throw datoInvalido("hasta", "La fecha final debe ser igual o posterior a la inicial.");
+        }
+        if (ChronoUnit.DAYS.between(desde, hasta) >= MAXIMO_DIAS_RANGO) {
+            throw datoInvalido("hasta", "El rango no puede superar un año. Elige un rango más corto.");
+        }
+    }
+
+    private static ExcepcionNegocio noExiste() {
+        return new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La publicación no existe.");
     }
 
     public List<TipoConfigurado> listarTiposActivos() {
@@ -266,9 +317,10 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     public record RevisionComando(boolean aprobar, String motivo) {
     }
 
-    public record PeriodoComando(@NotNull LocalDate fechaInicio,
-                                 @NotNull LocalDate fechaFin,
-                                 @NotNull PeriodoDisponibilidad.Tipo tipo) {
+    /** El rango incluye ambos días. */
+    public record CambioDisponibilidad(@NotNull LocalDate desde,
+                                       @NotNull LocalDate hasta,
+                                       @NotNull PeriodoDisponibilidad.Tipo estado) {
     }
 
     public record Catalogos(List<TipoAlojamiento> tipos, List<Servicio> servicios, List<PoliticaOfrecida> politicas) {
