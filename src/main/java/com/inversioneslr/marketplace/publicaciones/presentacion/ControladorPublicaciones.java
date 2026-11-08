@@ -55,9 +55,14 @@ public class ControladorPublicaciones {
         return servicio.revisar(administrador.id(), id, comando);
     }
 
-    @PostMapping("/publicaciones/{id}/pausa")
-    public Publicacion pausar(@AuthenticationPrincipal UsuarioAutenticado anfitrion, @PathVariable UUID id) {
-        return servicio.pausar(anfitrion.id(), id);
+    @PostMapping("/publicaciones/{id}/pausar")
+    public PublicacionVista pausar(@AuthenticationPrincipal UsuarioAutenticado anfitrion, @PathVariable UUID id) {
+        return servicio.pausar(anfitrion, id);
+    }
+
+    @PostMapping("/publicaciones/{id}/reactivar")
+    public PublicacionVista reactivar(@AuthenticationPrincipal UsuarioAutenticado anfitrion, @PathVariable UUID id) {
+        return servicio.reactivar(anfitrion, id);
     }
 
     @GetMapping("/publicaciones/mias")

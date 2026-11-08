@@ -166,8 +166,19 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         throw new UnsupportedOperationException("CU-09");
     }
 
-    public Publicacion pausar(UUID anfitrionId, UUID publicacionId) {
-        throw new UnsupportedOperationException("CU-10");
+    /** CU-10. */
+    @Transactional
+    public PublicacionVista pausar(UsuarioAutenticado anfitrion, UUID publicacionId) {
+        publicaciones.guardar(propia(anfitrion, publicacionId).pausar());
+        eventos.publicar(new EventoDominio("PublicacionPausada", anfitrion.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        return vista(publicacionId);
+    }
+
+    @Transactional
+    public PublicacionVista reactivar(UsuarioAutenticado anfitrion, UUID publicacionId) {
+        publicaciones.guardar(propia(anfitrion, publicacionId).reactivar());
+        eventos.publicar(new EventoDominio("PublicacionReactivada", anfitrion.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        return vista(publicacionId);
     }
 
     /** CU-11: el anfitrión ve las suyas en cualquier estado. El huésped ve las activas en la búsqueda. */
