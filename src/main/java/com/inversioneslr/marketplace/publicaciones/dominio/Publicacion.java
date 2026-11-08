@@ -58,12 +58,27 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.PENDIENTE_REVISION, null);
     }
 
+    /** RF-09: solo una publicación pendiente de revisión pasa a ACTIVA. */
     public Publicacion aprobar() {
-        throw new UnsupportedOperationException("RF-09");
+        exigirPendienteDeRevision();
+        return conEstado(EstadoPublicacion.ACTIVA, null);
     }
 
+    /** RF-09: vuelve a BORRADOR con el motivo, que es obligatorio, para que el anfitrión sepa qué corregir. */
     public Publicacion rechazar(String motivo) {
-        throw new UnsupportedOperationException("RF-09");
+        exigirPendienteDeRevision();
+        if (vacio(motivo)) {
+            String mensaje = "Indica el motivo del rechazo para que el anfitrión sepa qué corregir.";
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of("motivo", mensaje));
+        }
+        return conEstado(EstadoPublicacion.BORRADOR, motivo.trim());
+    }
+
+    private void exigirPendienteDeRevision() {
+        if (estado != EstadoPublicacion.PENDIENTE_REVISION) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO,
+                    "La publicación ya no está pendiente de revisión: su estado es " + estado + ".");
+        }
     }
 
     /** RF-10: deja de aparecer en la búsqueda y de recibir reservas. */

@@ -48,7 +48,6 @@ public class ConfiguracionSeguridad {
 
                         // Administrador
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMINISTRADOR)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/publicaciones/*/revision").hasRole(ADMINISTRADOR)
 
                         // Anfitrión
                         .requestMatchers(HttpMethod.POST, "/api/v1/publicaciones",

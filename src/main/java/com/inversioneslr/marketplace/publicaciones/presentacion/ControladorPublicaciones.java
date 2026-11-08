@@ -4,7 +4,6 @@ import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.aplicacion.ServicioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
-import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -50,10 +49,15 @@ public class ControladorPublicaciones {
         return servicio.solicitarActivacion(anfitrion, id);
     }
 
-    @PostMapping("/publicaciones/{id}/revision")
-    public Publicacion revisar(@AuthenticationPrincipal UsuarioAutenticado administrador, @PathVariable UUID id,
-                               @Valid @RequestBody ServicioPublicaciones.RevisionComando comando) {
-        return servicio.revisar(administrador.id(), id, comando);
+    @PostMapping("/admin/publicaciones/{id}/aprobar")
+    public PublicacionVista aprobar(@AuthenticationPrincipal UsuarioAutenticado administrador, @PathVariable UUID id) {
+        return servicio.aprobar(administrador.id(), id);
+    }
+
+    @PostMapping("/admin/publicaciones/{id}/rechazar")
+    public PublicacionVista rechazar(@AuthenticationPrincipal UsuarioAutenticado administrador, @PathVariable UUID id,
+                                     @Valid @RequestBody ServicioPublicaciones.RechazoComando rechazo) {
+        return servicio.rechazar(administrador.id(), id, rechazo.motivo());
     }
 
     @PostMapping("/publicaciones/{id}/pausar")

@@ -165,8 +165,26 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return vista(publicacionId);
     }
 
-    public Publicacion revisar(UUID administradorId, UUID publicacionId, RevisionComando comando) {
-        throw new UnsupportedOperationException("CU-09");
+    /** CU-09: pasa a ACTIVA y se avisa al anfitrión. */
+    @Transactional
+    public PublicacionVista aprobar(UUID administradorId, UUID publicacionId) {
+        Publicacion aprobada = publicaciones.guardar(existente(publicacionId).aprobar());
+        eventos.publicar(new EventoDominio("PublicacionAprobada", administradorId, "publicacion", publicacionId, "EXITO",
+                Map.of(), List.of(aprobada.anfitrionId())));
+        return vista(publicacionId);
+    }
+
+    /** CU-09: vuelve a BORRADOR con el motivo y se avisa al anfitrión. */
+    @Transactional
+    public PublicacionVista rechazar(UUID administradorId, UUID publicacionId, String motivo) {
+        Publicacion rechazada = publicaciones.guardar(existente(publicacionId).rechazar(motivo));
+        eventos.publicar(new EventoDominio("PublicacionRechazada", administradorId, "publicacion", publicacionId, "EXITO",
+                Map.of("motivo", rechazada.motivoEstado()), List.of(rechazada.anfitrionId())));
+        return vista(publicacionId);
+    }
+
+    private Publicacion existente(UUID publicacionId) {
+        return publicaciones.buscarPorId(publicacionId).orElseThrow(ServicioPublicaciones::noExiste);
     }
 
     /** CU-10. */
@@ -314,7 +332,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
             String politicaCancelacion) {
     }
 
-    public record RevisionComando(boolean aprobar, String motivo) {
+    public record RechazoComando(@Size(max = 1000) String motivo) {
     }
 
     /** El rango incluye ambos días. */
