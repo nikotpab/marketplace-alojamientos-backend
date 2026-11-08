@@ -66,8 +66,23 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         throw new UnsupportedOperationException("RF-09");
     }
 
+    /** RF-10: deja de aparecer en la búsqueda y de recibir reservas. */
     public Publicacion pausar() {
-        throw new UnsupportedOperationException("RF-10");
+        if (estado != EstadoPublicacion.ACTIVA) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo una publicación activa puede pausarse.");
+        }
+        return conEstado(EstadoPublicacion.PAUSADA, null);
+    }
+
+    /** Decisión temporal: vuelve a ACTIVA sin pasar por revisión (pendiente 10 del README). */
+    public Publicacion reactivar() {
+        if (estado == EstadoPublicacion.BLOQUEADA) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Una publicación bloqueada solo la puede desbloquear un administrador.");
+        }
+        if (estado != EstadoPublicacion.PAUSADA) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo una publicación pausada puede reactivarse.");
+        }
+        return conEstado(EstadoPublicacion.ACTIVA, null);
     }
 
     public Publicacion bloquear(String motivo) {
