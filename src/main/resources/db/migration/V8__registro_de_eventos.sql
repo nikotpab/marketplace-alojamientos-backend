@@ -15,3 +15,6 @@ CREATE TABLE event_publication (
 );
 CREATE INDEX event_publication_serialized_event_hash_idx ON event_publication USING hash (serialized_event);
 CREATE INDEX event_publication_by_completion_date_idx ON event_publication (completion_date);
+
+-- Reemplaza al outbox propio. Los eventos que queden en él sin entregar no se migran.
+DROP TABLE evento_pendiente;

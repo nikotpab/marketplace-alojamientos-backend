@@ -1,34 +1,24 @@
 package com.inversioneslr.marketplace.notificaciones.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
-import com.inversioneslr.marketplace.compartido.SuscriptorAsincrono;
 import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
 import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificaciones;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** Registra una notificación por destinatario de cada evento (RF-24) y las consulta. */
+/** Guarda y consulta las notificaciones (RF-24). */
 @Repository
-public class AdaptadorNotificaciones implements SuscriptorAsincrono, RepositorioNotificaciones {
+public class AdaptadorNotificaciones implements RepositorioNotificaciones {
 
     private final JdbcClient jdbc;
-    private final Clock reloj;
 
-    public AdaptadorNotificaciones(JdbcClient jdbc, Clock reloj) {
+    public AdaptadorNotificaciones(JdbcClient jdbc) {
         this.jdbc = jdbc;
-        this.reloj = reloj;
-    }
-
-    @Override
-    public void atender(EventoDominio evento) {
-        evento.destinatarios().forEach(usuarioId -> guardar(Notificacion.nueva(evento.id(), usuarioId, evento.tipo(), reloj.instant())));
     }
 
     @Override

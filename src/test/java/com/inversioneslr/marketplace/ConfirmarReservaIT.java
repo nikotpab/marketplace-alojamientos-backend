@@ -78,7 +78,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
         assertThat(contar("SELECT count(*) FROM reserva WHERE id = ? AND estado = 'CONFIRMADA'", id)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM pago WHERE reserva_id = ? AND estado = 'APROBADO'", id)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'ReservaConfirmada'", id)).isEqualTo(1);
-        assertThat(contar("SELECT count(*) FROM evento_pendiente WHERE payload->>'entidadId' = ?", id.toString())).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM event_publication WHERE serialized_event::jsonb ->> 'entidadId' = ?", id.toString())).isEqualTo(1);
         verify(pasarela).cobrar(TOTAL, clave);
     }
 

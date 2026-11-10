@@ -17,24 +17,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.transaction.PlatformTransactionManager;
-import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(OutputCaptureExtension.class)
 class LatidoIT extends PruebaIntegracion {
 
     @Autowired
     ComprobacionBaseDatos baseDeDatos;
-
-    @Autowired
-    JdbcClient jdbc;
-
-    @Autowired
-    JsonMapper json;
-
-    @Autowired
-    PlatformTransactionManager transacciones;
 
     @Test
     void conLaBaseDeDatosDisponibleElLatidoEsCorrecto(CapturedOutput salida) {
@@ -74,13 +62,13 @@ class LatidoIT extends PruebaIntegracion {
         Instant inicio = Instant.parse("2030-01-01T00:00:00Z");
         Clock reloj = mock(Clock.class);
         when(reloj.instant()).thenReturn(inicio);
-        ProcesadorEventos procesador = new ProcesadorEventos(List.of(), jdbc, json, transacciones, reloj);
+        ProcesadorEventos procesador = new ProcesadorEventos(opciones -> { }, reloj);
         assertThat(procesador.disponible()).isTrue();
 
         when(reloj.instant()).thenReturn(inicio.plus(Duration.ofMinutes(2)));
         assertThat(procesador.disponible()).isFalse();
 
-        procesador.procesarPendientes();
+        procesador.reintentarFallidos();
         assertThat(procesador.disponible()).isTrue();
     }
 

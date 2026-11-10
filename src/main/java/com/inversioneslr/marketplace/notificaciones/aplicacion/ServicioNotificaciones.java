@@ -1,19 +1,34 @@
 package com.inversioneslr.marketplace.notificaciones.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
 import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificaciones;
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ServicioNotificaciones {
 
     private final RepositorioNotificaciones notificaciones;
+    private final Clock reloj;
 
-    public ServicioNotificaciones(RepositorioNotificaciones notificaciones) {
+    public ServicioNotificaciones(RepositorioNotificaciones notificaciones, Clock reloj) {
         this.notificaciones = notificaciones;
+        this.reloj = reloj;
+    }
+
+    /**
+     * RF-24 · ADR-06: una notificación por destinatario. Se atiende después de confirmar el caso de uso, en otro hilo
+     * y en su propia transacción. Si falla, ProcesadorEventos la reintenta.
+     */
+    @ApplicationModuleListener
+    public void atender(EventoDominio evento) {
+        evento.destinatarios().forEach(usuarioId ->
+                notificaciones.guardar(Notificacion.nueva(evento.id(), usuarioId, evento.tipo(), reloj.instant())));
     }
 
     /** CU-21: cada usuario ve solo las suyas. */

@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -10,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
-import com.inversioneslr.marketplace.compartido.SuscriptorAsincrono;
 import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
 import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
 import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificaciones;
@@ -21,9 +21,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.transaction.PlatformTransactionManager;
-import tools.jackson.databind.json.JsonMapper;
 
 class NotificacionesIT extends PruebaIntegracion {
 
@@ -37,69 +34,58 @@ class NotificacionesIT extends PruebaIntegracion {
     RepositorioNotificaciones notificaciones;
 
     @Autowired
-    JdbcClient jdbc;
-
-    @Autowired
-    JsonMapper json;
-
-    @Autowired
-    PlatformTransactionManager transacciones;
-
-    @Autowired
     Clock reloj;
 
     @Test
-    void publicarGuardaAuditoriaYEventoPendiente() {
+    void publicarGuardaLaAuditoriaYRegistraElEvento() {
         UUID usuario = crearUsuario(Rol.HUESPED);
         UUID entidad = UUID.randomUUID();
 
         eventos.publicar(evento("ReservaConfirmada", usuario, entidad, List.of(usuario)));
 
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ?", entidad)).isEqualTo(1);
-        assertThat(contar("SELECT count(*) FROM evento_pendiente WHERE payload->>'entidadId' = ?", entidad.toString())).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM event_publication WHERE serialized_event::jsonb ->> 'entidadId' = ?",
+                entidad.toString())).isEqualTo(1);
     }
 
     @Test
-    void siLaAuditoriaFallaNoQuedaEventoPendiente() {
+    void siLaAuditoriaFallaNoQuedaElEvento() {
         UUID actorInexistente = UUID.randomUUID();
         UUID entidad = UUID.randomUUID();
 
         assertThatThrownBy(() -> eventos.publicar(evento("ReservaConfirmada", actorInexistente, entidad, List.of())))
                 .isInstanceOf(DataAccessException.class);
 
-        assertThat(contar("SELECT count(*) FROM evento_pendiente WHERE payload->>'entidadId' = ?", entidad.toString())).isZero();
+        assertThat(contar("SELECT count(*) FROM event_publication WHERE serialized_event::jsonb ->> 'entidadId' = ?",
+                entidad.toString())).isZero();
     }
 
     @Test
-    void elProcesadorReintentaUnEventoFallidoHastaElLimite() {
+    void unaEntregaFallidaSeReintentaHastaElLimite() {
         UUID usuario = crearUsuario(Rol.HUESPED);
         UUID entidad = UUID.randomUUID();
-        eventos.publicar(evento("ReservaConfirmada", usuario, entidad, List.of(usuario)));
-        SuscriptorAsincrono fallido = evento -> {
-            throw new IllegalStateException("Componente caído");
-        };
-        ProcesadorEventos procesador = new ProcesadorEventos(List.of(fallido), jdbc, json, transacciones, reloj);
+        UUID destinatarioInexistente = UUID.randomUUID();
 
-        procesador.procesarPendientes();
+        eventos.publicar(evento("ReservaConfirmada", usuario, entidad, List.of(destinatarioInexistente)));
+        esperarEstado(entidad, "FAILED:1");
 
-        String consulta = "SELECT estado || ':' || intentos FROM evento_pendiente WHERE payload->>'entidadId' = ?";
-        assertThat(comoAplicacion.queryForObject(consulta, String.class, entidad.toString())).isEqualTo("PENDIENTE:1");
-
-        for (int ciclo = 0; ciclo < 4; ciclo++) {
-            procesador.procesarPendientes();
+        for (int intento = 2; intento <= 5; intento++) {
+            procesador.reintentarFallidos();
+            esperarEstado(entidad, "FAILED:" + intento);
         }
+        procesador.reintentarFallidos();
 
-        assertThat(comoAplicacion.queryForObject(consulta, String.class, entidad.toString())).isEqualTo("FALLIDO:5");
+        assertThat(estado(entidad)).isEqualTo("FAILED:5");
     }
 
     @Test
-    void entregarUnEventoCreaUnaNotificacionPorDestinatarioSinDuplicar() {
+    void entregarUnEventoCreaUnaNotificacionPorDestinatario() {
         UUID huesped = crearUsuario(Rol.HUESPED);
         UUID anfitrion = crearUsuario(Rol.ANFITRION);
-        eventos.publicar(evento("ReservaConfirmada", huesped, UUID.randomUUID(), List.of(huesped, anfitrion)));
+        UUID entidad = UUID.randomUUID();
 
-        procesador.procesarPendientes();
-        procesador.procesarPendientes();
+        eventos.publicar(evento("ReservaConfirmada", huesped, entidad, List.of(huesped, anfitrion)));
+        esperarEventosDe(entidad);
 
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", huesped)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", anfitrion)).isEqualTo(1);
@@ -123,9 +109,12 @@ class NotificacionesIT extends PruebaIntegracion {
     void elUsuarioConsultaYMarcaSusNotificaciones() throws Exception {
         UUID usuario = crearUsuario(Rol.HUESPED);
         String sesion = sesionDe(usuario, Rol.HUESPED);
-        eventos.publicar(evento("ReservaConfirmada", usuario, UUID.randomUUID(), List.of(usuario)));
-        eventos.publicar(evento("ReservaCancelada", usuario, UUID.randomUUID(), List.of(usuario)));
-        procesador.procesarPendientes();
+        UUID confirmada = UUID.randomUUID();
+        UUID cancelada = UUID.randomUUID();
+        eventos.publicar(evento("ReservaConfirmada", usuario, confirmada, List.of(usuario)));
+        eventos.publicar(evento("ReservaCancelada", usuario, cancelada, List.of(usuario)));
+        esperarEventosDe(confirmada);
+        esperarEventosDe(cancelada);
 
         mvc.perform(get("/api/v1/notificaciones").header("Authorization", sesion))
                 .andExpect(status().isOk())
@@ -146,8 +135,9 @@ class NotificacionesIT extends PruebaIntegracion {
     void marcarLaNotificacionDeOtroUsuarioSeDeniegaYSeAudita() throws Exception {
         UUID duena = crearUsuario(Rol.HUESPED);
         UUID intruso = crearUsuario(Rol.HUESPED);
-        eventos.publicar(evento("ReservaConfirmada", duena, UUID.randomUUID(), List.of(duena)));
-        procesador.procesarPendientes();
+        UUID entidad = UUID.randomUUID();
+        eventos.publicar(evento("ReservaConfirmada", duena, entidad, List.of(duena)));
+        esperarEventosDe(entidad);
         UUID notificacion = comoAplicacion.queryForObject("SELECT id FROM notificacion WHERE usuario_id = ?", UUID.class, duena);
 
         mvc.perform(post("/api/v1/notificaciones/{id}/lectura", notificacion).header("Authorization", sesionDe(intruso, Rol.HUESPED)))
@@ -158,6 +148,17 @@ class NotificacionesIT extends PruebaIntegracion {
 
     private static EventoDominio evento(String tipo, UUID actor, UUID entidad, List<UUID> destinatarios) {
         return new EventoDominio(tipo, actor, "reserva", entidad, "EXITO", Map.of(), destinatarios);
+    }
+
+    /** Estado e intentos de la entrega a las notificaciones, por ejemplo "FAILED:2". */
+    private String estado(UUID entidad) {
+        return comoAplicacion.queryForObject("""
+                SELECT status || ':' || completion_attempts FROM event_publication
+                WHERE serialized_event::jsonb ->> 'entidadId' = ?""", String.class, entidad.toString());
+    }
+
+    private void esperarEstado(UUID entidad, String esperado) {
+        await().until(() -> esperado.equals(estado(entidad)));
     }
 
     private long contar(String sql, Object valor) {
