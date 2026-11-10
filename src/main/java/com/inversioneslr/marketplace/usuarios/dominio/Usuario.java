@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.usuarios.dominio;
 
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.Rol;
 import java.time.Duration;
 import java.time.Instant;
@@ -51,7 +52,15 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
                 motivoRestriccion, intentosFallidos, bloqueadoHasta);
     }
 
+    /** RF-28: un usuario restringido no puede iniciar sesión. Un administrador no se restringe. */
     public Usuario restringir(String motivo) {
-        throw new UnsupportedOperationException("RF-28");
+        if (rol == Rol.ADMINISTRADOR) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "No se puede restringir a un administrador.");
+        }
+        if (restringido) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "El usuario ya está restringido.");
+        }
+        return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, cuentaActiva, true, motivo.trim(),
+                intentosFallidos, bloqueadoHasta);
     }
 }

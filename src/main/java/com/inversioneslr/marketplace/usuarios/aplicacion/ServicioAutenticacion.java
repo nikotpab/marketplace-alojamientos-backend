@@ -172,14 +172,19 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         return perfil(usuario);
     }
 
+    /** CU-25: del más reciente al más antiguo. */
     @Override
     public List<UsuarioResumen> listar() {
-        throw new UnsupportedOperationException("CU-25");
+        return usuarios.listar().stream().map(ServicioAutenticacion::resumen).toList();
     }
 
+    /** CU-25: queda en la auditoría con el motivo. */
     @Override
+    @Transactional
     public void restringir(UUID administradorId, UUID usuarioId, String motivo) {
-        throw new UnsupportedOperationException("CU-25");
+        Usuario restringido = usuarios.guardar(buscar(usuarioId).restringir(motivo));
+        eventos.publicar(new EventoDominio("UsuarioRestringido", administradorId, "usuario", usuarioId, "EXITO",
+                Map.of("motivo", restringido.motivoRestriccion()), List.of()));
     }
 
     @Override
