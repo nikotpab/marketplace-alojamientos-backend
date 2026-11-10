@@ -251,9 +251,12 @@ public class ServicioReservas implements FachadaReservas {
         reservas.actualizarEstado(reservaId, buscar(reservaId).cancelar().estado());
     }
 
+    /** CU-24: las que aún no empiezan se conservan para auditoría y pasan a revisión manual. Se avisa a cada huésped. */
     @Override
     public void marcarFuturasEnRevision(UUID publicacionId) {
-        throw new UnsupportedOperationException("CU-24");
+        reservas.marcarFuturasEnRevision(publicacionId, LocalDate.now(reloj)).forEach(reserva ->
+                eventos.publicar(new EventoDominio("ReservaEnRevision", null, "reserva", reserva.id(), "EXITO",
+                        Map.of("publicacionId", publicacionId), List.of(reserva.huespedId()))));
     }
 
     /** Con los nombres que envía el frontend. */

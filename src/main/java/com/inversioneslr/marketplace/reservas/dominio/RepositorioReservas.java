@@ -44,5 +44,10 @@ public interface RepositorioReservas {
     /** Las confirmadas cuya fecha de salida es anterior a ese día. */
     List<Reserva> listarConfirmadasConSalidaAntesDe(LocalDate dia);
 
-    void marcarFuturasEnRevision(UUID publicacionId);
+    /**
+     * Pasa a EN_REVISION las confirmadas de la publicación que llegan ese día o después.
+     *
+     * @return las reservas que cambiaron
+     */
+    List<Reserva> marcarFuturasEnRevision(UUID publicacionId, LocalDate desde);
 }

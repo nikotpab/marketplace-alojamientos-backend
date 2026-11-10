@@ -303,9 +303,13 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return publicaciones.periodoDisponible(publicacionId, llegada, salida);
     }
 
+    /** CU-24: deja de aparecer en la búsqueda, que solo muestra las activas, y se avisa al anfitrión. */
     @Override
+    @Transactional
     public void bloquear(UUID administradorId, UUID publicacionId, String motivo) {
-        throw new UnsupportedOperationException("CU-24");
+        Publicacion bloqueada = publicaciones.guardar(existente(publicacionId).bloquear(motivo));
+        eventos.publicar(new EventoDominio("PublicacionBloqueada", administradorId, "publicacion", publicacionId, "EXITO",
+                Map.of("motivo", bloqueada.motivoEstado()), List.of(bloqueada.anfitrionId())));
     }
 
     @Override

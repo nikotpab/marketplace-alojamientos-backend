@@ -322,6 +322,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                 estado,
                 fila.getTimestamp("actualizado_en").toInstant(),
                 estado == EstadoPublicacion.BORRADOR ? fila.getString("motivo_estado") : null,
+                estado == EstadoPublicacion.BLOQUEADA ? fila.getString("motivo_estado") : null,
                 fila.getString("anfitrion"),
                 fila.getString("titulo"),
                 fila.getString("descripcion"),
