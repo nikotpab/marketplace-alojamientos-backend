@@ -28,7 +28,12 @@ public class ConfiguracionSeguridad {
     private static final String ANFITRION = Rol.ANFITRION.name();
     private static final String ADMINISTRADOR = Rol.ADMINISTRADOR.name();
 
+    /**
+     * CSRF desactivado a propósito: la API no usa cookies ni sesión y el token viaja en el encabezado Authorization,
+     * que el navegador no envía solo desde otro sitio.
+     */
     @Bean
+    @SuppressWarnings("java:S4502")
     SecurityFilterChain cadenaDeFiltros(HttpSecurity http, Tokens tokens, ManejadorDenegaciones denegaciones) {
         return http
                 .csrf(AbstractHttpConfigurer::disable)

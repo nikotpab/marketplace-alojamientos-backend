@@ -139,6 +139,10 @@ Todas, salvo la de carga, corren en cada PR con `mvn verify` contra PostgreSQL r
 
 En cada PR, el CI sube el reporte como el artefacto `cobertura-jacoco`.
 
+## Análisis estático (SonarQube Cloud)
+
+El CI analiza cada PR y `main` en [SonarQube Cloud](https://sonarcloud.io/project/overview?id=nikotpab_marketplace-alojamientos-backend), con la cobertura de JaCoCo. Los resultados aparecen también en el PR. Necesita el secreto `SONAR_TOKEN` en GitHub y el análisis automático apagado en SonarQube Cloud (Administration > Analysis Method). Las migraciones de Flyway no se analizan, porque no se pueden modificar una vez aplicadas.
+
 ## Pruebas de carga (ASR-01)
 
 `pruebas/carga/ejecutar.sh` corre todos los escenarios a la vez con JMeter durante 2 minutos, contra el backend con el perfil `demo`. Crea un huésped y un administrador, ejecuta `plan.jmx`, imprime p95 y p99 por escenario y, al terminar, borra las reservas que hizo. El reporte HTML de JMeter queda en `pruebas/carga/resultados/`.

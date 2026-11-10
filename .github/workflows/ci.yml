@@ -12,14 +12,22 @@ jobs:
   # Incluye las pruebas de arquitectura (EC-28).
   construir-y-probar:
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # SonarQube Cloud necesita el historial para saber qué código es nuevo.
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
       - run: mvn -B verify
+      # SCRUM-104: análisis en SonarQube Cloud con la cobertura de JaCoCo. Sin el secreto (PR de Dependabot), se omite.
+      - if: env.SONAR_TOKEN != ''
+        run: mvn -B sonar:sonar
       # SCRUM-100: reporte de cobertura de JaCoCo, descargable desde la ejecución del CI.
       - uses: actions/upload-artifact@v4
         with:
