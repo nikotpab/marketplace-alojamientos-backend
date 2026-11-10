@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace.administracion.presentacion;
 
 import com.inversioneslr.marketplace.administracion.aplicacion.ServicioAdministracion;
 import com.inversioneslr.marketplace.administracion.aplicacion.ServicioReportes;
+import com.inversioneslr.marketplace.administracion.dominio.FiltrosReporte;
 import com.inversioneslr.marketplace.administracion.dominio.FormatoReporte;
 import com.inversioneslr.marketplace.administracion.dominio.Indicadores;
 import com.inversioneslr.marketplace.administracion.dominio.TipoReporte;
@@ -18,6 +19,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -108,12 +110,19 @@ public class ControladorAdministracion {
         return reportes.consultarDashboard(desde, hasta);
     }
 
+    /** Filtros opcionales: periodo (desde y hasta, incluidos) y ciudad. */
     @GetMapping("/reportes")
     public CompletableFuture<ResponseEntity<byte[]>> exportarReporte(@AuthenticationPrincipal UsuarioAutenticado administrador,
                                                                      @RequestParam TipoReporte tipo,
-                                                                     @RequestParam FormatoReporte formato) {
-        return reportes.exportar(administrador.id(), tipo, formato).thenApply(contenido -> ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"reporte." + formato.extension() + "\"")
-                .body(contenido));
+                                                                     @RequestParam FormatoReporte formato,
+                                                                     @RequestParam(required = false) LocalDate desde,
+                                                                     @RequestParam(required = false) LocalDate hasta,
+                                                                     @RequestParam(required = false) String ciudad) {
+        String archivo = "reporte-" + tipo.name().toLowerCase().replace('_', '-') + "." + formato.extension();
+        return reportes.exportar(administrador.id(), tipo, formato, new FiltrosReporte(desde, hasta, ciudad))
+                .thenApply(contenido -> ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + archivo + "\"")
+                        .contentType(MediaType.parseMediaType(formato.tipoContenido()))
+                        .body(contenido));
     }
 }

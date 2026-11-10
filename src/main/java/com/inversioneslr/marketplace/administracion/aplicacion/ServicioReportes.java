@@ -1,14 +1,20 @@
 package com.inversioneslr.marketplace.administracion.aplicacion;
 
+import com.inversioneslr.marketplace.administracion.dominio.FiltrosReporte;
 import com.inversioneslr.marketplace.administracion.dominio.FormatoReporte;
 import com.inversioneslr.marketplace.administracion.dominio.GeneradorReportes;
 import com.inversioneslr.marketplace.administracion.dominio.Indicadores;
+import com.inversioneslr.marketplace.administracion.dominio.Reporte;
 import com.inversioneslr.marketplace.administracion.dominio.RepositorioIndicadores;
+import com.inversioneslr.marketplace.administracion.dominio.RepositorioReportes;
 import com.inversioneslr.marketplace.administracion.dominio.TipoReporte;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -24,12 +30,15 @@ public class ServicioReportes {
     private static final int DIAS_POR_DEFECTO = 30;
 
     private final RepositorioIndicadores indicadores;
+    private final RepositorioReportes reportes;
     private final GeneradorReportes generador;
     private final PublicadorEventos eventos;
     private final Clock reloj;
 
-    public ServicioReportes(RepositorioIndicadores indicadores, GeneradorReportes generador, PublicadorEventos eventos, Clock reloj) {
+    public ServicioReportes(RepositorioIndicadores indicadores, RepositorioReportes reportes, GeneradorReportes generador,
+                            PublicadorEventos eventos, Clock reloj) {
         this.indicadores = indicadores;
+        this.reportes = reportes;
         this.generador = generador;
         this.eventos = eventos;
         this.reloj = reloj;
@@ -43,16 +52,36 @@ public class ServicioReportes {
     public Indicadores consultarDashboard(LocalDate desde, LocalDate hasta) {
         LocalDate fin = hasta == null ? LocalDate.now(reloj) : hasta;
         LocalDate inicio = desde == null ? fin.minusDays(DIAS_POR_DEFECTO - 1) : desde;
-        if (inicio.isAfter(fin)) {
-            String mensaje = "La fecha inicial es posterior a la final. Elige una fecha igual o anterior.";
-            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, "El periodo no es válido.", Map.of("desde", mensaje));
-        }
+        validarPeriodo(inicio, fin);
         return indicadores.calcular(inicio, fin);
     }
 
-    /** CU-30: registra en auditoría quién exportó y cuándo. */
+    /**
+     * CU-30: se genera en otro hilo, con hasta 5 exportaciones a la vez (RNF-08). Cada exportación queda en la auditoría
+     * con quién la pidió y sus filtros, que es el historial de exportaciones.
+     */
     @Async
-    public CompletableFuture<byte[]> exportar(UUID administradorId, TipoReporte tipo, FormatoReporte formato) {
-        throw new UnsupportedOperationException("CU-30");
+    public CompletableFuture<byte[]> exportar(UUID administradorId, TipoReporte tipo, FormatoReporte formato, FiltrosReporte filtros) {
+        if (filtros.desde() != null && filtros.hasta() != null) {
+            validarPeriodo(filtros.desde(), filtros.hasta());
+        }
+        Reporte reporte = reportes.consultar(tipo, filtros);
+        byte[] contenido = generador.generar(reporte, formato);
+        Map<String, Object> detalle = new LinkedHashMap<>();
+        detalle.put("tipo", tipo.name());
+        detalle.put("formato", formato.name());
+        detalle.put("filas", reporte.filas().size());
+        detalle.put("desde", String.valueOf(filtros.desde()));
+        detalle.put("hasta", String.valueOf(filtros.hasta()));
+        detalle.put("ciudad", String.valueOf(filtros.ciudad()));
+        eventos.publicar(new EventoDominio("ReporteExportado", administradorId, "reporte", null, "EXITO", detalle, List.of()));
+        return CompletableFuture.completedFuture(contenido);
+    }
+
+    private static void validarPeriodo(LocalDate desde, LocalDate hasta) {
+        if (desde.isAfter(hasta)) {
+            String mensaje = "La fecha inicial es posterior a la final. Elige una fecha igual o anterior.";
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, "El periodo no es válido.", Map.of("desde", mensaje));
+        }
     }
 }

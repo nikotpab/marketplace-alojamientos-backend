@@ -2,9 +2,9 @@
 
 API del Marketplace de Alojamientos de Inversiones LR. Monolito modular con [Spring Modulith](https://docs.spring.io/spring-modulith/reference/), capas y regla de dependencia (ADR-01).
 
-**Estado: en construcción.** La aplicación arranca y todas las rutas existen. Lo que aún no se implementa responde `501`.
+**Estado:** ya no quedan rutas sin implementar. Lo que falta, como la reconciliación de reservas a medias, depende de las [decisiones pendientes](#decisiones-pendientes).
 
-Ya funcionan: el esquema de base de datos, la seguridad con denegación por defecto, el registro y el inicio de sesión, las publicaciones y su revisión, la búsqueda, la cotización, la confirmación de reservas con idempotencia, el historial de reservas, los pagos, la auditoría, las notificaciones, los logs y las pruebas de arquitectura.
+Ya funcionan: el esquema de base de datos, la seguridad con denegación por defecto, el registro y el inicio de sesión, las publicaciones y su revisión, la búsqueda, la cotización, la confirmación de reservas con idempotencia, el historial, la cancelación con devolución, las reseñas, la moderación, la configuración de tarifas y de tipos de alojamiento, el dashboard, los reportes en PDF y Excel, los pagos, la auditoría, las notificaciones, los logs y las pruebas de arquitectura.
 
 ## Ejecutar
 
