@@ -108,6 +108,19 @@ Una entrega repetida no duplica la notificación, porque su id sale del id del e
 | RNF-12 Reservas a medias | `ServicioPagos.revertirCobrosSinReserva` |
 | RNF-31 Nueva política | `PoliticaCancelacion` |
 
+## Experimento de modificabilidad (ASR-08b)
+
+SCRUM-66 pide agregar un segundo proveedor de pagos simulado y medir el cambio. `AdaptadorPagosAlterno` se elige con `PAGOS_PROVEEDOR=alterno`: tiene sus propias referencias, rechaza los cobros de más de 20 millones y no cobra dos veces con la misma clave.
+
+| Medida | Meta | Resultado |
+|---|---|---|
+| Esfuerzo | ≤ 3 días-persona | Menos de 1 día-persona |
+| Componentes modificados | 1 | 1: la infraestructura de pagos (una clase nueva de 34 líneas y una línea en `ConfiguracionPagos`) |
+| Cambios en dominio y aplicación | 0 | 0 |
+| Pruebas del flujo de pago | Pasan | `PagosAlternoIT` confirma, reintenta y rechaza con el proveedor alterno, y las demás pruebas siguen pasando con el simulado |
+
+Para comprobarlo: `git show --stat` sobre el commit "SCRUM-66: agregar un segundo proveedor de pagos simulado". Funciona porque el resto del sistema solo conoce `PasarelaPagos` (Adapter, ADR-08).
+
 ## Simplificaciones respecto a los documentos
 
 Para mantener el MVP mínimo:
