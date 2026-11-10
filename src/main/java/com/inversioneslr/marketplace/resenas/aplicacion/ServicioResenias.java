@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.resenas.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.resenas.api.FachadaResenas;
 import com.inversioneslr.marketplace.resenas.dominio.RepositorioResenas;
 import com.inversioneslr.marketplace.reservas.api.FachadaReservas;

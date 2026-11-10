@@ -1,7 +1,7 @@
 package com.inversioneslr.marketplace.pagos.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.ComprobacionEstado;
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ComprobacionEstado;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;

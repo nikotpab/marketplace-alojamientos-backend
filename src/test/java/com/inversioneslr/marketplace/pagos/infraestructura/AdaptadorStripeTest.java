@@ -3,7 +3,7 @@ package com.inversioneslr.marketplace.pagos.infraestructura;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;

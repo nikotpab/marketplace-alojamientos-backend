@@ -3,8 +3,8 @@ package com.inversioneslr.marketplace.usuarios.infraestructura;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.Rol;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

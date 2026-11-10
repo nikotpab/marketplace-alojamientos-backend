@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.usuarios.dominio;
 
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
+import com.inversioneslr.marketplace.compartido.Rol;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;

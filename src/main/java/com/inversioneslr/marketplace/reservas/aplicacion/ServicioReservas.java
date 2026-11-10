@@ -1,9 +1,9 @@
 package com.inversioneslr.marketplace.reservas.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.cotizacion.api.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.api.FachadaCotizacion;
 import com.inversioneslr.marketplace.pagos.api.FachadaPagos;

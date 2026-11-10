@@ -7,7 +7,7 @@ public interface FachadaPagos {
 
     /**
      * @return referencia del pago
-     * @throws com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio PAGO_RECHAZADO o PAGO_NO_PROCESADO
+     * @throws com.inversioneslr.marketplace.compartido.ExcepcionNegocio PAGO_RECHAZADO o PAGO_NO_PROCESADO
      */
     String cobrar(BigDecimal monto, String claveSolicitud);
 

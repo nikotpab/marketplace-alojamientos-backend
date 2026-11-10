@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.publicaciones.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.publicaciones.aplicacion.ServicioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;

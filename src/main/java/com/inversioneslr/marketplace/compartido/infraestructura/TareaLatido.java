@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.compartido.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.ComprobacionEstado;
+import com.inversioneslr.marketplace.compartido.ComprobacionEstado;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

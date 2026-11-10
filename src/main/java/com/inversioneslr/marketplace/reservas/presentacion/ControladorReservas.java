@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.reservas.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.reservas.api.EstadoReserva;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;

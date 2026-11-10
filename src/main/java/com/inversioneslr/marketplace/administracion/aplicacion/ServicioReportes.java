@@ -5,7 +5,7 @@ import com.inversioneslr.marketplace.administracion.dominio.GeneradorReportes;
 import com.inversioneslr.marketplace.administracion.dominio.Indicadores;
 import com.inversioneslr.marketplace.administracion.dominio.RepositorioIndicadores;
 import com.inversioneslr.marketplace.administracion.dominio.TipoReporte;
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.scheduling.annotation.Async;

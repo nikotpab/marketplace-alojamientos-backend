@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.notificaciones.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.notificaciones.aplicacion.ServicioNotificaciones;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;

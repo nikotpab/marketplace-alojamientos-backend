@@ -1,7 +1,7 @@
 package com.inversioneslr.marketplace.usuarios.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.Usuario;
 import java.sql.ResultSet;

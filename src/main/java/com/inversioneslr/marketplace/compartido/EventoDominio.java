@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.compartido.dominio;
+package com.inversioneslr.marketplace.compartido;
 
 import java.util.List;
 import java.util.Map;

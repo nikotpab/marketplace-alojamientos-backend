@@ -7,7 +7,7 @@ import com.inversioneslr.marketplace.administracion.dominio.Indicadores;
 import com.inversioneslr.marketplace.administracion.dominio.TipoReporte;
 import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.EventoAuditoria;
 import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.FiltrosAuditoria;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.cotizacion.api.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.TipoAlojamiento;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios.UsuarioResumen;

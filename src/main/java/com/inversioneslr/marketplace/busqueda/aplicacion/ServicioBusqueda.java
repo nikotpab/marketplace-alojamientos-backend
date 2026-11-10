@@ -4,7 +4,7 @@ import com.inversioneslr.marketplace.busqueda.dominio.AlojamientoDetalle;
 import com.inversioneslr.marketplace.busqueda.dominio.FiltrosBusqueda;
 import com.inversioneslr.marketplace.busqueda.dominio.PaginaAlojamientos;
 import com.inversioneslr.marketplace.busqueda.dominio.RepositorioBusqueda;
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.resenas.api.FachadaResenas;
 import java.math.BigDecimal;
 import java.time.Clock;

@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.publicaciones.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.DatosPublicacion;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.ServicioAdicional;
 import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.TipoAlojamiento;

@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.usuarios.api;
 
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
+import com.inversioneslr.marketplace.compartido.Rol;
 import java.util.List;
 import java.util.UUID;
 

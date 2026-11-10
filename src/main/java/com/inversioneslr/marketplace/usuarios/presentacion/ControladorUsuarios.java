@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.usuarios.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios.UsuarioResumen;
 import com.inversioneslr.marketplace.usuarios.aplicacion.ServicioAutenticacion;
 import jakarta.validation.Valid;

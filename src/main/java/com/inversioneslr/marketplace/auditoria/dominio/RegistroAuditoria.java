@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.auditoria.dominio;
 
-import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

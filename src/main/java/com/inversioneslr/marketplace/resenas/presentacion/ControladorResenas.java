@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.resenas.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.resenas.api.FachadaResenas.ResenaVisible;
 import com.inversioneslr.marketplace.resenas.aplicacion.ServicioResenias;
 import jakarta.validation.Valid;

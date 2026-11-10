@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.pagos.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.stripe.StripeClient;
 import com.stripe.exception.CardException;
