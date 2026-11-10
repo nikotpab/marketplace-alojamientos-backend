@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.pagos.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.Pago;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
@@ -28,6 +29,19 @@ public class ServicioPagos implements FachadaPagos {
     @Override
     public void devolver(String referencia, BigDecimal monto) {
         pasarela.devolver(referencia, monto);
+    }
+
+    /** Marca el pago antes de llamar a la pasarela: así dos cancelaciones simultáneas no devuelven dos veces. */
+    @Override
+    public void devolverPagoDeReserva(UUID reservaId, BigDecimal monto) {
+        String referencia = pagos.marcarDevuelto(reservaId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La reserva no tiene un pago aprobado que devolver."));
+        try {
+            pasarela.devolver(referencia, monto);
+        } catch (RuntimeException e) {
+            pagos.marcarAprobado(reservaId);
+            throw e;
+        }
     }
 
     @Override
