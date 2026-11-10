@@ -133,6 +133,12 @@ Una entrega repetida no duplica la notificación, porque su id sale del id del e
 
 Todas, salvo la de carga, corren en cada PR con `mvn verify` contra PostgreSQL real.
 
+## Cobertura de pruebas (JaCoCo)
+
+`mvn verify` mide la cobertura de las pruebas unitarias y de integración, y deja el reporte en `target/site/jacoco/index.html`, más `jacoco.xml` para otras herramientas. Para ver solo la de las unitarias: `mvn test jacoco:report`.
+
+En cada PR, el CI sube el reporte como el artefacto `cobertura-jacoco`.
+
 ## Pruebas de carga (ASR-01)
 
 `pruebas/carga/ejecutar.sh` corre todos los escenarios a la vez con JMeter durante 2 minutos, contra el backend con el perfil `demo`. Crea un huésped y un administrador, ejecuta `plan.jmx`, imprime p95 y p99 por escenario y, al terminar, borra las reservas que hizo. El reporte HTML de JMeter queda en `pruebas/carga/resultados/`.

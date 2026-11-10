@@ -20,6 +20,11 @@ jobs:
           java-version: "21"
           cache: maven
       - run: mvn -B verify
+      # SCRUM-100: reporte de cobertura de JaCoCo, descargable desde la ejecución del CI.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-jacoco
+          path: target/site/jacoco
 
   # Bloquea credenciales en el repositorio (EC-27).
   credenciales:
