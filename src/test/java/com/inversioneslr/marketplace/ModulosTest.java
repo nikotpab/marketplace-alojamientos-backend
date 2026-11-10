@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
+import org.springframework.modulith.docs.Documenter;
 
 /**
  * Fronteras entre módulos con Spring Modulith (ADR-01, EC-28). Cada paquete directo de
@@ -14,5 +15,11 @@ class ModulosTest {
     @Test
     void losModulosNoTienenCiclosNiUsanLaParteInternaDeOtro() {
         MODULOS.verify();
+    }
+
+    /** Diagramas PlantUML de los módulos y sus dependencias en target/spring-modulith-docs. */
+    @Test
+    void documentaLosModulos() {
+        new Documenter(MODULOS).writeDocumentation();
     }
 }
