@@ -1,0 +1,35 @@
+# SCRUM-103: GitHub propone por PR las actualizaciones; el CI decide si se pueden fusionar.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Bogota
+    # Las menores y de parche llegan juntas en un PR; las mayores, una por PR.
+    groups:
+      maven-menores:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Bogota
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Imágenes base del Dockerfile. Java se queda en 21 (la versión del proyecto): no se proponen saltos mayores.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Bogota
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
