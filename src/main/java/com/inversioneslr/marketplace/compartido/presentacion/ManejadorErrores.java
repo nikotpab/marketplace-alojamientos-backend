@@ -67,12 +67,6 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
         problema.setProperty("errores", campos);
     }
 
-    /** Caso de uso aún sin implementar en el esqueleto. */
-    @ExceptionHandler(UnsupportedOperationException.class)
-    ProblemDetail pendiente(UnsupportedOperationException excepcion) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_IMPLEMENTED, "Pendiente: " + excepcion.getMessage());
-    }
-
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException excepcion,
             HttpHeaders cabeceras, HttpStatusCode estado, WebRequest solicitud) {
