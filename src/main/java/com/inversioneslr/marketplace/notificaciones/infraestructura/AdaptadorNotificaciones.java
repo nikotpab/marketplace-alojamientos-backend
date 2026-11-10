@@ -28,7 +28,7 @@ public class AdaptadorNotificaciones implements SuscriptorAsincrono, Repositorio
 
     @Override
     public void atender(EventoDominio evento) {
-        evento.destinatarios().forEach(usuarioId -> guardar(Notificacion.nueva(usuarioId, evento.tipo(), reloj.instant())));
+        evento.destinatarios().forEach(usuarioId -> guardar(Notificacion.nueva(evento.id(), usuarioId, evento.tipo(), reloj.instant())));
     }
 
     @Override
@@ -36,7 +36,7 @@ public class AdaptadorNotificaciones implements SuscriptorAsincrono, Repositorio
         jdbc.sql("""
                 INSERT INTO notificacion (id, usuario_id, tipo, mensaje, leida, creado_en)
                 VALUES (:id, :usuario, :tipo, :mensaje, :leida, :creadoEn)
-                ON CONFLICT (id) DO UPDATE SET leida = EXCLUDED.leida""")
+                ON CONFLICT (id) DO UPDATE SET leida = notificacion.leida OR EXCLUDED.leida""")
                 .param("id", notificacion.id())
                 .param("usuario", notificacion.usuarioId())
                 .param("tipo", notificacion.tipo())

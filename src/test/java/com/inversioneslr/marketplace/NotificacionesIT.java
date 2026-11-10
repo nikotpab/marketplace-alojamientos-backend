@@ -12,6 +12,8 @@ import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.SuscriptorAsincrono;
 import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
+import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
+import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificaciones;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,9 @@ class NotificacionesIT extends PruebaIntegracion {
 
     @Autowired
     ProcesadorEventos procesador;
+
+    @Autowired
+    RepositorioNotificaciones notificaciones;
 
     @Autowired
     JdbcClient jdbc;
@@ -98,6 +103,20 @@ class NotificacionesIT extends PruebaIntegracion {
 
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", huesped)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", anfitrion)).isEqualTo(1);
+    }
+
+    @Test
+    void entregarOtraVezUnEventoNoDuplicaNiDesmarcaLaNotificacion() {
+        UUID usuario = crearUsuario(Rol.HUESPED);
+        EventoDominio evento = evento("ReservaConfirmada", usuario, UUID.randomUUID(), List.of(usuario));
+        Notificacion notificacion = Notificacion.nueva(evento.id(), usuario, evento.tipo(), reloj.instant());
+        notificaciones.guardar(notificacion);
+        notificaciones.guardar(notificacion.marcarLeida());
+
+        notificaciones.guardar(Notificacion.nueva(evento.id(), usuario, evento.tipo(), reloj.instant()));
+
+        assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ?", usuario)).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND leida", usuario)).isEqualTo(1);
     }
 
     @Test
