@@ -18,6 +18,13 @@
     <properties>
         <java.version>21</java.version>
         <spring-modulith.version>2.1.2</spring-modulith.version>
+        <!-- SCRUM-104: análisis en SonarQube Cloud. La cobertura sale del reporte de JaCoCo. -->
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.organization>nikotpab</sonar.organization>
+        <sonar.projectKey>nikotpab_marketplace-alojamientos-backend</sonar.projectKey>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <!-- Una migración aplicada no se puede cambiar: Flyway rechaza el checksum distinto. -->
+        <sonar.exclusions>src/main/resources/db/migration/**</sonar.exclusions>
     </properties>
 
     <dependencyManagement>
@@ -142,6 +149,16 @@
 
     <build>
         <finalName>marketplace-api</finalName>
+        <pluginManagement>
+            <plugins>
+                <!-- Solo lo ejecuta el CI (ver .github/workflows/ci.yml). -->
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>5.8.0.7211</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
