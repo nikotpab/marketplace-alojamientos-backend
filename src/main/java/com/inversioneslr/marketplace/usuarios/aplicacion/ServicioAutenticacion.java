@@ -74,10 +74,13 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         Usuario usuario = usuarios.buscarPorCorreo(normalizar(comando.correo())).orElse(null);
         if (usuario == null) {
             cifrador.matches(comando.contrasena(), hashDeRelleno);
+            // RNF-23: también se registra, sin el correo, para detectar fuerza bruta contra cuentas que no existen.
+            eventos.publicar(new EventoDominio("InicioSesionFallido", null, "usuario", null, "CORREO_DESCONOCIDO", Map.of(), List.of()));
             throw credencialesInvalidas();
         }
         Instant ahora = reloj.instant();
         if (usuario.bloqueadoEn(ahora)) {
+            eventos.publicar(evento("InicioSesionFallido", usuario, "CUENTA_BLOQUEADA", Map.of()));
             throw cuentaBloqueada();
         }
         if (!cifrador.matches(comando.contrasena(), usuario.hashContrasena())) {
