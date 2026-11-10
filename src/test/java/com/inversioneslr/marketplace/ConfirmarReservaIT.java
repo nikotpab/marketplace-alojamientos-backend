@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
@@ -13,6 +14,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.inversioneslr.marketplace.auditoria.aplicacion.ServicioAuditoria;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
@@ -25,7 +28,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultActions;
 
 /** La cotización es de SCRUM-32, así que se simula. La pasarela se simula para provocar sus fallas. */
@@ -51,6 +57,9 @@ class ConfirmarReservaIT extends PruebaIntegracion {
 
     @MockitoBean
     PasarelaPagos pasarela;
+
+    @MockitoSpyBean
+    ServicioAuditoria auditoria;
 
     private UUID huesped;
     private UUID publicacion;
@@ -127,12 +136,20 @@ class ConfirmarReservaIT extends PruebaIntegracion {
     @Test
     void conCincuentaSolicitudesSimultaneasSoloSeConfirmaUna() throws Exception {
         int solicitudes = 50;
+        // Retrasa el commit de la reserva ganadora, como en una JVM recién arrancada: los INSERT se superponen y, sin
+        // el candado de RepositorioReservasSql, PostgreSQL aborta algunos por deadlock (SCRUM-102).
+        doAnswer(llamada -> {
+            Thread.sleep(300);
+            return llamada.callRealMethod();
+        }).when(auditoria).atender(any(EventoDominio.class));
         ConfirmarReservaComando comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 7, 10), LocalDate.of(2030, 7, 13), 2, List.of());
         CountDownLatch salida = new CountDownLatch(1);
         AtomicInteger confirmadas = new AtomicInteger();
         AtomicInteger rechazadas = new AtomicInteger();
+        Set<String> inesperadas = ConcurrentHashMap.newKeySet();
 
-        try (ExecutorService hilos = Executors.newVirtualThreadPerTaskExecutor()) {
+        // Hilos de plataforma, como los de Tomcat.
+        try (ExecutorService hilos = Executors.newFixedThreadPool(solicitudes)) {
             for (int i = 0; i < solicitudes; i++) {
                 hilos.submit(() -> {
                     salida.await();
@@ -141,6 +158,8 @@ class ConfirmarReservaIT extends PruebaIntegracion {
                         confirmadas.incrementAndGet();
                     } catch (PeriodoNoDisponibleException e) {
                         rechazadas.incrementAndGet();
+                    } catch (RuntimeException e) {
+                        inesperadas.add(e.getClass().getName() + ": " + e.getMessage());
                     }
                     return null;
                 });
@@ -148,6 +167,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
             salida.countDown();
         }
 
+        assertThat(inesperadas).isEmpty();
         assertThat(confirmadas).hasValue(1);
         assertThat(rechazadas).hasValue(solicitudes - 1);
         assertThat(contar("SELECT count(*) FROM reserva WHERE publicacion_id = ? AND estado = 'CONFIRMADA'", publicacion)).isEqualTo(1);

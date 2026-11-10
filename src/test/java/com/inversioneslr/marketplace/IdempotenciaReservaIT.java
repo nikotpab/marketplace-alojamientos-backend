@@ -93,7 +93,8 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         CountDownLatch salida = new CountDownLatch(1);
         List<Future<Reserva>> envios = new ArrayList<>();
 
-        try (ExecutorService hilos = Executors.newVirtualThreadPerTaskExecutor()) {
+        // Hilos de plataforma, como los de Tomcat.
+        try (ExecutorService hilos = Executors.newFixedThreadPool(10)) {
             for (int i = 0; i < 10; i++) {
                 envios.add(hilos.submit(() -> {
                     salida.await();

@@ -73,6 +73,13 @@ public class RepositorioReservasSql implements RepositorioReservas {
 
     @Override
     public Reserva guardar(Reserva reserva, List<AdicionalReservado> adicionales) {
+        // SCRUM-102: las confirmaciones de una misma publicación entran de a una hasta que su transacción termina.
+        // Sin esto, varios INSERT simultáneos se bloquean entre sí al verificar reserva_sin_solape y PostgreSQL
+        // aborta algunos por deadlock, en vez de rechazarlos con la violación que se traduce a PeriodoNoDisponible.
+        jdbc.sql("SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(:publicacion, 0))")
+                .param("publicacion", reserva.publicacionId().toString())
+                .query(Integer.class)
+                .single();
         String codigo;
         try {
             codigo = jdbc.sql("""
