@@ -58,9 +58,14 @@ public class ServicioResenias implements FachadaResenas {
         return resenas.listarVisibles(publicacionId);
     }
 
+    /** CU-26: queda en la auditoría quién la ocultó. */
     @Override
+    @Transactional
     public void ocultar(UUID administradorId, UUID resenaId) {
-        throw new UnsupportedOperationException("CU-26");
+        Resena resena = resenas.buscarPorId(resenaId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La reseña no existe."));
+        resenas.guardar(resena.ocultar(administradorId));
+        eventos.publicar(new EventoDominio("ResenaOcultada", administradorId, "resena", resenaId, "EXITO", Map.of(), List.of()));
     }
 
     public record PublicarResenaComando(

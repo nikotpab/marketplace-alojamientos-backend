@@ -80,6 +80,41 @@ class ResenasIT extends PruebaIntegracion {
         publicar(huesped, reserva, 5, "a".repeat(1001)).andExpect(status().isBadRequest());
     }
 
+    @Test
+    void elAdministradorOcultaUnaResenaQueDejaDeMostrarse() throws Exception {
+        UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
+        UUID resena = resenar(publicacion, 1, "Contenido ofensivo", false);
+        UUID administrador = crearUsuario(Rol.ADMINISTRADOR);
+
+        ocultar(sesionDe(administrador, Rol.ADMINISTRADOR), resena).andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/v1/publicaciones/{id}/resenas", publicacion).header("Authorization", sesionDe(administrador, Rol.ADMINISTRADOR)))
+                .andExpect(jsonPath("$.length()").value(0));
+        assertThat(comoAplicacion.queryForObject("SELECT ocultada_por FROM resena WHERE id = ?", UUID.class, resena)).isEqualTo(administrador);
+        assertThat(comoAplicacion.queryForObject("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'ResenaOcultada'",
+                Long.class, resena)).isEqualTo(1);
+    }
+
+    @Test
+    void unaResenaYaOcultaOInexistenteSeInforma() throws Exception {
+        String administrador = sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR);
+        UUID oculta = resenar(crearPublicacionActiva(crearUsuario(Rol.ANFITRION)), 1, "Ya oculta", true);
+
+        ocultar(administrador, oculta).andExpect(status().isConflict());
+        ocultar(administrador, UUID.randomUUID()).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void soloElAdministradorOcultaResenas() throws Exception {
+        UUID resena = resenar(crearPublicacionActiva(crearUsuario(Rol.ANFITRION)), 1, "No me gusta", false);
+
+        ocultar(sesionDe(crearUsuario(Rol.ANFITRION), Rol.ANFITRION), resena).andExpect(status().isForbidden());
+    }
+
+    private ResultActions ocultar(String sesion, UUID resena) throws Exception {
+        return mvc.perform(post("/api/v1/admin/resenas/{id}/ocultamiento", resena).header("Authorization", sesion));
+    }
+
     private ResultActions publicar(UUID huesped, UUID reserva, int calificacion, String contenido) throws Exception {
         return mvc.perform(post("/api/v1/reservas/{id}/resena", reserva)
                 .header("Authorization", sesionDe(huesped, Rol.HUESPED))
@@ -93,8 +128,9 @@ class ResenasIT extends PruebaIntegracion {
                 VALUES (?, ?, '2029-01-01', '2029-01-03', 1, ?) RETURNING id""", UUID.class, huesped, publicacion, estado);
     }
 
-    private void resenar(UUID publicacion, int calificacion, String comentario, boolean oculta) {
+    private UUID resenar(UUID publicacion, int calificacion, String comentario, boolean oculta) {
         UUID reserva = reservar(crearUsuario(Rol.HUESPED), publicacion, "COMPLETADA");
-        comoAplicacion.update("INSERT INTO resena (reserva_id, calificacion, contenido, oculta) VALUES (?, ?, ?, ?)", reserva, calificacion, comentario, oculta);
+        return comoAplicacion.queryForObject("INSERT INTO resena (reserva_id, calificacion, contenido, oculta) VALUES (?, ?, ?, ?) RETURNING id",
+                UUID.class, reserva, calificacion, comentario, oculta);
     }
 }
