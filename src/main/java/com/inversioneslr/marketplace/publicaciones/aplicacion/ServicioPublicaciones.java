@@ -288,8 +288,10 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return publicaciones.listarTiposActivos();
     }
 
+    /** CU-06: lo que el anfitrión puede elegir al crear una publicación. Solo los tipos activos. */
     public Catalogos consultarCatalogos() {
-        throw new UnsupportedOperationException("CU-06");
+        List<TipoAlojamiento> activos = publicaciones.listarTipos().stream().filter(TipoAlojamiento::activo).toList();
+        return new Catalogos(activos, publicaciones.listarServicios(), publicaciones.listarPoliticas());
     }
 
     @Override
@@ -312,14 +314,23 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
                 Map.of("motivo", bloqueada.motivoEstado()), List.of(bloqueada.anfitrionId())));
     }
 
+    /** CU-31: todos, también los inactivos, para la pantalla de configuración. */
     @Override
     public List<TipoAlojamiento> listarTipos() {
-        throw new UnsupportedOperationException("CU-31");
+        return publicaciones.listarTipos();
     }
 
+    /**
+     * CU-31: los cambios aparecen de inmediato al crear publicaciones y en los filtros de búsqueda, porque se leen en
+     * cada consulta (RNF-32).
+     */
     @Override
+    @Transactional
     public TipoAlojamiento guardarTipo(UUID administradorId, TipoAlojamiento tipo) {
-        throw new UnsupportedOperationException("CU-31");
+        TipoAlojamiento guardado = publicaciones.guardarTipo(new TipoAlojamiento(tipo.id(), tipo.nombre().strip(), tipo.activo()));
+        eventos.publicar(new EventoDominio(tipo.id() == null ? "TipoAlojamientoAgregado" : "TipoAlojamientoEditado", administradorId,
+                "tipo_alojamiento", guardado.id(), "EXITO", Map.of("nombre", guardado.nombre(), "activo", guardado.activo()), List.of()));
+        return guardado;
     }
 
     /** Lo que envía el formulario del frontend. En borrador todos los campos pueden ir vacíos. */
