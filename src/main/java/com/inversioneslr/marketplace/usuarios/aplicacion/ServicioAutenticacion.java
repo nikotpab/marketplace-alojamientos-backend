@@ -6,7 +6,7 @@ import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
-import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.CodigosRecuperacion;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.Usuario;

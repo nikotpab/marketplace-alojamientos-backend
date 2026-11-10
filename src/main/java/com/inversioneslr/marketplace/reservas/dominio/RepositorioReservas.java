@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.reservas.dominio;
 
-import com.inversioneslr.marketplace.reservas.api.EstadoReserva;
+import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

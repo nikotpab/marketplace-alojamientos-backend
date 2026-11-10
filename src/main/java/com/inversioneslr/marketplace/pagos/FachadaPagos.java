@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.pagos.api;
+package com.inversioneslr.marketplace.pagos;
 
 import java.math.BigDecimal;
 import java.util.UUID;

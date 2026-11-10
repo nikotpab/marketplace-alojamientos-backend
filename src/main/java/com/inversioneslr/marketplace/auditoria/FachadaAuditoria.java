@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.auditoria.api;
+package com.inversioneslr.marketplace.auditoria;
 
 import java.time.Instant;
 import java.time.LocalDate;

@@ -1,7 +1,7 @@
 package com.inversioneslr.marketplace.publicaciones.dominio;
 
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.DatosPublicacion;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.TipoAlojamiento;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.DatosPublicacion;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.TipoAlojamiento;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;

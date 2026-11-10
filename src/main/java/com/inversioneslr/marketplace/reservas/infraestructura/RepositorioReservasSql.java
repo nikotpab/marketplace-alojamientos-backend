@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.reservas.infraestructura;
 
-import com.inversioneslr.marketplace.reservas.api.EstadoReserva;
+import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;

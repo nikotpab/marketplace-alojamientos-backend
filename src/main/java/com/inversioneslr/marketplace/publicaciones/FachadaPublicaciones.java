@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.publicaciones.api;
+package com.inversioneslr.marketplace.publicaciones;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

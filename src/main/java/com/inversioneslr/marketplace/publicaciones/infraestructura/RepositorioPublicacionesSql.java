@@ -1,9 +1,9 @@
 package com.inversioneslr.marketplace.publicaciones.infraestructura;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.DatosPublicacion;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.ServicioAdicional;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.TipoAlojamiento;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.DatosPublicacion;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.ServicioAdicional;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.TipoAlojamiento;
 import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;

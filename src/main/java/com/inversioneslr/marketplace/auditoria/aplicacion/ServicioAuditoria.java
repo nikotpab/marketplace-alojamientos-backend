@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.auditoria.aplicacion;
 
-import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria;
+import com.inversioneslr.marketplace.auditoria.FachadaAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RegistroAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RepositorioAuditoria;
 import com.inversioneslr.marketplace.compartido.EventoDominio;

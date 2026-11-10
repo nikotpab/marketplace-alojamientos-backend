@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.usuarios.api;
+package com.inversioneslr.marketplace.usuarios;
 
 import com.inversioneslr.marketplace.compartido.Rol;
 import java.util.List;

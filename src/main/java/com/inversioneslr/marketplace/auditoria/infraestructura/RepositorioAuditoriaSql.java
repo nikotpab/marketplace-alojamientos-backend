@@ -1,7 +1,7 @@
 package com.inversioneslr.marketplace.auditoria.infraestructura;
 
-import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.EventoAuditoria;
-import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.FiltrosAuditoria;
+import com.inversioneslr.marketplace.auditoria.FachadaAuditoria.EventoAuditoria;
+import com.inversioneslr.marketplace.auditoria.FachadaAuditoria.FiltrosAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RegistroAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RepositorioAuditoria;
 import java.sql.ResultSet;

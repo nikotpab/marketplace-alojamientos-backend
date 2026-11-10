@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.resenas.infraestructura;
 
-import com.inversioneslr.marketplace.resenas.api.FachadaResenas.ResenaVisible;
+import com.inversioneslr.marketplace.resenas.FachadaResenas.ResenaVisible;
 import com.inversioneslr.marketplace.resenas.dominio.RepositorioResenas;
 import com.inversioneslr.marketplace.resenas.dominio.Resena;
 import java.util.List;

@@ -1,16 +1,16 @@
 package com.inversioneslr.marketplace.administracion.aplicacion;
 
-import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria;
-import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.EventoAuditoria;
-import com.inversioneslr.marketplace.auditoria.api.FachadaAuditoria.FiltrosAuditoria;
-import com.inversioneslr.marketplace.cotizacion.api.ConfiguracionTarifas;
-import com.inversioneslr.marketplace.cotizacion.api.FachadaCotizacion;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones.TipoAlojamiento;
-import com.inversioneslr.marketplace.resenas.api.FachadaResenas;
-import com.inversioneslr.marketplace.reservas.api.FachadaReservas;
-import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
-import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios.UsuarioResumen;
+import com.inversioneslr.marketplace.auditoria.FachadaAuditoria;
+import com.inversioneslr.marketplace.auditoria.FachadaAuditoria.EventoAuditoria;
+import com.inversioneslr.marketplace.auditoria.FachadaAuditoria.FiltrosAuditoria;
+import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
+import com.inversioneslr.marketplace.cotizacion.FachadaCotizacion;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.TipoAlojamiento;
+import com.inversioneslr.marketplace.resenas.FachadaResenas;
+import com.inversioneslr.marketplace.reservas.FachadaReservas;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios.UsuarioResumen;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.List;

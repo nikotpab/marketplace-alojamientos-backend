@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.reservas.api;
+package com.inversioneslr.marketplace.reservas;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

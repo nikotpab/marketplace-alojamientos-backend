@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.cotizacion.api;
+package com.inversioneslr.marketplace.cotizacion;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;

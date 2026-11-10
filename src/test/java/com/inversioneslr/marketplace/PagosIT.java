@@ -2,7 +2,7 @@ package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.inversioneslr.marketplace.pagos.api.FachadaPagos;
+import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
