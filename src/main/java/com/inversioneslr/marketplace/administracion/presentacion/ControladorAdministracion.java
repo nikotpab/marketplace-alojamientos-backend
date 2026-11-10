@@ -12,6 +12,7 @@ import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.TipoAlojamiento;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios.UsuarioResumen;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -102,8 +103,9 @@ public class ControladorAdministracion {
     }
 
     @GetMapping("/dashboard")
-    public Indicadores consultarDashboard() {
-        return reportes.consultarDashboard();
+    public Indicadores consultarDashboard(@RequestParam(required = false) LocalDate desde,
+                                          @RequestParam(required = false) LocalDate hasta) {
+        return reportes.consultarDashboard(desde, hasta);
     }
 
     @GetMapping("/reportes")
