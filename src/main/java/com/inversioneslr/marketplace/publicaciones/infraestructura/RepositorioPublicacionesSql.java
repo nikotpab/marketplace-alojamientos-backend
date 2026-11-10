@@ -19,16 +19,16 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
-
-    private static final String PENDIENTE = "SQL de publicaciones";
 
     /** Consulta base de la vista para el frontend; se completa con el filtro y el orden. */
     private static final String VISTA = """
@@ -278,7 +278,9 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
 
     @Override
     public List<TipoAlojamiento> listarTipos() {
-        throw new UnsupportedOperationException(PENDIENTE);
+        return jdbc.sql("SELECT id, nombre, activo FROM tipo_alojamiento ORDER BY nombre")
+                .query((fila, numero) -> new TipoAlojamiento(fila.getObject("id", UUID.class), fila.getString("nombre"), fila.getBoolean("activo")))
+                .list();
     }
 
     @Override
@@ -296,9 +298,37 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                 .optional();
     }
 
+    /**
+     * Un tipo nuevo recibe un código estable sacado del nombre, por ejemplo "Casa rural" → CASA_RURAL. Al editarlo, el
+     * código no cambia, para no romper los filtros del frontend.
+     */
     @Override
     public TipoAlojamiento guardarTipo(TipoAlojamiento tipo) {
-        throw new UnsupportedOperationException(PENDIENTE);
+        try {
+            if (tipo.id() == null) {
+                UUID id = jdbc.sql("""
+                        INSERT INTO tipo_alojamiento (nombre, activo, codigo)
+                        VALUES (:nombre, :activo, upper(trim(BOTH '_' FROM regexp_replace(unaccent(:nombre), '[^[:alnum:]]+', '_', 'g'))))
+                        RETURNING id""")
+                        .param("nombre", tipo.nombre())
+                        .param("activo", tipo.activo())
+                        .query(UUID.class)
+                        .single();
+                return new TipoAlojamiento(id, tipo.nombre(), tipo.activo());
+            }
+            int cambiados = jdbc.sql("UPDATE tipo_alojamiento SET nombre = :nombre, activo = :activo WHERE id = :id")
+                    .param("nombre", tipo.nombre())
+                    .param("activo", tipo.activo())
+                    .param("id", tipo.id())
+                    .update();
+            if (cambiados == 0) {
+                throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "El tipo de alojamiento no existe.");
+            }
+            return tipo;
+        } catch (DuplicateKeyException e) {
+            String mensaje = "Ya existe un tipo de alojamiento con ese nombre. Usa otro nombre.";
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, mensaje, Map.of("nombre", mensaje));
+        }
     }
 
     @Override

@@ -23,11 +23,6 @@ class EsqueletoIT extends PruebaIntegracion {
     }
 
     @Test
-    void casoDeUsoPendienteResponde501() throws Exception {
-        mvc.perform(get("/api/v1/catalogos")).andExpect(status().isNotImplemented());
-    }
-
-    @Test
     void rutaSinDeclararSeDeniega() throws Exception {
         String huesped = sesionDe(crearUsuario(Rol.HUESPED), Rol.HUESPED);
         mvc.perform(get("/api/v1/no-declarada")).andExpect(status().isUnauthorized());
