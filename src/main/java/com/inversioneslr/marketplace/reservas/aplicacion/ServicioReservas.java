@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -108,7 +107,7 @@ public class ServicioReservas implements FachadaReservas {
                 return guardada;
             });
         } catch (PeriodoNoDisponibleException otraReservaGano) {
-            devolverCobro(huespedId, publicacion, referencia, reserva);
+            devolverCobro(huespedId, publicacion, claveSolicitud, referencia, reserva);
             recordarRechazo(claveSolicitud, huespedId);
             throw otraReservaGano;
         }
@@ -133,10 +132,10 @@ public class ServicioReservas implements FachadaReservas {
         });
     }
 
-    /** SEC-03: otra reserva ganó el periodo. Si la devolución falla, queda en auditoría para reconciliarla (SCRUM-59). */
-    private void devolverCobro(UUID huespedId, DatosPublicacion publicacion, String referencia, Reserva reserva) {
+    /** SEC-03: otra reserva ganó el periodo. Si la devolución falla, queda en auditoría y la reconciliación la reintenta. */
+    private void devolverCobro(UUID huespedId, DatosPublicacion publicacion, String claveSolicitud, String referencia, Reserva reserva) {
         try {
-            pagos.devolver(referencia, reserva.total());
+            pagos.devolverCobroSinReserva(claveSolicitud, referencia, reserva.total());
         } catch (ExcepcionNegocio error) {
             log.error("No se pudo devolver el cobro {} tras perder el periodo", referencia);
             eventos.publicar(new EventoDominio("DevolucionFallida", huespedId, "publicacion", publicacion.id(), error.tipo().name(),
@@ -214,11 +213,6 @@ public class ServicioReservas implements FachadaReservas {
     @Scheduled(cron = "0 0 * * * *")
     public void eliminarSolicitudesVencidas() {
         reservas.eliminarSolicitudesVencidas(reloj.instant());
-    }
-
-    /** Pendiente RNF-12: completar o revertir en máximo 15 min las reservas que quedaron a medias. */
-    @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
-    public void reconciliarReservasIncompletas() {
     }
 
     /**

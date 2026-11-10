@@ -20,7 +20,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
         // Solo para pruebas: valor de baja entropía con la longitud mínima que exige TokensJwt.
         "marketplace.jwt-secreto=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "marketplace.pagos.proveedor=simulado",
-        "marketplace.eventos.cron=-"})
+        "marketplace.eventos.cron=-",
+        "marketplace.pagos.reconciliacion-cron=-"})
 @AutoConfigureMockMvc
 abstract class PruebaIntegracion {
 
