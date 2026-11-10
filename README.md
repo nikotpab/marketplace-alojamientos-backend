@@ -40,6 +40,14 @@ Luego vuelve a iniciar sesión, porque el rol va en el token.
 
 El frontend llama a `/api/...` y el backend responde en `/api/v1/...`. En desarrollo, el proxy de Angular une los dos: reenvía `/api` a `http://localhost:8080` y lo reescribe como `/api/v1`.
 
+### Documentación de la API (Swagger)
+
+Con el backend corriendo, Swagger UI queda en http://localhost:8080/swagger-ui.html y la especificación OpenAPI en http://localhost:8080/v3/api-docs. Se generan desde los controladores, así que siempre coinciden con el código. Solo documentan `/api/v1/**`.
+
+Para probar un endpoint con sesión: ejecuta `POST /api/v1/auth/login`, copia el campo `token` de la respuesta, pulsa **Authorize** y pégalo sin el prefijo `Bearer`.
+
+En el servidor, Caddy solo enruta `/api/*` hacia la API, así que la documentación no queda expuesta a internet.
+
 ## Estructura
 
 ```

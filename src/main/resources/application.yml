@@ -61,6 +61,10 @@ management:
       probes:
         enabled: true
 
+# SCRUM-99: Swagger UI en /swagger-ui.html y la especificación en /v3/api-docs. Solo se documenta la API.
+springdoc:
+  paths-to-match: /api/v1/**
+
 marketplace:
   pagos:
     proveedor: ${PAGOS_PROVEEDOR}
