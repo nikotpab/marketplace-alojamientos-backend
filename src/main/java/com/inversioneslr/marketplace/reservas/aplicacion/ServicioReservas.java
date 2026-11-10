@@ -221,9 +221,17 @@ public class ServicioReservas implements FachadaReservas {
     public void reconciliarReservasIncompletas() {
     }
 
-    /** Pendiente RF-25: pasar a COMPLETADA las reservas confirmadas cuya fecha de salida ya pasó. */
+    /**
+     * RF-25 · pendiente 13 del README: cada noche pasa a COMPLETADA las reservas confirmadas cuya fecha de salida ya
+     * pasó, y avisa al huésped de que ya puede reseñar.
+     */
     @Scheduled(cron = "0 0 1 * * *", zone = "America/Bogota")
     public void completarReservasFinalizadas() {
+        reservas.listarConfirmadasConSalidaAntesDe(LocalDate.now(reloj)).forEach(reserva -> transaccion.executeWithoutResult(estado -> {
+            reservas.actualizarEstado(reserva.id(), reserva.completar().estado());
+            eventos.publicar(new EventoDominio("ReservaCompletada", null, "reserva", reserva.id(), "EXITO", Map.of(),
+                    List.of(reserva.huespedId())));
+        }));
     }
 
     @Override

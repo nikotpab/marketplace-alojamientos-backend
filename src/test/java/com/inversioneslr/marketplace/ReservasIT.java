@@ -8,11 +8,13 @@ import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import com.inversioneslr.marketplace.reservas.FachadaReservas;
+import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +33,44 @@ class ReservasIT extends PruebaIntegracion {
 
     @Autowired
     FachadaPublicaciones publicaciones;
+
+    @Autowired
+    ServicioReservas servicio;
+
+    @Autowired
+    Clock reloj;
+
+    @Test
+    void cadaNocheSeCompletanLasReservasCuyaSalidaYaPasoYSeAvisaAlHuesped() {
+        UUID huesped = crearUsuario(Rol.HUESPED);
+        UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
+        LocalDate hoy = LocalDate.now(reloj);
+        UUID terminada = insertar(huesped, publicacion, hoy.minusDays(3), hoy.minusDays(1));
+        UUID enCurso = insertar(huesped, publicacion, hoy.minusDays(1), hoy.plusDays(1));
+
+        servicio.completarReservasFinalizadas();
+
+        assertThat(fachada.datosReserva(terminada).estado()).isEqualTo(EstadoReserva.COMPLETADA);
+        assertThat(fachada.datosReserva(enCurso).estado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        esperarEventosDe(terminada);
+        assertThat(comoAplicacion.queryForObject(
+                "SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaCompletada'", Long.class, huesped)).isEqualTo(1);
+    }
+
+    @Test
+    void soloSeCompletaUnaReservaConfirmada() {
+        Reserva cancelada = reserva(UUID.randomUUID(), UUID.randomUUID(), DIA, DIA.plusDays(1)).cancelar();
+
+        assertThatThrownBy(cancelada::completar)
+                .isInstanceOfSatisfying(ExcepcionNegocio.class,
+                        error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.CONFLICTO));
+    }
+
+    private UUID insertar(UUID huesped, UUID publicacion, LocalDate llegada, LocalDate salida) {
+        return comoAplicacion.queryForObject("""
+                INSERT INTO reserva (huesped_id, publicacion_id, fecha_llegada, fecha_salida, numero_huespedes, estado)
+                VALUES (?, ?, ?, ?, 1, 'CONFIRMADA') RETURNING id""", UUID.class, huesped, publicacion, llegada, salida);
+    }
 
     @Test
     void guardaLaReservaConSusServiciosAdicionales() {
