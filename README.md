@@ -196,7 +196,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 **Faltan reglas o datos**
 
 5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`, y la cotización la cobra en 0 hasta que el administrador le asigne un porcentaje en `PUT /api/v1/admin/tarifas`.
-6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase.
+6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase. Decisión tomada en SCRUM-38: mientras no se definan, una política sin clase responde 409 con un mensaje claro, en vez de inventar reglas.
 7. **Código de recuperación (CU-03).** No hay tabla donde guardarlo. Por ahora vive en memoria 15 minutos y, como la recuperación es simulada, la API lo devuelve en la respuesta. **Cualquiera que conozca un correo puede cambiar esa contraseña: no debe llegar a producción así.**
 8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
 9. **Duración del JWT y revocación.** Por ahora los tokens duran 8 horas. Un usuario restringido o desactivado conserva su token hasta que venza, salvo que se verifique en cada petición.
