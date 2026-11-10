@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.cotizacion.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
@@ -15,10 +16,12 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServicioCotizacion implements FachadaCotizacion {
@@ -132,9 +135,44 @@ public class ServicioCotizacion implements FachadaCotizacion {
         return tarifas.vigentes();
     }
 
+    /**
+     * CU-28: cada cotización lee las tarifas, así que el cambio aplica de inmediato a las nuevas (RNF-29). Las reservas
+     * ya confirmadas guardaron su desglose y no cambian. La auditoría registra quién, cuándo y qué cambió.
+     */
     @Override
+    @Transactional
     public void actualizarTarifas(UUID administradorId, ConfiguracionTarifas nuevasTarifas) {
-        throw new UnsupportedOperationException("CU-28");
+        ConfiguracionTarifas anteriores = tarifas.vigentes();
+        tarifas.guardar(nuevasTarifas, administradorId);
+        eventos.publicar(new EventoDominio("TarifasActualizadas", administradorId, "configuracion_tarifa", null, "EXITO",
+                cambios(anteriores, nuevasTarifas), List.of()));
+    }
+
+    /** Por ejemplo, "Tarifa de servicio" → "9 % → 10 %". Solo incluye lo que cambió. */
+    private static Map<String, Object> cambios(ConfiguracionTarifas antes, ConfiguracionTarifas despues) {
+        Map<String, Object> cambios = new LinkedHashMap<>();
+        cambio(cambios, "Tarifa de limpieza", antes.porcentajeLimpieza(), despues.porcentajeLimpieza(), " %");
+        cambio(cambios, "Tarifa de servicio", antes.porcentajeServicio(), despues.porcentajeServicio(), " %");
+        cambio(cambios, "Descuento promocional", antes.porcentajeDescuento(), despues.porcentajeDescuento(), " %");
+        cambio(cambios, "Descuento por estancia larga", antes.porcentajeDescuentoEstanciaLarga(),
+                despues.porcentajeDescuentoEstanciaLarga(), " %");
+        cambio(cambios, "Noches para estancia larga", antes.nochesEstanciaLarga(), despues.nochesEstanciaLarga(), "");
+        return cambios;
+    }
+
+    private static void cambio(Map<String, Object> cambios, String concepto, Object antes, Object despues, String unidad) {
+        String anterior = texto(antes) + unidad;
+        String nuevo = texto(despues) + unidad;
+        if (!anterior.equals(nuevo)) {
+            cambios.put(concepto, anterior + " → " + nuevo);
+        }
+    }
+
+    private static String texto(Object valor) {
+        if (valor == null) {
+            return "sin definir";
+        }
+        return valor instanceof BigDecimal numero ? numero.stripTrailingZeros().toPlainString() : valor.toString();
     }
 
     /** El desglose que muestra la pantalla de cotización del frontend (RNF-34). */
