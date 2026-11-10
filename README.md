@@ -1,6 +1,6 @@
 # marketplace-alojamientos-backend
 
-API del Marketplace de Alojamientos de Inversiones LR. Monolito modular con capas y regla de dependencia (ADR-01).
+API del Marketplace de Alojamientos de Inversiones LR. Monolito modular con [Spring Modulith](https://docs.spring.io/spring-modulith/reference/), capas y regla de dependencia (ADR-01).
 
 **Estado: en construcción.** La aplicación arranca y todas las rutas existen. Lo que aún no se implementa responde `501`.
 
@@ -19,7 +19,7 @@ mvn spring-boot:run
 curl localhost:8080/actuator/health
 ```
 
-`mvn test` corre las pruebas unitarias y de arquitectura. `mvn verify` agrega las de integración, que usan Docker.
+`mvn test` corre las pruebas unitarias y de arquitectura, y deja los diagramas de los módulos en `target/spring-modulith-docs`. `mvn verify` agrega las de integración, que usan Docker.
 
 ### Con el frontend y datos de demostración
 
@@ -60,23 +60,31 @@ com.inversioneslr.marketplace
 └── auditoria        Registro de solo inserción
 ```
 
-Cada módulo se divide en las capas que necesita:
+Cada paquete directo de `marketplace` es un módulo, como pide Spring Modulith:
+
+- **Lo público** de un módulo es su paquete raíz: la fachada y los tipos que usa, por ejemplo `reservas.FachadaReservas` y `reservas.EstadoReserva`. En `compartido` son los tipos que usan todos, como `ExcepcionNegocio`, `EventoDominio` y `UsuarioAutenticado`.
+- **Lo interno** son sus subpaquetes, y otro módulo no puede usarlos. Por ejemplo, `reservas` puede usar `publicaciones.FachadaPublicaciones`, pero no `publicaciones.dominio.Publicacion`.
+
+Dentro de cada módulo, las capas que necesita:
 
 | Paquete | Contiene | Puede depender de |
 |---|---|---|
-| `presentacion` | Controladores REST | `aplicacion`, `dominio`, `api` |
-| `aplicacion` | `Servicio<Módulo>`, con un método por caso de uso | `dominio`, `api` de otros módulos |
-| `dominio` | Modelo y puertos, sin frameworks | `api` propia |
+| raíz del módulo | La fachada y sus tipos, lo único visible para otros módulos | nada interno |
+| `presentacion` | Controladores REST | `aplicacion`, `dominio`, raíz |
+| `aplicacion` | `Servicio<Módulo>`, con un método por caso de uso | `dominio`, raíz propia y de otros módulos |
+| `dominio` | Modelo y puertos, sin frameworks | raíz propia |
 | `infraestructura` | SQL y adaptadores | `dominio` |
-| `api` | Lo único visible para otros módulos | nada interno |
 
-`ArquitecturaTest` hace cumplir estas fronteras y bloquea el merge si se rompen.
+Dos pruebas hacen cumplir estas fronteras y bloquean el merge si se rompen:
+
+- `ModulosTest`: con Spring Modulith, que no haya ciclos entre módulos ni accesos a la parte interna de otro. También genera los diagramas.
+- `ArquitecturaTest`: con ArchUnit, las capas dentro de cada módulo.
 
 ## Dónde vive cada decisión
 
 | Decisión | Dónde |
 |---|---|
-| ADR-01 Capas y módulos | `ArquitecturaTest` |
+| ADR-01 Capas y módulos | `ModulosTest`, `ArquitecturaTest` |
 | ADR-02 Búsqueda indexada, 20 por página, tiempo máximo | `RepositorioBusquedaSql`, `ServicioBusqueda`, índices de `V1` |
 | ADR-03 Anti-solape | Restricción `reserva_sin_solape` en `V1` |
 | ADR-04 Idempotencia | Cabecera `Idempotency-Key`, tabla `solicitud_procesada`, `ServicioReservas.confirmarReserva` |
@@ -94,7 +102,7 @@ Cada módulo se divide en las capas que necesita:
 Para mantener el MVP mínimo:
 
 - **Filtro de autorización:** el `FiltroAutorizacion` del Patrón 6 es el `AuthorizationFilter` de Spring Security con una sola tabla de rutas, no una clase propia.
-- **Fachadas:** solo tienen `api/` los módulos a los que otro módulo llama. `busqueda`, `cancelaciones`, `notificaciones` y `administracion` no la necesitan todavía.
+- **Fachadas:** solo tienen fachada los módulos a los que otro módulo llama. `busqueda`, `cancelaciones`, `notificaciones` y `administracion` no la necesitan todavía.
 - **Casos de uso:** son métodos del `Servicio` de cada módulo. Por ejemplo, `ServicioReservas.confirmarReserva` es el `ConfirmarReserva` de SEC-01.
 - **Eventos:** hay un solo tipo, `EventoDominio`, con un campo `tipo` (por ejemplo, `"ReservaConfirmada"`), en vez de una clase por evento.
 
@@ -116,6 +124,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 10. **Errores por campo.** Los errores por campo van en `campos` y también en `errores`, el nombre que lee el frontend. La información mínima que falta para publicar responde 422.
 11. **Código de reserva.** El frontend muestra un código legible, como `LR-2026-0001`, que no está en el modelo de datos. Se agregó la columna `codigo`, que asigna la base de datos al guardar la reserva. Las peticiones y respuestas de reserva usan los nombres del frontend (`llegada`, `salida`, `huespedes`, `adicionales`).
 12. **Base de la cotización.** RF-17 no dice sobre qué monto se aplican los porcentajes. Como en el mockup, la tarifa de servicio y los descuentos se calculan sobre el subtotal (precio por noche × noches) y se redondean al peso. El descuento promocional y el de estancia larga se suman.
+13. **Interfaz pública en la raíz del módulo.** ADR-01 y SCRUM-54 la ubican en un paquete `api/`. Spring Modulith, el estándar de Spring para monolitos modulares, trata los subpaquetes como internos, así que la fachada y sus tipos están en el paquete raíz de cada módulo (SCRUM-98). La regla no cambia: otro módulo solo usa lo público.
 
 ## Consultar los logs
 
