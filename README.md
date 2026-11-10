@@ -105,6 +105,7 @@ Una entrega repetida no duplica la notificación, porque su id sale del id del e
 | RNF-18, RNF-25 Logs | `FiltroCorrelacion`, `EnmascaradorLogs` |
 | RNF-26 HTTPS | `deploy/Caddyfile` |
 | RNF-27 Credenciales | `.env`, gitleaks en `.github/workflows/ci.yml` |
+| RNF-12 Reservas a medias | `ServicioPagos.revertirCobrosSinReserva` |
 | RNF-31 Nueva política | `PoliticaCancelacion` |
 
 ## Simplificaciones respecto a los documentos
@@ -189,7 +190,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Afectan el flujo crítico**
 
-1. **Reserva a medias (RNF-12).** SEC-01 solo escribe el pago en el paso 10. Si la aplicación cae después de cobrar, no queda rastro local y el reconciliador no tiene qué revisar. Hace falta registrar el intento antes de llamar a Stripe.
+1. **Reserva a medias (RNF-12).** SEC-01 solo escribe el pago en el paso 10. Si la aplicación cae después de cobrar, no queda rastro local y el reconciliador no tiene qué revisar. Hace falta registrar el intento antes de llamar a Stripe. Resuelto en SCRUM-59: el cobro se registra como `PENDIENTE` antes de llamar a la pasarela y pasa a `APROBADO` en la transacción de la reserva. Cada 5 min, `ServicioPagos.revertirCobrosSinReserva` devuelve los que llevan 10 min pendientes, así que quedan resueltos en máximo 15 min. Pide el cobro con la misma clave: si ya se hizo, la pasarela devuelve el mismo pago sin cobrar otra vez (ADR-04); si nunca se hizo, se cobra y se devuelve en el acto. Un periodo bloqueado sin pago no puede darse, porque la reserva y el pago se guardan en la misma transacción.
 2. **Método de pago de prueba.** CU-17 y CU-19 lo piden como entrada, pero `cobrar(monto, clave)` no lo recibe. Por ahora sale de la variable `STRIPE_METODO_PAGO`, así que no se puede elegir por petición.
 3. **Devolución fallida.** CU-20 E4 supone que la reserva no cambia de estado. El Proceso 4 la deja cancelada con "devolución no procesada". Decisión tomada en SCRUM-37: se sigue el Proceso 4. La reserva queda cancelada con `DEVOLUCION_NO_PROCESADA`, la falla queda en la auditoría como `DevolucionFallida` y se notifica al huésped. El pago sigue `APROBADO`, para poder devolverlo después.
 4. **Reintento tras un solape.** Resuelto en SCRUM-34: el rechazo se guarda con su clave en una transacción aparte, y un reintento recibe el mismo rechazo sin volver a cobrar.

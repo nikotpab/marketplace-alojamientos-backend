@@ -1,34 +1,63 @@
 package com.inversioneslr.marketplace.pagos.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.Pago;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.RepositorioPagos;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /** CU-19. */
 @Service
 public class ServicioPagos implements FachadaPagos {
 
+    private static final Logger log = LoggerFactory.getLogger(ServicioPagos.class);
+
+    /** Una confirmación tarda segundos: a los 10 min, un cobro pendiente ya no va a tener reserva. */
+    private static final Duration ESPERA_ANTES_DE_REVERTIR = Duration.ofMinutes(10);
+
     private final PasarelaPagos pasarela;
     private final RepositorioPagos pagos;
+    private final PublicadorEventos eventos;
+    private final Clock reloj;
 
-    public ServicioPagos(PasarelaPagos pasarela, RepositorioPagos pagos) {
+    public ServicioPagos(PasarelaPagos pasarela, RepositorioPagos pagos, PublicadorEventos eventos, Clock reloj) {
         this.pasarela = pasarela;
         this.pagos = pagos;
+        this.eventos = eventos;
+        this.reloj = reloj;
     }
 
+    /** Registra el intento antes de llamar a la pasarela, para que un cobro nunca quede sin rastro (RNF-12). */
     @Override
     public String cobrar(BigDecimal monto, String claveSolicitud) {
-        return pasarela.cobrar(monto, claveSolicitud);
+        pagos.registrarIntento(claveSolicitud, monto);
+        try {
+            return pasarela.cobrar(monto, claveSolicitud);
+        } catch (ExcepcionNegocio error) {
+            if (error.tipo() == ExcepcionNegocio.Tipo.PAGO_RECHAZADO) {
+                pagos.marcarRechazado(claveSolicitud);
+            }
+            throw error;
+        }
     }
 
+    /** Si la devolución falla, el cobro sigue PENDIENTE y la reconciliación lo devuelve después. */
     @Override
-    public void devolver(String referencia, BigDecimal monto) {
+    public void devolverCobroSinReserva(String claveSolicitud, String referencia, BigDecimal monto) {
         pasarela.devolver(referencia, monto);
+        pagos.marcarDevueltoSinReserva(claveSolicitud, referencia);
     }
 
     /** Marca el pago antes de llamar a la pasarela: así dos cancelaciones simultáneas no devuelven dos veces. */
@@ -47,5 +76,31 @@ public class ServicioPagos implements FachadaPagos {
     @Override
     public void registrarPago(UUID reservaId, String referencia, String claveSolicitud, BigDecimal monto) {
         pagos.guardar(new Pago(UUID.randomUUID(), reservaId, referencia, claveSolicitud, monto, Pago.Estado.APROBADO));
+    }
+
+    /**
+     * RNF-12 · SCRUM-59: revierte cada 5 min los cobros que llevan 10 min PENDIENTES, así que quedan resueltos en
+     * máximo 15 min. Le pide el cobro a la pasarela con la misma clave: si ya se hizo, devuelve el mismo pago sin
+     * cobrar otra vez (ADR-04). Luego lo devuelve completo.
+     */
+    @Scheduled(cron = "${marketplace.pagos.reconciliacion-cron:0 */5 * * * *}")
+    public void revertirCobrosSinReserva() {
+        pagos.listarPendientesCreadosAntesDe(reloj.instant().minus(ESPERA_ANTES_DE_REVERTIR)).forEach(this::revertir);
+    }
+
+    private void revertir(Pago pago) {
+        try {
+            String referencia = pasarela.cobrar(pago.monto(), pago.claveIdempotencia());
+            pasarela.devolver(referencia, pago.monto());
+            pagos.marcarDevueltoSinReserva(pago.claveIdempotencia(), referencia);
+            eventos.publicar(new EventoDominio("CobroRevertido", null, "pago", pago.id(), "EXITO",
+                    Map.of("monto", pago.monto(), "referencia", referencia), List.of()));
+        } catch (ExcepcionNegocio error) {
+            if (error.tipo() == ExcepcionNegocio.Tipo.PAGO_RECHAZADO) {
+                pagos.marcarRechazado(pago.claveIdempotencia());
+            } else {
+                log.warn("No se pudo revertir el cobro {}; se reintenta en el siguiente ciclo", pago.id(), error);
+            }
+        }
     }
 }
