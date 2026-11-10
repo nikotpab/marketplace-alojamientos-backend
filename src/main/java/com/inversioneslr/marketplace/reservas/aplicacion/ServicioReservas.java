@@ -3,6 +3,7 @@ package com.inversioneslr.marketplace.reservas.aplicacion;
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.FachadaCotizacion;
@@ -15,10 +16,12 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
+import com.inversioneslr.marketplace.reservas.dominio.ReservaConAlojamiento;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -191,9 +194,20 @@ public class ServicioReservas implements FachadaReservas {
         return new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(campo, mensaje));
     }
 
-    /** CU-18: el contacto del huésped solo llega al anfitrión si la reserva está confirmada (RNF-21). */
+    /**
+     * CU-18: el huésped ve sus reservas y el anfitrión las de sus alojamientos. El contacto del huésped solo llega al
+     * anfitrión, y solo si la reserva está confirmada (RNF-21).
+     */
     public List<ReservaVista> consultarHistorial(UsuarioAutenticado usuario, EstadoReserva estado) {
-        throw new UnsupportedOperationException("CU-18");
+        if (usuario.rol() == Rol.ANFITRION) {
+            return reservas.listarPorAnfitrion(usuario.id(), estado).stream()
+                    .map(listada -> ReservaVista.de(listada, listada.reserva().estado() == EstadoReserva.CONFIRMADA
+                            ? usuarios.datosContacto(listada.reserva().huespedId()) : null))
+                    .toList();
+        }
+        return reservas.listarPorHuesped(usuario.id(), estado).stream()
+                .map(listada -> ReservaVista.de(listada, null))
+                .toList();
     }
 
     /** ADR-04: las claves se conservan 24 h, tiempo suficiente para los reintentos de un cliente. */
@@ -242,6 +256,15 @@ public class ServicioReservas implements FachadaReservas {
                                           List<UUID> adicionales) {
     }
 
-    public record ReservaVista(Reserva reserva, FachadaUsuarios.DatosContacto contactoHuesped) {
+    /** Con los nombres del frontend. El frontend agrupa por estado: próximas, completadas y canceladas. */
+    public record ReservaVista(UUID id, String codigo, EstadoReserva estado, UUID publicacionId, String alojamiento,
+                               LocalDate llegada, LocalDate salida, int huespedes, int noches, BigDecimal total,
+                               FachadaUsuarios.DatosContacto contactoHuesped) {
+
+        static ReservaVista de(ReservaConAlojamiento listada, FachadaUsuarios.DatosContacto contacto) {
+            Reserva reserva = listada.reserva();
+            return new ReservaVista(reserva.id(), reserva.codigo(), reserva.estado(), reserva.publicacionId(), listada.alojamiento(),
+                    reserva.fechaLlegada(), reserva.fechaSalida(), reserva.numeroHuespedes(), reserva.noches(), reserva.total(), contacto);
+        }
     }
 }

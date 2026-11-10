@@ -4,9 +4,7 @@ API del Marketplace de Alojamientos de Inversiones LR. Monolito modular con [Spr
 
 **Estado: en construcción.** La aplicación arranca y todas las rutas existen. Lo que aún no se implementa responde `501`.
 
-Ya funcionan: el esquema de base de datos, la seguridad con denegación por defecto, el registro de usuarios, la edición de publicaciones, la confirmación de reservas con idempotencia, los pagos, la auditoría, las notificaciones, los logs y las pruebas de arquitectura.
-
-Aún no se puede reservar de punta a punta: faltan la cotización (SCRUM-32) y las sesiones JWT (SCRUM-17). Las pruebas las simulan.
+Ya funcionan: el esquema de base de datos, la seguridad con denegación por defecto, el registro y el inicio de sesión, las publicaciones y su revisión, la búsqueda, la cotización, la confirmación de reservas con idempotencia, el historial de reservas, los pagos, la auditoría, las notificaciones, los logs y las pruebas de arquitectura.
 
 ## Ejecutar
 
