@@ -4,7 +4,6 @@ import com.inversioneslr.marketplace.cancelaciones.aplicacion.ServicioCancelacio
 import com.inversioneslr.marketplace.cancelaciones.dominio.Cancelacion;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import jakarta.validation.Valid;
-import java.math.BigDecimal;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,7 +24,7 @@ public class ControladorCancelaciones {
     }
 
     @GetMapping("/estimacion")
-    public BigDecimal estimarDevolucion(@AuthenticationPrincipal UsuarioAutenticado huesped, @PathVariable UUID reservaId) {
+    public ServicioCancelaciones.EstimacionDevolucion estimarDevolucion(@AuthenticationPrincipal UsuarioAutenticado huesped, @PathVariable UUID reservaId) {
         return servicio.estimarDevolucion(huesped.id(), reservaId);
     }
 
