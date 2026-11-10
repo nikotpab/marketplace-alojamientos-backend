@@ -38,7 +38,25 @@ public class RepositorioTarifasSql implements RepositorioTarifas {
 
     @Override
     public void guardar(ConfiguracionTarifas tarifas, UUID modificadoPor) {
-        throw new UnsupportedOperationException("SQL de configuracion_tarifa");
+        guardar("LIMPIEZA", tarifas.porcentajeLimpieza(), null, modificadoPor);
+        guardar("SERVICIO", tarifas.porcentajeServicio(), null, modificadoPor);
+        guardar("DESCUENTO_PROMOCIONAL", tarifas.porcentajeDescuento(), null, modificadoPor);
+        guardar("DESCUENTO_ESTANCIA_LARGA", tarifas.porcentajeDescuentoEstanciaLarga(), tarifas.nochesEstanciaLarga(), modificadoPor);
+    }
+
+    private void guardar(String clave, BigDecimal porcentaje, Integer nochesMinimas, UUID modificadoPor) {
+        jdbc.sql("""
+                INSERT INTO configuracion_tarifa (clave, porcentaje, noches_minimas, modificado_por)
+                VALUES (:clave, :porcentaje, :noches, :modificadoPor)
+                ON CONFLICT (clave) DO UPDATE SET
+                    porcentaje = EXCLUDED.porcentaje,
+                    noches_minimas = EXCLUDED.noches_minimas,
+                    modificado_por = EXCLUDED.modificado_por""")
+                .param("clave", clave)
+                .param("porcentaje", porcentaje)
+                .param("noches", nochesMinimas)
+                .param("modificadoPor", modificadoPor)
+                .update();
     }
 
     private static BigDecimal porcentaje(Map<String, Tarifa> porClave, String clave) {
