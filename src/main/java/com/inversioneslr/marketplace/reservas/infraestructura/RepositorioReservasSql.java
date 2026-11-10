@@ -5,7 +5,10 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
+import com.inversioneslr.marketplace.reservas.dominio.ReservaConAlojamiento;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -114,32 +117,49 @@ public class RepositorioReservasSql implements RepositorioReservas {
     public Optional<Reserva> buscarPorId(UUID id) {
         return jdbc.sql("SELECT * FROM reserva WHERE id = :id")
                 .param("id", id)
-                .query((fila, numero) -> new Reserva(
-                        id,
-                        fila.getString("codigo"),
-                        fila.getObject("huesped_id", UUID.class),
-                        fila.getObject("publicacion_id", UUID.class),
-                        fila.getObject("fecha_llegada", LocalDate.class),
-                        fila.getObject("fecha_salida", LocalDate.class),
-                        fila.getInt("numero_huespedes"),
-                        EstadoReserva.valueOf(fila.getString("estado")),
-                        fila.getInt("noches"),
-                        fila.getBigDecimal("precio_base"),
-                        fila.getBigDecimal("tarifa_limpieza"),
-                        fila.getBigDecimal("tarifa_servicio"),
-                        fila.getBigDecimal("descuento"),
-                        fila.getBigDecimal("total")))
+                .query(RepositorioReservasSql::aReserva)
                 .optional();
     }
 
     @Override
-    public List<Reserva> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
-        throw new UnsupportedOperationException(PENDIENTE);
+    public List<ReservaConAlojamiento> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
+        return listar("r.huesped_id = :usuario", huespedId, estado);
     }
 
     @Override
-    public List<Reserva> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado) {
-        throw new UnsupportedOperationException(PENDIENTE);
+    public List<ReservaConAlojamiento> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado) {
+        return listar("p.anfitrion_id = :usuario", anfitrionId, estado);
+    }
+
+    private List<ReservaConAlojamiento> listar(String condicion, UUID usuarioId, EstadoReserva estado) {
+        return jdbc.sql("""
+                SELECT r.*, p.titulo AS alojamiento
+                FROM reserva r
+                JOIN publicacion p ON p.id = r.publicacion_id
+                WHERE %s AND (CAST(:estado AS varchar) IS NULL OR r.estado = :estado)
+                ORDER BY r.fecha_llegada DESC""".formatted(condicion))
+                .param("usuario", usuarioId)
+                .param("estado", estado == null ? null : estado.name())
+                .query((fila, numero) -> new ReservaConAlojamiento(aReserva(fila, numero), fila.getString("alojamiento")))
+                .list();
+    }
+
+    private static Reserva aReserva(ResultSet fila, int numero) throws SQLException {
+        return new Reserva(
+                fila.getObject("id", UUID.class),
+                fila.getString("codigo"),
+                fila.getObject("huesped_id", UUID.class),
+                fila.getObject("publicacion_id", UUID.class),
+                fila.getObject("fecha_llegada", LocalDate.class),
+                fila.getObject("fecha_salida", LocalDate.class),
+                fila.getInt("numero_huespedes"),
+                EstadoReserva.valueOf(fila.getString("estado")),
+                fila.getInt("noches"),
+                fila.getBigDecimal("precio_base"),
+                fila.getBigDecimal("tarifa_limpieza"),
+                fila.getBigDecimal("tarifa_servicio"),
+                fila.getBigDecimal("descuento"),
+                fila.getBigDecimal("total"));
     }
 
     @Override
