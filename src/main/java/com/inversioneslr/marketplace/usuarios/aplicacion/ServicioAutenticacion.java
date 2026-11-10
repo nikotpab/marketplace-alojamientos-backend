@@ -1,12 +1,12 @@
 package com.inversioneslr.marketplace.usuarios.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
-import com.inversioneslr.marketplace.compartido.dominio.Tokens;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
-import com.inversioneslr.marketplace.usuarios.api.FachadaUsuarios;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.Rol;
+import com.inversioneslr.marketplace.compartido.Tokens;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.CodigosRecuperacion;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.Usuario;

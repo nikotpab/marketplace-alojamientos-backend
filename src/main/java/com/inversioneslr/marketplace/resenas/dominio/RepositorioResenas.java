@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.resenas.dominio;
 
-import com.inversioneslr.marketplace.resenas.api.FachadaResenas.ResenaVisible;
+import com.inversioneslr.marketplace.resenas.FachadaResenas.ResenaVisible;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

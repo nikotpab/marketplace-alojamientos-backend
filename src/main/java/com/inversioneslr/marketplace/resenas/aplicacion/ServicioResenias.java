@@ -1,9 +1,9 @@
 package com.inversioneslr.marketplace.resenas.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
-import com.inversioneslr.marketplace.resenas.api.FachadaResenas;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.resenas.FachadaResenas;
 import com.inversioneslr.marketplace.resenas.dominio.RepositorioResenas;
-import com.inversioneslr.marketplace.reservas.api.FachadaReservas;
+import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

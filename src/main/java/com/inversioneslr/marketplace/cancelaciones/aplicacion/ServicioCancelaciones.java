@@ -2,10 +2,10 @@ package com.inversioneslr.marketplace.cancelaciones.aplicacion;
 
 import com.inversioneslr.marketplace.cancelaciones.dominio.Cancelacion;
 import com.inversioneslr.marketplace.cancelaciones.dominio.RepositorioCancelaciones;
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
-import com.inversioneslr.marketplace.pagos.api.FachadaPagos;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
-import com.inversioneslr.marketplace.reservas.api.FachadaReservas;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.pagos.FachadaPagos;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
+import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import java.util.UUID;

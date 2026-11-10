@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.inversioneslr.marketplace.compartido.dominio.ComprobacionEstado;
+import com.inversioneslr.marketplace.compartido.ComprobacionEstado;
 import com.inversioneslr.marketplace.compartido.infraestructura.ComprobacionBaseDatos;
 import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
 import com.inversioneslr.marketplace.compartido.infraestructura.TareaLatido;

@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.cotizacion.infraestructura;
 
-import com.inversioneslr.marketplace.cotizacion.api.ConfiguracionTarifas;
+import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.cotizacion.dominio.RepositorioTarifas;
 import java.math.BigDecimal;
 import java.util.Map;

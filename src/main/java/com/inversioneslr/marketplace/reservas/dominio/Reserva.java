@@ -1,7 +1,7 @@
 package com.inversioneslr.marketplace.reservas.dominio;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
-import com.inversioneslr.marketplace.reservas.api.EstadoReserva;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;

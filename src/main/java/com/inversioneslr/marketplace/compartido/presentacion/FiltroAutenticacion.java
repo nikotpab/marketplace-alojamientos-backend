@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.compartido.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.Tokens;
+import com.inversioneslr.marketplace.compartido.Tokens;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

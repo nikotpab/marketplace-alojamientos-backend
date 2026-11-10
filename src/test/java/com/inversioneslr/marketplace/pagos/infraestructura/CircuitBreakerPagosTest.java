@@ -3,7 +3,7 @@ package com.inversioneslr.marketplace.pagos.infraestructura;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import java.math.BigDecimal;
 import java.time.Duration;

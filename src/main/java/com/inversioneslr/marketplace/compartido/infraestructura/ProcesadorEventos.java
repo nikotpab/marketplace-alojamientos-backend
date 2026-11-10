@@ -1,8 +1,8 @@
 package com.inversioneslr.marketplace.compartido.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.ComprobacionEstado;
-import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
-import com.inversioneslr.marketplace.compartido.dominio.SuscriptorAsincrono;
+import com.inversioneslr.marketplace.compartido.ComprobacionEstado;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.compartido.SuscriptorAsincrono;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

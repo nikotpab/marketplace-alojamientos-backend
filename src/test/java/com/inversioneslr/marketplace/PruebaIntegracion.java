@@ -1,8 +1,8 @@
 package com.inversioneslr.marketplace;
 
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
-import com.inversioneslr.marketplace.compartido.dominio.Tokens;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.Rol;
+import com.inversioneslr.marketplace.compartido.Tokens;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

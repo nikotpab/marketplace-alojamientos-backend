@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.compartido.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.stream.Collectors;

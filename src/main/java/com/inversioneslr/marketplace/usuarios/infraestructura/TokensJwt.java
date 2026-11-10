@@ -1,8 +1,8 @@
 package com.inversioneslr.marketplace.usuarios.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
-import com.inversioneslr.marketplace.compartido.dominio.Tokens;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.Rol;
+import com.inversioneslr.marketplace.compartido.Tokens;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;

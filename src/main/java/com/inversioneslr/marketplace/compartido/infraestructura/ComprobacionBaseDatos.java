@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.compartido.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.ComprobacionEstado;
+import com.inversioneslr.marketplace.compartido.ComprobacionEstado;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 

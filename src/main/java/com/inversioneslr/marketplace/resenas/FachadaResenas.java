@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.resenas.api;
+package com.inversioneslr.marketplace.resenas;
 
 import java.time.Instant;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.pagos.api;
+package com.inversioneslr.marketplace.pagos;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -7,7 +7,7 @@ public interface FachadaPagos {
 
     /**
      * @return referencia del pago
-     * @throws com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio PAGO_RECHAZADO o PAGO_NO_PROCESADO
+     * @throws com.inversioneslr.marketplace.compartido.ExcepcionNegocio PAGO_RECHAZADO o PAGO_NO_PROCESADO
      */
     String cobrar(BigDecimal monto, String claveSolicitud);
 

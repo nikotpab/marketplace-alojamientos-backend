@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.cotizacion.dominio;
 
-import com.inversioneslr.marketplace.cotizacion.api.ConfiguracionTarifas;
+import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import java.util.UUID;
 
 public interface RepositorioTarifas {

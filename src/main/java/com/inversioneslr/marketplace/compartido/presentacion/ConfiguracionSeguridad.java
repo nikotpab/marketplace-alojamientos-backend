@@ -1,7 +1,7 @@
 package com.inversioneslr.marketplace.compartido.presentacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
-import com.inversioneslr.marketplace.compartido.dominio.Tokens;
+import com.inversioneslr.marketplace.compartido.Rol;
+import com.inversioneslr.marketplace.compartido.Tokens;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

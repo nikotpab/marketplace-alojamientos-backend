@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.notificaciones.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
 import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificaciones;
 import java.util.List;

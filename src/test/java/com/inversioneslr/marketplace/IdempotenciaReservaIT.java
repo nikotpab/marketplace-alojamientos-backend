@@ -8,10 +8,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
-import com.inversioneslr.marketplace.cotizacion.api.Cotizacion;
+import com.inversioneslr.marketplace.cotizacion.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.aplicacion.ServicioCotizacion;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas;

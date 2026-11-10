@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.pagos.aplicacion;
 
-import com.inversioneslr.marketplace.pagos.api.FachadaPagos;
+import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.Pago;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.RepositorioPagos;

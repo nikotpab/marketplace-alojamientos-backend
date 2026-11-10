@@ -1,7 +1,7 @@
 package com.inversioneslr.marketplace.notificaciones.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
-import com.inversioneslr.marketplace.compartido.dominio.SuscriptorAsincrono;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.compartido.SuscriptorAsincrono;
 import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
 import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificaciones;
 import java.sql.ResultSet;

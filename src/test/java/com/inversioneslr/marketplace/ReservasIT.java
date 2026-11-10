@@ -3,11 +3,11 @@ package com.inversioneslr.marketplace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.inversioneslr.marketplace.compartido.dominio.ExcepcionNegocio;
-import com.inversioneslr.marketplace.compartido.dominio.Rol;
-import com.inversioneslr.marketplace.publicaciones.api.FachadaPublicaciones;
-import com.inversioneslr.marketplace.reservas.api.EstadoReserva;
-import com.inversioneslr.marketplace.reservas.api.FachadaReservas;
+import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.Rol;
+import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
+import com.inversioneslr.marketplace.reservas.EstadoReserva;
+import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;

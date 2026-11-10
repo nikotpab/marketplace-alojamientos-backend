@@ -2,7 +2,7 @@ package com.inversioneslr.marketplace.cancelaciones.presentacion;
 
 import com.inversioneslr.marketplace.cancelaciones.aplicacion.ServicioCancelaciones;
 import com.inversioneslr.marketplace.cancelaciones.dominio.Cancelacion;
-import com.inversioneslr.marketplace.compartido.dominio.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.util.UUID;

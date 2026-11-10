@@ -3,8 +3,8 @@ package com.inversioneslr.marketplace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

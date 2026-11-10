@@ -1,4 +1,4 @@
-package com.inversioneslr.marketplace.cotizacion.api;
+package com.inversioneslr.marketplace.cotizacion;
 
 import java.time.LocalDate;
 import java.util.List;

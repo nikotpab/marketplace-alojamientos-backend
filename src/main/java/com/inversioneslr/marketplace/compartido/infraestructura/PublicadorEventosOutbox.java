@@ -1,8 +1,8 @@
 package com.inversioneslr.marketplace.compartido.infraestructura;
 
-import com.inversioneslr.marketplace.compartido.dominio.EventoDominio;
-import com.inversioneslr.marketplace.compartido.dominio.PublicadorEventos;
-import com.inversioneslr.marketplace.compartido.dominio.SuscriptorSincrono;
+import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.SuscriptorSincrono;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
