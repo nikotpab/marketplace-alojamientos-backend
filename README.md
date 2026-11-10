@@ -141,7 +141,7 @@ En cada PR, el CI sube el reporte como el artefacto `cobertura-jacoco`.
 
 ## Análisis estático (SonarQube Cloud)
 
-El CI analiza cada PR y `main` en [SonarQube Cloud](https://sonarcloud.io/project/overview?id=nikotpab_marketplace-alojamientos-backend), con la cobertura de JaCoCo. Los resultados aparecen también en el PR. Necesita el secreto `SONAR_TOKEN` en GitHub y el análisis automático apagado en SonarQube Cloud (Administration > Analysis Method). Las migraciones de Flyway no se analizan, porque no se pueden modificar una vez aplicadas.
+El CI analiza cada PR y `main` en [SonarQube Cloud](https://sonarcloud.io/project/overview?id=nikotpab_marketplace-alojamientos-backend), con la cobertura de JaCoCo. Los resultados aparecen también en el PR. Necesita el secreto `SONAR_TOKEN` en GitHub y el análisis automático apagado en SonarQube Cloud (Administration > Analysis Method). Las migraciones de Flyway y los datos de demostración (`src/main/resources/db`) no se analizan, porque no se pueden modificar una vez aplicados.
 
 ## Pruebas de carga (ASR-01)
 

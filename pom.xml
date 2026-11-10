@@ -23,8 +23,8 @@
         <sonar.organization>nikotpab</sonar.organization>
         <sonar.projectKey>nikotpab_marketplace-alojamientos-backend</sonar.projectKey>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-        <!-- Una migración aplicada no se puede cambiar: Flyway rechaza el checksum distinto. -->
-        <sonar.exclusions>src/main/resources/db/migration/**</sonar.exclusions>
+        <!-- Las migraciones y los datos de demostración no se pueden cambiar una vez aplicados: Flyway rechaza el checksum distinto. -->
+        <sonar.exclusions>src/main/resources/db/**</sonar.exclusions>
     </properties>
 
     <dependencyManagement>
