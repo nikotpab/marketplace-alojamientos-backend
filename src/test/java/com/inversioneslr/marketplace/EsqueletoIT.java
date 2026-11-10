@@ -35,7 +35,7 @@ class EsqueletoIT extends PruebaIntegracion {
         String administrador = sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR);
         mvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", huesped)).andExpect(status().isForbidden());
-        mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", administrador)).andExpect(status().isNotImplemented());
+        mvc.perform(get("/api/v1/admin/dashboard").header("Authorization", administrador)).andExpect(status().isOk());
     }
 
     @Test

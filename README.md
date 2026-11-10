@@ -137,6 +137,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 12. **Base de la cotización.** RF-17 no dice sobre qué monto se aplican los porcentajes. Como en el mockup, la tarifa de servicio y los descuentos se calculan sobre el subtotal (precio por noche × noches) y se redondean al peso. El descuento promocional y el de estancia larga se suman.
 13. **Interfaz pública en la raíz del módulo.** ADR-01 y SCRUM-54 la ubican en un paquete `api/`. Spring Modulith, el estándar de Spring para monolitos modulares, trata los subpaquetes como internos, así que la fachada y sus tipos están en el paquete raíz de cada módulo (SCRUM-98). La regla no cambia: otro módulo solo usa lo público.
 14. **Tabla de eventos.** El modelo de datos define `evento_pendiente` para el outbox. Con Spring Modulith, el outbox es su tabla `event_publication`, con el esquema oficial (`V8`, SCRUM-98). Además, `EventoDominio` lleva un `id`, que no está en los documentos, para que una entrega repetida no duplique la notificación.
+15. **Indicadores del dashboard.** RF-33 no define "ingresos estimados" ni el periodo. Los ingresos son la suma de las tarifas de servicio de las reservas confirmadas y completadas, que es lo que gana la plataforma. El periodo cuenta las reservas por la fecha en que se hicieron y, si no se elige, son los últimos 30 días. Usuarios y publicaciones activas son el total actual.
 
 ## Consultar los logs
 
