@@ -10,4 +10,7 @@ public interface RepositorioAuditoria {
     void insertar(RegistroAuditoria registro);
 
     List<EventoAuditoria> consultar(FiltrosAuditoria filtros);
+
+    /** Todos los registros, para verificar su hash. */
+    List<RegistroAuditoria> listarTodos();
 }

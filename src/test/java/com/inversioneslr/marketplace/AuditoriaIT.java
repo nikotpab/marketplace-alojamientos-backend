@@ -6,18 +6,52 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.inversioneslr.marketplace.auditoria.aplicacion.ServicioAuditoria;
+import com.inversioneslr.marketplace.auditoria.aplicacion.VerificacionAuditoria;
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.Rol;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class AuditoriaIT extends PruebaIntegracion {
 
     @Autowired
     ServicioAuditoria auditoria;
+
+    @Autowired
+    VerificacionAuditoria verificacion;
+
+    @Test
+    void losRegistrosValidosPasanLaVerificacionAunqueTenganDecimales() {
+        UUID entidad = UUID.randomUUID();
+        auditoria.atender(new EventoDominio("ReservaConfirmada", null, "reserva", entidad, "EXITO",
+                Map.of("total", new BigDecimal("330000.00"), "devolucion", new BigDecimal("150000"), "codigo", "LR-2030-0001",
+                        "publicacionId", UUID.randomUUID(), "filas", 3), List.of()));
+        UUID registro = comoAplicacion.queryForObject("SELECT id FROM auditoria.evento_auditoria WHERE entidad_id = ?", UUID.class, entidad);
+
+        assertThat(verificacion.verificar()).doesNotContain(registro);
+    }
+
+    @Test
+    void unRegistroAlteradoSeDetectaYElLatidoReportaLaFalla(CapturedOutput salida) {
+        UUID entidad = UUID.randomUUID();
+        // Como si alguien cambiara el resultado saltándose los triggers: el hash ya no corresponde.
+        comoAplicacion.update("""
+                INSERT INTO auditoria.evento_auditoria (accion, entidad, entidad_id, resultado, detalle, hash_registro)
+                VALUES ('PagoFallido', 'reserva', ?, 'EXITO', '{}', repeat('0', 64))""", entidad);
+        UUID alterado = comoAplicacion.queryForObject("SELECT id FROM auditoria.evento_auditoria WHERE entidad_id = ?", UUID.class, entidad);
+
+        assertThat(verificacion.verificar()).contains(alterado);
+        assertThat(verificacion.disponible()).isFalse();
+        assertThat(salida.getOut()).contains("Registros de auditoría alterados", alterado.toString());
+    }
 
     @Test
     void registraElEventoConSuHash() {

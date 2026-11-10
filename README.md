@@ -186,7 +186,7 @@ fields @timestamp, logger_name, message, correlationId
 
 ## Monitoreo
 
-Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos`, `pasarelaPagos` y `procesadorEventos`.
+Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos`, `pasarelaPagos`, `procesadorEventos` y `auditoria`. `auditoria` figura caída si algún registro de auditoría fue alterado: cada 10 min, `VerificacionAuditoria` recalcula el hash de cada uno (ASR-07).
 
 `pasarelaPagos` no llama a Stripe: solo figura caída si el circuit breaker está abierto. Sin cobros recientes, una caída de Stripe no se detecta.
 
