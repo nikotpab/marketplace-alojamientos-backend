@@ -12,6 +12,18 @@ spring:
     password: ${DB_CONTRASENA_MIGRACION}
     default-schema: marketplace
     schemas: marketplace
+  modulith:
+    events:
+      # La tabla event_publication la crea Flyway (V8): el usuario de la aplicación no tiene permisos de DDL.
+      jdbc:
+        schema-initialization:
+          enabled: false
+      # ADR-06: una entrega que se queda a medias, por ejemplo porque la aplicación se reinició,
+      # se marca fallida al minuto y ProcesadorEventos la reintenta.
+      staleness:
+        published: 1m
+        processing: 1m
+        resubmitted: 1m
   mvc:
     format:
       date: iso
