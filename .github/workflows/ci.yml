@@ -27,7 +27,7 @@ jobs:
       - run: mvn -B verify
       # SCRUM-104: análisis en SonarQube Cloud con la cobertura de JaCoCo. Sin el secreto (PR de Dependabot), se omite.
       - if: env.SONAR_TOKEN != ''
-        run: mvn -B sonar:sonar
+        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
       # SCRUM-100: reporte de cobertura de JaCoCo, descargable desde la ejecución del CI.
       - uses: actions/upload-artifact@v4
         with:

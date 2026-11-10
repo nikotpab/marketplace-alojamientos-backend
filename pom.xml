@@ -151,7 +151,7 @@
         <finalName>marketplace-api</finalName>
         <pluginManagement>
             <plugins>
-                <!-- Se ejecuta con mvn sonar:sonar (solo en el CI, ver .github/workflows/ci.yml). -->
+                <!-- Solo lo ejecuta el CI (ver .github/workflows/ci.yml). -->
                 <plugin>
                     <groupId>org.sonarsource.scanner.maven</groupId>
                     <artifactId>sonar-maven-plugin</artifactId>
