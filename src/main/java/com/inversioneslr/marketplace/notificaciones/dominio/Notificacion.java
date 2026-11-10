@@ -11,6 +11,7 @@ public record Notificacion(UUID id, UUID usuarioId, String tipo, String mensaje,
             "ReservaConfirmada", "Tu pago fue aprobado y la reserva quedó confirmada.",
             "ReservaCancelada", "Una reserva fue cancelada.",
             "DevolucionProcesada", "La devolución de tu reserva fue procesada.",
+            "DevolucionFallida", "No pudimos procesar la devolución de tu reserva cancelada. La revisaremos.",
             "PublicacionAprobada", "Tu publicación fue aprobada y ya está activa.",
             "PublicacionRechazada", "Tu publicación fue rechazada. Revisa el motivo.",
             "PublicacionBloqueada", "Tu publicación fue bloqueada. Revisa el motivo.");
