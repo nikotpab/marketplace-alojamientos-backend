@@ -100,8 +100,12 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.ACTIVA, null);
     }
 
+    /** RF-27: se bloquea una publicación activa o pausada. El anfitrión no puede reactivarla. */
     public Publicacion bloquear(String motivo) {
-        throw new UnsupportedOperationException("RF-27");
+        if (estado != EstadoPublicacion.ACTIVA && estado != EstadoPublicacion.PAUSADA) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo una publicación activa o pausada puede bloquearse.");
+        }
+        return conEstado(EstadoPublicacion.BLOQUEADA, motivo.trim());
     }
 
     private Publicacion conEstado(EstadoPublicacion nuevo, String motivo) {

@@ -22,7 +22,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RepositorioReservasSql implements RepositorioReservas {
 
-    private static final String PENDIENTE = "SQL de reservas";
     private static final String RESTRICCION_ANTI_SOLAPE = "reserva_sin_solape";
 
     private final JdbcClient jdbc;
@@ -179,7 +178,14 @@ public class RepositorioReservasSql implements RepositorioReservas {
     }
 
     @Override
-    public void marcarFuturasEnRevision(UUID publicacionId) {
-        throw new UnsupportedOperationException(PENDIENTE);
+    public List<Reserva> marcarFuturasEnRevision(UUID publicacionId, LocalDate desde) {
+        return jdbc.sql("""
+                UPDATE reserva SET estado = 'EN_REVISION'
+                WHERE publicacion_id = :publicacion AND estado = 'CONFIRMADA' AND fecha_llegada >= :desde
+                RETURNING *""")
+                .param("publicacion", publicacionId)
+                .param("desde", desde)
+                .query(RepositorioReservasSql::aReserva)
+                .list();
     }
 }
