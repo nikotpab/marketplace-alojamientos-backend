@@ -17,6 +17,7 @@ public class ConfiguracionPagos {
         PasarelaPagos adaptador = switch (proveedor) {
             case "stripe" -> adaptadorStripe(claveStripe, metodoPago);
             case "simulado" -> new AdaptadorPagosSimulado();
+            case "alterno" -> new AdaptadorPagosAlterno();
             default -> throw new IllegalArgumentException("Proveedor de pagos desconocido: " + proveedor);
         };
         return new CircuitBreakerPagos(adaptador);
