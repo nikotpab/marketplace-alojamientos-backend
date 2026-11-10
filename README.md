@@ -108,6 +108,46 @@ Una entrega repetida no duplica la notificación, porque su id sale del id del e
 | RNF-12 Reservas a medias | `ServicioPagos.revertirCobrosSinReserva` |
 | RNF-31 Nueva política | `PoliticaCancelacion` |
 
+## Cómo se verifica cada ASR
+
+| ASR | Qué se comprueba | Prueba |
+|---|---|---|
+| ASR-01 Rendimiento | p95 y p99 de cada escenario con la carga pedida | `pruebas/carga` (JMeter), ver la sección siguiente |
+| ASR-02 Concurrencia | 50 solicitudes simultáneas por las mismas fechas: 1 confirmada, 49 rechazadas, 0 superposiciones | `ConfirmarReservaIT.conCincuentaSolicitudesSimultaneasSoloSeConfirmaUna` |
+| ASR-03 Idempotencia | 10 envíos de la misma solicitud: 1 reserva, 1 cobro y 1 notificación | `IdempotenciaReservaIT.diezEnviosSimultaneosProducenUnSoloEfecto` |
+| ASR-04 Pasarela caída | Respuesta antes de 7 s sin reserva ni periodo bloqueado; circuito abierto tras 5 fallas y prueba a los 30 s | `AdaptadorStripeTest`, `CircuitBreakerPagosTest`, `ConfirmarReservaIT.pagoNoProcesadoNoCreaLaReservaNiBloqueaElPeriodo` |
+| ASR-05 Componente no crítico | Notificaciones lentas o caídas no frenan buscar, reservar ni cancelar; los avisos se entregan al volver | `ComponenteNoCriticoIT` |
+| ASR-06 Autorización | Todos los endpoints con cada rol: 403 y registro en la auditoría en cada denegación | `AutorizacionIT`, `HistorialReservasIT` (contacto, RNF-21) |
+| ASR-07 Auditoría inalterable | UPDATE y DELETE rechazados para cualquier rol; un hash alterado deja el latido en falla | `EsqueletoIT.auditoriaEsSoloInsercionParaCualquierRol`, `AuditoriaIT` |
+| ASR-08b Modificabilidad | Segundo proveedor de pagos sin tocar dominio ni aplicación | `PagosAlternoIT`, ver "Experimento de modificabilidad" |
+| RNF-12 Reservas a medias | Un cobro sin reserva se devuelve en máximo 15 min | `ReconciliacionIT` |
+| RNF-19, RNF-22, RNF-23 Seguridad | Inyección SQL, XSS, fuerza bruta y contraseñas con hash | `SeguridadIT`, `InicioSesionIT` |
+
+Todas, salvo la de carga, corren en cada PR con `mvn verify` contra PostgreSQL real.
+
+## Pruebas de carga (ASR-01)
+
+`pruebas/carga/ejecutar.sh` corre todos los escenarios a la vez con JMeter durante 2 minutos, contra el backend con el perfil `demo`. Crea un huésped y un administrador, ejecuta `plan.jmx`, imprime p95 y p99 por escenario y, al terminar, borra las reservas que hizo. El reporte HTML de JMeter queda en `pruebas/carga/resultados/`.
+
+```bash
+pruebas/carga/ejecutar.sh          # o ejecutar.sh 300 para 5 minutos
+```
+
+Resultado del 10 de noviembre, en local (Apple M5, 10 núcleos, 16 GB, PostgreSQL en Docker y los 9 alojamientos de la demo):
+
+| Escenario | Carga | p95 (meta) | p99 (meta) |
+|---|---|---|---|
+| Búsqueda | 580/min | 4 ms (≤ 1 s) | 5 ms (≤ 2 s) |
+| Detalle | 580/min | 7 ms (≤ 2 s) | 16 ms |
+| Calendario | 580/min | 5 ms (≤ 2,5 s) | 7 ms |
+| Cotización | 100/min | 4 ms (≤ 500 ms) | 6 ms (≤ 1 s) |
+| Confirmación de reserva | 30/min | 17 ms (≤ 5 s) | 20 ms |
+| Cancelación | 10/min | 13 ms (≤ 4 s) | 16 ms |
+| Dashboard | 5 administradores sin pausa | 3 ms (≤ 4 s) | 4 ms |
+| Reporte | 5 exportaciones sin pausa | 8 ms (≤ 10 s) | 9 ms |
+
+Con 10.000 reservas sembradas, 5 exportaciones simultáneas tardaron 0,5 s en PDF y 0,31 s en Excel (meta: 10 s). Todos los escenarios cumplen sin errores, así que no hace falta la caché de la búsqueda que ADR-02 dejó como decisión diferida. JMeter mide desde el cliente, pero en local la red no suma tiempo. Falta repetir la medición en el servidor desplegado y con más datos.
+
 ## Experimento de modificabilidad (ASR-08b)
 
 SCRUM-66 pide agregar un segundo proveedor de pagos simulado y medir el cambio. `AdaptadorPagosAlterno` se elige con `PAGOS_PROVEEDOR=alterno`: tiene sus propias referencias, rechaza los cobros de más de 20 millones y no cobra dos veces con la misma clave.

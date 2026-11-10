@@ -3,3 +3,6 @@
 spring:
   flyway:
     locations: classpath:db/migration,classpath:db/demo
+    # Los datos de ejemplo son V1000, así que una migración nueva del esquema (por ejemplo V8) queda con un número
+    # menor. Sin esto, una base de demostración que ya tenía V1000 no se podría actualizar.
+    out-of-order: true
