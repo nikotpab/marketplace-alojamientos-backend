@@ -11,5 +11,8 @@ public interface RepositorioResenas {
 
     Optional<Resena> buscarPorId(UUID id);
 
+    /** @return vacío si no existe o está oculta */
+    Optional<ResenaVisible> buscarVisible(UUID id);
+
     List<ResenaVisible> listarVisibles(UUID publicacionId);
 }
