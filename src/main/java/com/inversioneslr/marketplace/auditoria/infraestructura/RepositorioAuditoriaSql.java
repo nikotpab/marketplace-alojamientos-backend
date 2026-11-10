@@ -14,6 +14,7 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 @Repository
@@ -64,6 +65,32 @@ public class RepositorioAuditoriaSql implements RepositorioAuditoria {
         filtrar(sql, parametros, "e.creado_en < (CAST(:hasta AS date) + 1)::timestamp AT TIME ZONE 'America/Bogota'", "hasta", filtros.hasta());
         sql.append(" ORDER BY e.creado_en DESC LIMIT ").append(MAXIMO_EVENTOS);
         return jdbc.sql(sql.toString()).params(parametros).query(this::aEvento).list();
+    }
+
+    @Override
+    public List<RegistroAuditoria> listarTodos() {
+        return jdbc.sql("SELECT *, detalle::text AS detalle_texto FROM auditoria.evento_auditoria ORDER BY creado_en")
+                .query((fila, numero) -> new RegistroAuditoria(
+                        fila.getObject("id", UUID.class),
+                        fila.getObject("actor_id", UUID.class),
+                        fila.getString("accion"),
+                        fila.getString("entidad"),
+                        fila.getObject("entidad_id", UUID.class),
+                        fila.getString("resultado"),
+                        detalle(fila.getString("detalle_texto")),
+                        fila.getString("hash_registro"),
+                        fila.getTimestamp("creado_en").toInstant()))
+                .list();
+    }
+
+    /** Los decimales se leen como BigDecimal, como se escribieron, para que el hash se pueda recalcular igual. */
+    private Map<String, Object> detalle(String texto) {
+        if (texto == null) {
+            return Map.of();
+        }
+        return json.readerFor(new TypeReference<Map<String, Object>>() { })
+                .with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+                .readValue(texto);
     }
 
     private static void filtrar(StringBuilder sql, Map<String, Object> parametros, String condicion, String nombre, Object valor) {
