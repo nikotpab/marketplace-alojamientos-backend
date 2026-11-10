@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.notificaciones.dominio;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -16,8 +17,10 @@ public record Notificacion(UUID id, UUID usuarioId, String tipo, String mensaje,
 
     private static final String MENSAJE_GENERAL = "Hay una novedad en tu cuenta.";
 
-    public static Notificacion nueva(UUID usuarioId, String tipo, Instant creadoEn) {
-        return new Notificacion(UUID.randomUUID(), usuarioId, tipo, MENSAJES.getOrDefault(tipo, MENSAJE_GENERAL), false, creadoEn);
+    /** El id sale del evento y del usuario: si el evento se entrega otra vez, es la misma notificación. */
+    public static Notificacion nueva(UUID eventoId, UUID usuarioId, String tipo, Instant creadoEn) {
+        UUID id = UUID.nameUUIDFromBytes((eventoId + ":" + usuarioId).getBytes(StandardCharsets.UTF_8));
+        return new Notificacion(id, usuarioId, tipo, MENSAJES.getOrDefault(tipo, MENSAJE_GENERAL), false, creadoEn);
     }
 
     public Notificacion marcarLeida() {

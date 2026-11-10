@@ -80,6 +80,18 @@ Dos pruebas hacen cumplir estas fronteras y bloquean el merge si se rompen:
 - `ModulosTest`: con Spring Modulith, que no haya ciclos entre módulos ni accesos a la parte interna de otro. También genera los diagramas.
 - `ArquitecturaTest`: con ArchUnit, las capas dentro de cada módulo.
 
+### Eventos
+
+Los módulos se avisan con eventos de Spring (ADR-06). Por ejemplo, al confirmar una reserva:
+
+1. `ServicioReservas` publica un `EventoDominio` con `PublicadorEventos`.
+2. En la misma transacción, `ServicioAuditoria` lo registra (`@EventListener`). Si falla, la reserva no se confirma.
+3. También en esa transacción, Spring Modulith lo guarda en `event_publication`, que hace de outbox.
+4. Después de confirmar, en otro hilo, `ServicioNotificaciones` crea una notificación por destinatario (`@ApplicationModuleListener`).
+5. Si eso falla, `ProcesadorEventos` lo reintenta cada 5 s, hasta 5 intentos. Una entrega que queda a medias, por ejemplo porque la aplicación se reinició, se marca fallida al minuto y también se reintenta.
+
+Una entrega repetida no duplica la notificación, porque su id sale del id del evento y del destinatario.
+
 ## Dónde vive cada decisión
 
 | Decisión | Dónde |
@@ -89,7 +101,7 @@ Dos pruebas hacen cumplir estas fronteras y bloquean el merge si se rompen:
 | ADR-03 Anti-solape | Restricción `reserva_sin_solape` en `V1` |
 | ADR-04 Idempotencia | Cabecera `Idempotency-Key`, tabla `solicitud_procesada`, `ServicioReservas.confirmarReserva` |
 | ADR-05 Timeout y circuit breaker | `CircuitBreakerPagos`, `AdaptadorStripe` |
-| ADR-06 Eventos, auditoría y outbox | `PublicadorEventosOutbox`, `ProcesadorEventos`, `ServicioAuditoria`, `V2` |
+| ADR-06 Eventos, auditoría y outbox | `PublicadorEventosSpring`, `ServicioAuditoria`, `ServicioNotificaciones`, `ProcesadorEventos`, `V2`, `V8` |
 | ADR-07 Autorización | Tabla de rutas en `ConfiguracionSeguridad`, `ManejadorDenegaciones` |
 | ADR-08 Proveedor de pagos | `PasarelaPagos`, `ConfiguracionPagos` |
 | RNF-18, RNF-25 Logs | `FiltroCorrelacion`, `EnmascaradorLogs` |
@@ -116,7 +128,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 2. **`numero_huespedes`.** Está en el diagrama de clases y en los mockups, pero no en el modelo de datos. Se agregó a `reserva`.
 3. **`NOT NULL`.** El modelo de datos solo lo marca en claves y `creado_en`. Se agregó donde la integridad lo exige, por ejemplo en las fechas de `reserva`: con fechas nulas, la restricción anti-solape bloquearía todo el calendario.
 4. **Cruces entre módulos.** `Reserva.cancelar()` no devuelve una `Cancelacion`, porque está en otro módulo. `calcularDevolucion` recibe `(reserva, fecha)` como en SEC-04, no solo la reserva como en el diagrama de clases.
-5. **Nombres.** Se usan los del modelo de datos (`solicitud_procesada`, `evento_pendiente`) y `RepositorioBusqueda` del Patrón 1, no `RepositorioPublicaciones` de SEC-06.
+5. **Nombres.** Se usan los del modelo de datos (`solicitud_procesada`) y `RepositorioBusqueda` del Patrón 1, no `RepositorioPublicaciones` de SEC-06.
 6. **Borradores incompletos.** CU-06 pide rechazar un borrador sin datos obligatorios, pero el frontend permite guardarlo incompleto y RF-08 valida la información mínima al solicitar la activación. Se sigue a RF-08: el tipo y la política son opcionales en un borrador. Una publicación que ya no es borrador no puede quedar incompleta al editarla.
 7. **Ciudad (temporal).** El formulario del frontend no pide ciudad. Se toma lo que va después de la última coma de la ubicación, y la búsqueda también busca la ciudad en la ubicación. Lo correcto es agregar el campo en el formulario.
 8. **Política de cancelación (temporal).** El frontend la envía como texto libre. Se asocia a la política cuyo nombre aparece en el texto y, si ninguna aparece, a la Flexible. Lo correcto es que el formulario ofrezca las políticas para elegir, porque la devolución se calcula según la política elegida.
@@ -125,6 +137,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 11. **Código de reserva.** El frontend muestra un código legible, como `LR-2026-0001`, que no está en el modelo de datos. Se agregó la columna `codigo`, que asigna la base de datos al guardar la reserva. Las peticiones y respuestas de reserva usan los nombres del frontend (`llegada`, `salida`, `huespedes`, `adicionales`).
 12. **Base de la cotización.** RF-17 no dice sobre qué monto se aplican los porcentajes. Como en el mockup, la tarifa de servicio y los descuentos se calculan sobre el subtotal (precio por noche × noches) y se redondean al peso. El descuento promocional y el de estancia larga se suman.
 13. **Interfaz pública en la raíz del módulo.** ADR-01 y SCRUM-54 la ubican en un paquete `api/`. Spring Modulith, el estándar de Spring para monolitos modulares, trata los subpaquetes como internos, así que la fachada y sus tipos están en el paquete raíz de cada módulo (SCRUM-98). La regla no cambia: otro módulo solo usa lo público.
+14. **Tabla de eventos.** El modelo de datos define `evento_pendiente` para el outbox. Con Spring Modulith, el outbox es su tabla `event_publication`, con el esquema oficial (`V8`, SCRUM-98). Además, `EventoDominio` lleva un `id`, que no está en los documentos, para que una entrega repetida no duplique la notificación.
 
 ## Consultar los logs
 

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface RepositorioNotificaciones {
 
-    /** Inserta la notificación o actualiza si ya existe. */
+    /** Inserta la notificación. Si ya existe, solo puede marcarla leída: una leída no vuelve a quedar sin leer. */
     void guardar(Notificacion notificacion);
 
     Optional<Notificacion> buscarPorId(UUID id);

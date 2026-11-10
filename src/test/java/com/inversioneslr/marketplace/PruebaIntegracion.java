@@ -1,5 +1,7 @@
 package com.inversioneslr.marketplace;
 
+import static org.awaitility.Awaitility.await;
+
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
@@ -68,6 +70,14 @@ abstract class PruebaIntegracion {
                 INSERT INTO periodo_disponibilidad (publicacion_id, fecha_inicio, fecha_fin, tipo)
                 VALUES (?, '2030-01-01', '2031-01-01', 'DISPONIBLE')""", publicacion);
         return publicacion;
+    }
+
+    /** Espera a que se entreguen los eventos de esa entidad: las notificaciones se atienden en otro hilo. */
+    void esperarEventosDe(UUID entidadId) {
+        await().until(() -> comoAplicacion.queryForObject("""
+                SELECT count(*) = 0 FROM event_publication
+                WHERE serialized_event::jsonb ->> 'entidadId' = ? AND completion_date IS NULL""",
+                Boolean.class, entidadId.toString()));
     }
 
     /** @return valor de la cabecera Authorization con un JWT real para ese usuario */

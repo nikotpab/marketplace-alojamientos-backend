@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.Rol;
-import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.aplicacion.ServicioCotizacion;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
@@ -40,9 +39,6 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
 
     @Autowired
     ServicioReservas reservas;
-
-    @Autowired
-    ProcesadorEventos procesador;
 
     /** Con un total fijo, para que estas pruebas no dependan del cálculo de la cotización. */
     @MockitoBean
@@ -112,7 +108,7 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
             resultados.add(envio.get().id());
         }
         UUID reserva = resultados.iterator().next();
-        procesador.procesarPendientes();
+        esperarEventosDe(reserva);
 
         assertThat(resultados).hasSize(1);
         assertThat(contar("SELECT count(*) FROM reserva WHERE publicacion_id = ?", publicacion)).isEqualTo(1);

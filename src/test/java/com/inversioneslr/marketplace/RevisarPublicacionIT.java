@@ -96,11 +96,12 @@ class RevisarPublicacionIT extends PruebaIntegracion {
                 Long.class, publicacion, accion);
     }
 
-    /** El aviso sale por el outbox; el procesador está apagado en las pruebas. */
+    /** El aviso queda en el registro de eventos (outbox), que lo entrega a las notificaciones. */
     private long avisosAlAnfitrion(String tipo) {
         return comoAplicacion.queryForObject("""
-                SELECT count(*) FROM evento_pendiente
-                WHERE tipo = ? AND payload ->> 'entidadId' = ? AND payload -> 'destinatarios' @> jsonb_build_array(CAST(? AS text))""",
+                SELECT count(*) FROM event_publication
+                WHERE serialized_event::jsonb ->> 'tipo' = ? AND serialized_event::jsonb ->> 'entidadId' = ?
+                  AND serialized_event::jsonb -> 'destinatarios' @> jsonb_build_array(CAST(? AS text))""",
                 Long.class, tipo, publicacion.toString(), anfitrion.toString());
     }
 }

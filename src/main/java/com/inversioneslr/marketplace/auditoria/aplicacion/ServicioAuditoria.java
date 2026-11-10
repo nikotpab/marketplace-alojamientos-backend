@@ -5,14 +5,14 @@ import com.inversioneslr.marketplace.auditoria.dominio.RegistroAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RepositorioAuditoria;
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
-import com.inversioneslr.marketplace.compartido.SuscriptorSincrono;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ServicioAuditoria implements FachadaAuditoria, SuscriptorSincrono {
+public class ServicioAuditoria implements FachadaAuditoria {
 
     private final RepositorioAuditoria auditoria;
     private final Clock reloj;
@@ -23,10 +23,11 @@ public class ServicioAuditoria implements FachadaAuditoria, SuscriptorSincrono {
     }
 
     /**
-     * ADR-06 · SEC-05: se ejecuta dentro de la transacción del caso de uso. Si falla, no hay cambio sin registro.
+     * ADR-06 · SEC-05: se ejecuta al publicar el evento, dentro de la transacción del caso de uso. Si falla, el caso
+     * de uso se revierte: no hay cambio sin registro.
      * Pendiente ADR-07: alertar al administrador si un usuario acumula 5 denegaciones en 10 min.
      */
-    @Override
+    @EventListener
     public void atender(EventoDominio evento) {
         auditoria.insertar(RegistroAuditoria.de(evento, reloj.instant()));
     }
