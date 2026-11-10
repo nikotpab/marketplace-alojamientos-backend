@@ -53,7 +53,9 @@ class NotificacionesIT extends PruebaIntegracion {
         UUID actorInexistente = UUID.randomUUID();
         UUID entidad = UUID.randomUUID();
 
-        assertThatThrownBy(() -> eventos.publicar(evento("ReservaConfirmada", actorInexistente, entidad, List.of())))
+        var conActorInexistente = evento("ReservaConfirmada", actorInexistente, entidad, List.of());
+
+        assertThatThrownBy(() -> eventos.publicar(conActorInexistente))
                 .isInstanceOf(DataAccessException.class);
 
         assertThat(contar("SELECT count(*) FROM event_publication WHERE serialized_event::jsonb ->> 'entidadId' = ?",

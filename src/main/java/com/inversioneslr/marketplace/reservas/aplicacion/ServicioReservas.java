@@ -39,6 +39,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 public class ServicioReservas implements FachadaReservas {
 
+    private static final String RESERVA = "reserva";
+    private static final String TOTAL = "total";
+
     private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
 
     /** Coincide con el mínimo que Stripe conserva sus claves de idempotencia. */
@@ -101,8 +104,8 @@ public class ServicioReservas implements FachadaReservas {
                 }
                 Reserva guardada = reservas.guardar(reserva, adicionales);
                 pagos.registrarPago(guardada.id(), referencia, claveSolicitud, guardada.total());
-                eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, "reserva", guardada.id(), "EXITO",
-                        Map.of("total", guardada.total(), "codigo", guardada.codigo()), List.of(huespedId, publicacion.anfitrionId())));
+                eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, RESERVA, guardada.id(), EventoDominio.EXITO,
+                        Map.of(TOTAL, guardada.total(), "codigo", guardada.codigo()), List.of(huespedId, publicacion.anfitrionId())));
                 reservas.completarSolicitud(claveSolicitud, guardada.id(), json.writeValueAsString(guardada));
                 return guardada;
             });
@@ -139,7 +142,7 @@ public class ServicioReservas implements FachadaReservas {
         } catch (ExcepcionNegocio error) {
             log.error("No se pudo devolver el cobro {} tras perder el periodo", referencia);
             eventos.publicar(new EventoDominio("DevolucionFallida", huespedId, "publicacion", publicacion.id(), error.tipo().name(),
-                    Map.of("referencia", referencia, "total", reserva.total()), List.of()));
+                    Map.of("referencia", referencia, TOTAL, reserva.total()), List.of()));
         }
     }
 
@@ -178,7 +181,7 @@ public class ServicioReservas implements FachadaReservas {
             return pagos.cobrar(cotizacionFinal.total(), claveSolicitud);
         } catch (ExcepcionNegocio error) {
             eventos.publicar(new EventoDominio("PagoFallido", huespedId, "publicacion", publicacion.id(), error.tipo().name(),
-                    Map.of("total", cotizacionFinal.total()), List.of()));
+                    Map.of(TOTAL, cotizacionFinal.total()), List.of()));
             throw error;
         }
     }
@@ -223,7 +226,7 @@ public class ServicioReservas implements FachadaReservas {
     public void completarReservasFinalizadas() {
         reservas.listarConfirmadasConSalidaAntesDe(LocalDate.now(reloj)).forEach(reserva -> transaccion.executeWithoutResult(estado -> {
             reservas.actualizarEstado(reserva.id(), reserva.completar().estado());
-            eventos.publicar(new EventoDominio("ReservaCompletada", null, "reserva", reserva.id(), "EXITO", Map.of(),
+            eventos.publicar(new EventoDominio("ReservaCompletada", null, RESERVA, reserva.id(), EventoDominio.EXITO, Map.of(),
                     List.of(reserva.huespedId())));
         }));
     }
@@ -249,7 +252,7 @@ public class ServicioReservas implements FachadaReservas {
     @Override
     public void marcarFuturasEnRevision(UUID publicacionId) {
         reservas.marcarFuturasEnRevision(publicacionId, LocalDate.now(reloj)).forEach(reserva ->
-                eventos.publicar(new EventoDominio("ReservaEnRevision", null, "reserva", reserva.id(), "EXITO",
+                eventos.publicar(new EventoDominio("ReservaEnRevision", null, RESERVA, reserva.id(), EventoDominio.EXITO,
                         Map.of("publicacionId", publicacionId), List.of(reserva.huespedId()))));
     }
 

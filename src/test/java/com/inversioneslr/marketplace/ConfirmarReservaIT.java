@@ -24,6 +24,7 @@ import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas;
 import com.inversioneslr.marketplace.reservas.aplicacion.ServicioReservas.ConfirmarReservaComando;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
+import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -81,7 +82,8 @@ class ConfirmarReservaIT extends PruebaIntegracion {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.estado").value("CONFIRMADA"))
                 .andExpect(jsonPath("$.total").value(330000.00))
-                .andReturn().getResponse().getContentAsString().replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+                .andReturn().getResponse().getContentAsString();
+        reserva = JsonPath.read(reserva, "$.id");
 
         UUID id = UUID.fromString(reserva);
         assertThat(contar("SELECT count(*) FROM reserva WHERE id = ? AND estado = 'CONFIRMADA'", id)).isEqualTo(1);
@@ -134,7 +136,8 @@ class ConfirmarReservaIT extends PruebaIntegracion {
 
     /** RNF-13: la base de datos deja pasar exactamente una, y a las demás se les devuelve lo cobrado. */
     @Test
-    void conCincuentaSolicitudesSimultaneasSoloSeConfirmaUna() throws Exception {
+    @SuppressWarnings("java:S2925") // Retrasa el commit de la ganadora para reproducir la carrera (SCRUM-102).
+    void conCincuentaSolicitudesSimultaneasSoloSeConfirmaUna() {
         int solicitudes = 50;
         // Retrasa el commit de la reserva ganadora, como en una JVM recién arrancada: los INSERT se superponen y, sin
         // el candado de RepositorioReservasSql, PostgreSQL aborta algunos por deadlock (SCRUM-102).
@@ -186,7 +189,9 @@ class ConfirmarReservaIT extends PruebaIntegracion {
             return "pi_" + llamada.getArgument(1);
         });
 
-        assertThatThrownBy(() -> reservas.confirmarReserva(huesped, comando, UUID.randomUUID().toString()))
+        String clave = UUID.randomUUID().toString();
+
+        assertThatThrownBy(() -> reservas.confirmarReserva(huesped, comando, clave))
                 .isInstanceOf(PeriodoNoDisponibleException.class);
 
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'DevolucionFallida'", publicacion)).isEqualTo(1);

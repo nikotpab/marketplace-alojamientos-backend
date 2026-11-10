@@ -23,8 +23,18 @@
         <sonar.organization>nikotpab</sonar.organization>
         <sonar.projectKey>nikotpab_marketplace-alojamientos-backend</sonar.projectKey>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-        <!-- Una migración aplicada no se puede cambiar: Flyway rechaza el checksum distinto. -->
-        <sonar.exclusions>src/main/resources/db/migration/**</sonar.exclusions>
+        <!-- Las migraciones y los datos de demostración no se pueden cambiar una vez aplicados: Flyway rechaza el checksum distinto. -->
+        <sonar.exclusions>src/main/resources/db/**</sonar.exclusions>
+        <!-- Reglas que no aplican aquí (SCRUM-105):
+             - java:S1192 en infraestructura: los textos repetidos son nombres de parámetros y columnas que deben
+               coincidir con el SQL de al lado; como constantes, el SQL se lee peor.
+             - java:S1135: marca la palabra "todo" de los comentarios en español ("todo o nada"). Los pendientes
+               están en el README, sección "Decisiones pendientes". -->
+        <sonar.issue.ignore.multicriteria>sql,todo</sonar.issue.ignore.multicriteria>
+        <sonar.issue.ignore.multicriteria.sql.ruleKey>java:S1192</sonar.issue.ignore.multicriteria.sql.ruleKey>
+        <sonar.issue.ignore.multicriteria.sql.resourceKey>**/infraestructura/**</sonar.issue.ignore.multicriteria.sql.resourceKey>
+        <sonar.issue.ignore.multicriteria.todo.ruleKey>java:S1135</sonar.issue.ignore.multicriteria.todo.ruleKey>
+        <sonar.issue.ignore.multicriteria.todo.resourceKey>**/*</sonar.issue.ignore.multicriteria.todo.resourceKey>
     </properties>
 
     <dependencyManagement>

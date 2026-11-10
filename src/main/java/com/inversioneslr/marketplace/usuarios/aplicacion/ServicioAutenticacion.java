@@ -28,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ServicioAutenticacion implements FachadaUsuarios {
 
+    private static final String USUARIO = "usuario";
+    private static final String INICIO_SESION_FALLIDO = "InicioSesionFallido";
+
     /** RNF-23: 5 intentos fallidos seguidos bloquean el inicio de sesión por 30 minutos. */
     private static final int MAXIMO_INTENTOS = 5;
     private static final Duration BLOQUEO = Duration.ofMinutes(30);
@@ -62,7 +65,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         Usuario usuario = usuarios.guardar(new Usuario(UUID.randomUUID(), comando.nombre(), comando.apellido(),
                 normalizar(comando.correo()), comando.telefono(), cifrador.encode(comando.contrasena()),
                 comando.rol(), true, false, null, 0, null));
-        eventos.publicar(evento("UsuarioRegistrado", usuario, "EXITO", Map.of("rol", usuario.rol().name())));
+        eventos.publicar(evento("UsuarioRegistrado", usuario, EventoDominio.EXITO, Map.of("rol", usuario.rol().name())));
         return resumen(usuario);
     }
 
@@ -75,18 +78,18 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         if (usuario == null) {
             cifrador.matches(comando.contrasena(), hashDeRelleno);
             // RNF-23: también se registra, sin el correo, para detectar fuerza bruta contra cuentas que no existen.
-            eventos.publicar(new EventoDominio("InicioSesionFallido", null, "usuario", null, "CORREO_DESCONOCIDO", Map.of(), List.of()));
+            eventos.publicar(new EventoDominio(INICIO_SESION_FALLIDO, null, USUARIO, null, "CORREO_DESCONOCIDO", Map.of(), List.of()));
             throw credencialesInvalidas();
         }
         Instant ahora = reloj.instant();
         if (usuario.bloqueadoEn(ahora)) {
-            eventos.publicar(evento("InicioSesionFallido", usuario, "CUENTA_BLOQUEADA", Map.of()));
+            eventos.publicar(evento(INICIO_SESION_FALLIDO, usuario, "CUENTA_BLOQUEADA", Map.of()));
             throw cuentaBloqueada();
         }
         if (!cifrador.matches(comando.contrasena(), usuario.hashContrasena())) {
             // Sin transacción a propósito: el intento debe quedar guardado aunque se responda con error.
             Usuario conIntento = usuarios.guardar(usuario.registrarIntentoFallido(ahora, MAXIMO_INTENTOS, BLOQUEO));
-            eventos.publicar(evento("InicioSesionFallido", usuario, "FALLIDO", Map.of()));
+            eventos.publicar(evento(INICIO_SESION_FALLIDO, usuario, "FALLIDO", Map.of()));
             throw conIntento.bloqueadoEn(ahora) ? cuentaBloqueada() : credencialesInvalidas();
         }
         if (usuario.restringido()) {
@@ -98,7 +101,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         if (usuario.intentosFallidos() > 0) {
             usuarios.guardar(usuario.reiniciarIntentos());
         }
-        eventos.publicar(evento("InicioSesionExitoso", usuario, "EXITO", Map.of()));
+        eventos.publicar(evento("InicioSesionExitoso", usuario, EventoDominio.EXITO, Map.of()));
         return new Sesion(tokens.emitir(new UsuarioAutenticado(usuario.id(), usuario.rol())),
                 new UsuarioSesion(usuario.id(), usuario.nombre(), usuario.correo(), usuario.rol()));
     }
@@ -116,7 +119,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     private static EventoDominio evento(String tipo, Usuario usuario, String resultado, Map<String, Object> detalle) {
-        return new EventoDominio(tipo, usuario.id(), "usuario", usuario.id(), resultado, detalle, List.of());
+        return new EventoDominio(tipo, usuario.id(), USUARIO, usuario.id(), resultado, detalle, List.of());
     }
 
     private static UsuarioResumen resumen(Usuario usuario) {
@@ -131,7 +134,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public Recuperacion solicitarRecuperacion(SolicitudRecuperacionComando comando) {
         return usuarios.buscarPorCorreo(normalizar(comando.correo()))
                 .map(usuario -> {
-                    eventos.publicar(evento("RecuperacionSolicitada", usuario, "EXITO", Map.of()));
+                    eventos.publicar(evento("RecuperacionSolicitada", usuario, EventoDominio.EXITO, Map.of()));
                     return new Recuperacion(codigos.generar(usuario.id()));
                 })
                 .orElseGet(() -> new Recuperacion(codigos.generar(UUID.randomUUID())));
@@ -143,7 +146,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 .flatMap(usuarios::buscarPorId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of("token", mensaje)));
         usuarios.guardar(usuario.cambiarContrasena(cifrador.encode(comando.contrasenaNueva())));
-        eventos.publicar(evento("ContrasenaRestablecida", usuario, "EXITO", Map.of()));
+        eventos.publicar(evento("ContrasenaRestablecida", usuario, EventoDominio.EXITO, Map.of()));
     }
 
     /** CU-04: cada usuario consulta y modifica solo su propio perfil, identificado por el token. */
@@ -154,7 +157,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     /** CU-04: el correo y el rol no se editan aquí. */
     public Perfil actualizarPerfil(UUID usuarioId, PerfilComando comando) {
         Usuario usuario = usuarios.guardar(buscar(usuarioId).actualizarDatos(comando.nombre(), comando.apellido(), comando.telefono()));
-        eventos.publicar(evento("PerfilActualizado", usuario, "EXITO", Map.of()));
+        eventos.publicar(evento("PerfilActualizado", usuario, EventoDominio.EXITO, Map.of()));
         return perfil(usuario);
     }
 
@@ -171,7 +174,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public Perfil cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
         Usuario actual = buscar(usuarioId);
         Usuario usuario = usuarios.guardar(comando.activo() ? actual.activar() : actual.desactivar());
-        eventos.publicar(evento(comando.activo() ? "CuentaActivada" : "CuentaDesactivada", usuario, "EXITO", Map.of()));
+        eventos.publicar(evento(comando.activo() ? "CuentaActivada" : "CuentaDesactivada", usuario, EventoDominio.EXITO, Map.of()));
         return perfil(usuario);
     }
 
@@ -186,7 +189,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     @Transactional
     public void restringir(UUID administradorId, UUID usuarioId, String motivo) {
         Usuario restringido = usuarios.guardar(buscar(usuarioId).restringir(motivo));
-        eventos.publicar(new EventoDominio("UsuarioRestringido", administradorId, "usuario", usuarioId, "EXITO",
+        eventos.publicar(new EventoDominio("UsuarioRestringido", administradorId, USUARIO, usuarioId, EventoDominio.EXITO,
                 Map.of("motivo", restringido.motivoRestriccion()), List.of()));
     }
 

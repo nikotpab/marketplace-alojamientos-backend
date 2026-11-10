@@ -22,7 +22,9 @@ public class RepositorioResenasSql implements RepositorioResenas {
             FROM resena r
             JOIN reserva rv ON rv.id = r.reserva_id
             JOIN usuario u ON u.id = rv.huesped_id
-            WHERE NOT r.oculta AND %s""";
+            WHERE NOT r.oculta""";
+    private static final String VISIBLE_POR_ID = VISIBLES + " AND r.id = :id";
+    private static final String VISIBLES_DE_PUBLICACION = VISIBLES + " AND rv.publicacion_id = :publicacion ORDER BY r.creado_en DESC";
 
     private final JdbcClient jdbc;
 
@@ -67,7 +69,7 @@ public class RepositorioResenasSql implements RepositorioResenas {
 
     @Override
     public Optional<ResenaVisible> buscarVisible(UUID id) {
-        return jdbc.sql(VISIBLES.formatted("r.id = :id"))
+        return jdbc.sql(VISIBLE_POR_ID)
                 .param("id", id)
                 .query(RepositorioResenasSql::aVisible)
                 .optional();
@@ -75,7 +77,7 @@ public class RepositorioResenasSql implements RepositorioResenas {
 
     @Override
     public List<ResenaVisible> listarVisibles(UUID publicacionId) {
-        return jdbc.sql(VISIBLES.formatted("rv.publicacion_id = :publicacion") + " ORDER BY r.creado_en DESC")
+        return jdbc.sql(VISIBLES_DE_PUBLICACION)
                 .param("publicacion", publicacionId)
                 .query(RepositorioResenasSql::aVisible)
                 .list();

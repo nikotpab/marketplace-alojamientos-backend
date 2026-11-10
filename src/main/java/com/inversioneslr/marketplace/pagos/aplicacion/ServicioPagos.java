@@ -93,7 +93,7 @@ public class ServicioPagos implements FachadaPagos {
             String referencia = pasarela.cobrar(pago.monto(), pago.claveIdempotencia());
             pasarela.devolver(referencia, pago.monto());
             pagos.marcarDevueltoSinReserva(pago.claveIdempotencia(), referencia);
-            eventos.publicar(new EventoDominio("CobroRevertido", null, "pago", pago.id(), "EXITO",
+            eventos.publicar(new EventoDominio("CobroRevertido", null, "pago", pago.id(), EventoDominio.EXITO,
                     Map.of("monto", pago.monto(), "referencia", referencia), List.of()));
         } catch (ExcepcionNegocio error) {
             if (error.tipo() == ExcepcionNegocio.Tipo.PAGO_RECHAZADO) {

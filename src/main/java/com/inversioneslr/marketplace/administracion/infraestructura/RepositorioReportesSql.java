@@ -39,7 +39,8 @@ public class RepositorioReportesSql implements RepositorioReportes {
                            %s AS "Registro"
                     FROM usuario u
                     WHERE %s
-                    ORDER BY u.creado_en DESC""".formatted(FECHA.formatted("u.creado_en"), PERIODO.formatted("u.creado_en")), filtros);
+                    ORDER BY u.creado_en DESC
+                    LIMIT :maximo""".formatted(FECHA.formatted("u.creado_en"), PERIODO.formatted("u.creado_en")), filtros);
             case PUBLICACIONES -> consultar("Publicaciones", """
                     SELECT p.titulo AS "Título", p.ciudad AS "Ciudad", t.nombre AS "Tipo", p.estado AS "Estado",
                            p.precio_noche AS "Precio por noche", concat_ws(' ', u.nombre, u.apellido) AS "Anfitrión", %s AS "Creación"
@@ -47,14 +48,16 @@ public class RepositorioReportesSql implements RepositorioReportes {
                     JOIN tipo_alojamiento t ON t.id = p.tipo_alojamiento_id
                     JOIN usuario u ON u.id = p.anfitrion_id
                     WHERE %s AND %s
-                    ORDER BY p.creado_en DESC""".formatted(FECHA.formatted("p.creado_en"), PERIODO.formatted("p.creado_en"), CIUDAD), filtros);
+                    ORDER BY p.creado_en DESC
+                    LIMIT :maximo""".formatted(FECHA.formatted("p.creado_en"), PERIODO.formatted("p.creado_en"), CIUDAD), filtros);
             case RESERVAS -> consultar("Reservas", """
                     SELECT r.codigo AS "Código", p.titulo AS "Alojamiento", p.ciudad AS "Ciudad", r.fecha_llegada AS "Llegada",
                            r.fecha_salida AS "Salida", r.estado AS "Estado", r.total AS "Total", %s AS "Reservada el"
                     FROM reserva r
                     JOIN publicacion p ON p.id = r.publicacion_id
                     WHERE %s AND %s
-                    ORDER BY r.creado_en DESC""".formatted(FECHA.formatted("r.creado_en"), PERIODO.formatted("r.creado_en"), CIUDAD), filtros);
+                    ORDER BY r.creado_en DESC
+                    LIMIT :maximo""".formatted(FECHA.formatted("r.creado_en"), PERIODO.formatted("r.creado_en"), CIUDAD), filtros);
             case INGRESOS_DEMANDA -> consultar("Ingresos y demanda por ciudad", """
                     SELECT p.ciudad AS "Ciudad", count(*) AS "Reservas", sum(r.tarifa_servicio) AS "Ingresos estimados",
                            sum(r.total) AS "Total reservado"
@@ -62,15 +65,18 @@ public class RepositorioReportesSql implements RepositorioReportes {
                     JOIN publicacion p ON p.id = r.publicacion_id
                     WHERE r.estado IN ('CONFIRMADA', 'COMPLETADA') AND %s AND %s
                     GROUP BY p.ciudad
-                    ORDER BY count(*) DESC, p.ciudad""".formatted(PERIODO.formatted("r.creado_en"), CIUDAD), filtros);
+                    ORDER BY count(*) DESC, p.ciudad
+                    LIMIT :maximo""".formatted(PERIODO.formatted("r.creado_en"), CIUDAD), filtros);
         };
     }
 
+    /** El SQL solo se arma con las constantes de esta clase; los filtros van como parámetros. */
     private Reporte consultar(String titulo, String sql, FiltrosReporte filtros) {
-        return jdbc.sql(sql + " LIMIT " + MAXIMO_FILAS)
+        return jdbc.sql(sql)
                 .param("desde", filtros.desde())
                 .param("hasta", filtros.hasta())
                 .param("ciudad", filtros.ciudad())
+                .param("maximo", MAXIMO_FILAS)
                 .query(resultado -> {
                     ResultSetMetaData metadatos = resultado.getMetaData();
                     List<String> columnas = new ArrayList<>();

@@ -48,7 +48,7 @@ public class ServicioResenias implements FachadaResenas {
         }
         Resena resena = resenas.guardar(new Resena(UUID.randomUUID(), reservaId, comando.calificacion(), comando.contenido().strip(),
                 false, null));
-        eventos.publicar(new EventoDominio("ResenaPublicada", huespedId, "resena", resena.id(), "EXITO",
+        eventos.publicar(new EventoDominio("ResenaPublicada", huespedId, "resena", resena.id(), EventoDominio.EXITO,
                 Map.of("reservaId", reservaId, "publicacionId", reserva.publicacionId(), "calificacion", resena.calificacion()), List.of()));
         return resenas.buscarVisible(resena.id()).orElseThrow();
     }
@@ -65,7 +65,7 @@ public class ServicioResenias implements FachadaResenas {
         Resena resena = resenas.buscarPorId(resenaId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La reseña no existe."));
         resenas.guardar(resena.ocultar(administradorId));
-        eventos.publicar(new EventoDominio("ResenaOcultada", administradorId, "resena", resenaId, "EXITO", Map.of(), List.of()));
+        eventos.publicar(new EventoDominio("ResenaOcultada", administradorId, "resena", resenaId, EventoDominio.EXITO, Map.of(), List.of()));
     }
 
     public record PublicarResenaComando(

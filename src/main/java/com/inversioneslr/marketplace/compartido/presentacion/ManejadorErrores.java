@@ -22,6 +22,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 public class ManejadorErrores extends ResponseEntityExceptionHandler {
 
+    private static final String CODIGO = "codigo";
+
     private static final Logger log = LoggerFactory.getLogger(ManejadorErrores.class);
 
     private static final Map<ExcepcionNegocio.Tipo, HttpStatus> ESTADOS = Map.ofEntries(
@@ -46,7 +48,7 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ExcepcionNegocio.class)
     ProblemDetail reglaDeNegocio(ExcepcionNegocio excepcion, HttpServletRequest solicitud) {
         log.atInfo()
-                .addKeyValue("codigo", excepcion.tipo())
+                .addKeyValue(CODIGO, excepcion.tipo())
                 .addKeyValue("metodo", solicitud.getMethod())
                 .addKeyValue("ruta", solicitud.getRequestURI())
                 .log("Solicitud rechazada: {}", excepcion.getMessage());
@@ -54,7 +56,7 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
             denegaciones.registrar(solicitud);
         }
         ProblemDetail problema = ProblemDetail.forStatusAndDetail(ESTADOS.get(excepcion.tipo()), excepcion.getMessage());
-        problema.setProperty("codigo", excepcion.tipo());
+        problema.setProperty(CODIGO, excepcion.tipo());
         if (!excepcion.campos().isEmpty()) {
             agregarCampos(problema, excepcion.campos());
         }
@@ -74,7 +76,7 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage, (primero, otro) -> primero));
         ProblemDetail problema = excepcion.getBody();
         problema.setDetail("Hay datos inválidos. Revisa los campos indicados.");
-        problema.setProperty("codigo", ExcepcionNegocio.Tipo.DATOS_INVALIDOS);
+        problema.setProperty(CODIGO, ExcepcionNegocio.Tipo.DATOS_INVALIDOS);
         agregarCampos(problema, campos);
         return handleExceptionInternal(excepcion, problema, cabeceras, estado, solicitud);
     }

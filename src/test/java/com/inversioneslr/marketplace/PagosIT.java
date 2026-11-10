@@ -21,7 +21,6 @@ class PagosIT extends PruebaIntegracion {
         pagos.registrarPago(null, referencia, clave, new BigDecimal("1062000.00"));
 
         var pago = comoAplicacion.queryForMap("SELECT id_pago_stripe, monto, estado FROM pago WHERE clave_idempotencia = ?", clave);
-        assertThat(pago.get("id_pago_stripe")).isEqualTo(referencia);
-        assertThat(pago.get("estado")).isEqualTo("APROBADO");
+        assertThat(pago).containsEntry("id_pago_stripe", referencia).containsEntry("estado", "APROBADO");
     }
 }

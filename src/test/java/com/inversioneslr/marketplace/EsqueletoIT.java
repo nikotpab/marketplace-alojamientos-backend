@@ -45,7 +45,9 @@ class EsqueletoIT extends PruebaIntegracion {
 
         insertarReserva(publicacion, dia, dia.plusDays(3), "CONFIRMADA");
 
-        assertThatThrownBy(() -> insertarReserva(publicacion, dia.plusDays(2), dia.plusDays(4), "CONFIRMADA"))
+        LocalDate llegada = dia.plusDays(2);
+        LocalDate salida = dia.plusDays(4);
+        assertThatThrownBy(() -> insertarReserva(publicacion, llegada, salida, "CONFIRMADA"))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("reserva_sin_solape");
         // Una cancelada no ocupa el periodo, y otra puede empezar el día en que la anterior termina.

@@ -51,7 +51,7 @@ public class ServicioReportes {
     @Transactional(readOnly = true, timeout = TIEMPO_MAX_SEGUNDOS)
     public Indicadores consultarDashboard(LocalDate desde, LocalDate hasta) {
         LocalDate fin = hasta == null ? LocalDate.now(reloj) : hasta;
-        LocalDate inicio = desde == null ? fin.minusDays(DIAS_POR_DEFECTO - 1) : desde;
+        LocalDate inicio = desde == null ? fin.minusDays(DIAS_POR_DEFECTO - 1L) : desde;
         validarPeriodo(inicio, fin);
         return indicadores.calcular(inicio, fin);
     }
@@ -74,7 +74,7 @@ public class ServicioReportes {
         detalle.put("desde", String.valueOf(filtros.desde()));
         detalle.put("hasta", String.valueOf(filtros.hasta()));
         detalle.put("ciudad", String.valueOf(filtros.ciudad()));
-        eventos.publicar(new EventoDominio("ReporteExportado", administradorId, "reporte", null, "EXITO", detalle, List.of()));
+        eventos.publicar(new EventoDominio("ReporteExportado", administradorId, "reporte", null, EventoDominio.EXITO, detalle, List.of()));
         return CompletableFuture.completedFuture(contenido);
     }
 
