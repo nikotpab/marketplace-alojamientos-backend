@@ -42,7 +42,9 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
 
     @Override
     public List<Usuario> listar() {
-        throw new UnsupportedOperationException("SQL de usuario");
+        return jdbc.sql("SELECT * FROM usuario ORDER BY creado_en DESC")
+                .query(RepositorioUsuariosSql::aUsuario)
+                .list();
     }
 
     @Override
