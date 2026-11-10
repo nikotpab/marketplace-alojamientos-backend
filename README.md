@@ -206,7 +206,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 10. Reactivar una cuenta desactivada (CU-05) y desbloquear una publicación. Por ahora una publicación pausada (CU-10) vuelve a ACTIVA sin pasar por revisión, y una bloqueada no se puede reactivar.
 11. Resolver una reserva `EN_REVISION`. Además, la restricción anti-solape solo cubre `CONFIRMADA`, como pide ADR-03.
 12. Si editar una publicación activa la devuelve a revisión (CU-07).
-13. Pasar una reserva a `COMPLETADA`: ningún caso de uso lo define y RF-25 lo necesita. Queda una tarea programada vacía en `ServicioReservas`.
+13. Pasar una reserva a `COMPLETADA`: ningún caso de uso lo define y RF-25 lo necesita. Decisión tomada en SCRUM-40: cada noche a la 1:00, hora de Bogotá, `ServicioReservas.completarReservasFinalizadas` pasa a `COMPLETADA` las confirmadas cuya fecha de salida ya pasó y avisa al huésped de que ya puede reseñar.
 
 **Despliegue**
 

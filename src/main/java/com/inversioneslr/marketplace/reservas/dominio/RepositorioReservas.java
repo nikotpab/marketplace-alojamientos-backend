@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace.reservas.dominio;
 
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +40,9 @@ public interface RepositorioReservas {
     List<ReservaConAlojamiento> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado);
 
     void actualizarEstado(UUID id, EstadoReserva estado);
+
+    /** Las confirmadas cuya fecha de salida es anterior a ese día. */
+    List<Reserva> listarConfirmadasConSalidaAntesDe(LocalDate dia);
 
     void marcarFuturasEnRevision(UUID publicacionId);
 }

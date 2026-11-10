@@ -171,6 +171,14 @@ public class RepositorioReservasSql implements RepositorioReservas {
     }
 
     @Override
+    public List<Reserva> listarConfirmadasConSalidaAntesDe(LocalDate dia) {
+        return jdbc.sql("SELECT * FROM reserva WHERE estado = 'CONFIRMADA' AND fecha_salida < :dia")
+                .param("dia", dia)
+                .query(RepositorioReservasSql::aReserva)
+                .list();
+    }
+
+    @Override
     public void marcarFuturasEnRevision(UUID publicacionId) {
         throw new UnsupportedOperationException(PENDIENTE);
     }

@@ -26,7 +26,12 @@ public record Reserva(UUID id, String codigo, UUID huespedId, UUID publicacionId
                 noches, precioBase, tarifaLimpieza, tarifaServicio, descuento, total);
     }
 
+    /** RF-25: solo una reserva confirmada termina como completada. */
     public Reserva completar() {
-        throw new UnsupportedOperationException("RF-25");
+        if (estado != EstadoReserva.CONFIRMADA) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La reserva está en estado " + estado + " y no se puede completar.");
+        }
+        return new Reserva(id, codigo, huespedId, publicacionId, fechaLlegada, fechaSalida, numeroHuespedes, EstadoReserva.COMPLETADA,
+                noches, precioBase, tarifaLimpieza, tarifaServicio, descuento, total);
     }
 }

@@ -10,6 +10,7 @@ public record Notificacion(UUID id, UUID usuarioId, String tipo, String mensaje,
     private static final Map<String, String> MENSAJES = Map.of(
             "ReservaConfirmada", "Tu pago fue aprobado y la reserva quedó confirmada.",
             "ReservaCancelada", "Una reserva fue cancelada.",
+            "ReservaCompletada", "Tu estadía terminó. Ya puedes calificar el alojamiento.",
             "DevolucionProcesada", "La devolución de tu reserva fue procesada.",
             "DevolucionFallida", "No pudimos procesar la devolución de tu reserva cancelada. La revisaremos.",
             "PublicacionAprobada", "Tu publicación fue aprobada y ya está activa.",
