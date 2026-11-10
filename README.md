@@ -213,3 +213,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Para cumplir "un healthcheck si se cuelga" hace falta algo más.
 15. **Secretos e imagen.** Falta el paso que pasa los secretos de SSM a `deploy/.env`, y definir dónde se publica la imagen. La infraestructura AWS no es parte de este repositorio.
 16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora se reporta el procesador de eventos, que ADR-06 pide monitorear con latido. Si se refería al dominio web, falta agregarlo.
+
+**Sin caso de uso**
+
+17. **Reportar una reseña (RF-29).** RF-29 pide que las reseñas reportadas aparezcan en Moderación con su número de reportes, pero ningún caso de uso permite reportarlas y el modelo de datos no tiene dónde guardar los reportes. Por ahora el administrador oculta una reseña desde la lista de la publicación (`POST /api/v1/admin/resenas/{id}/ocultamiento`).
