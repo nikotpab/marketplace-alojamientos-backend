@@ -23,6 +23,8 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.junit.jupiter.api.Test;
+import org.openpdf.text.pdf.PdfReader;
+import org.openpdf.text.pdf.parser.PdfTextExtractor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -62,6 +64,10 @@ class ReportesIT extends PruebaIntegracion {
                 .andReturn().getResponse().getContentAsByteArray();
 
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        // SCRUM-108: el PDF se puede leer y trae el título y las columnas.
+        try (PdfReader lector = new PdfReader(pdf)) {
+            assertThat(new PdfTextExtractor(lector).getTextFromPage(1)).contains("Reservas", "Alojamiento", "Llegada");
+        }
     }
 
     @Test
