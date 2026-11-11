@@ -33,3 +33,6 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
+      # La etiqueta de la imagen de compilación lleva la versión de Maven (3.9), no la de Java, así que la regla de
+      # arriba no la frena: Dependabot proponía pasarla a Java 26 (PR #54). Se actualiza a mano.
+      - dependency-name: "maven"
