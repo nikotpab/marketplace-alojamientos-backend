@@ -77,9 +77,9 @@ class CrearPublicacionIT extends PruebaIntegracion {
         LocalDate hoy = LocalDate.now(ZoneId.of("America/Bogota"));
 
         var periodo = comoAplicacion.queryForMap("SELECT fecha_inicio, fecha_fin, tipo FROM periodo_disponibilidad WHERE publicacion_id = ?", id);
-        assertThat(periodo.get("tipo")).isEqualTo("DISPONIBLE");
-        assertThat(periodo.get("fecha_inicio").toString()).isEqualTo(hoy.toString());
-        assertThat(periodo.get("fecha_fin").toString()).isEqualTo(hoy.plusYears(2).toString());
+        assertThat(periodo).containsEntry("tipo", "DISPONIBLE");
+        assertThat(periodo.get("fecha_inicio")).hasToString(hoy.toString());
+        assertThat(periodo.get("fecha_fin")).hasToString(hoy.plusYears(2).toString());
     }
 
     @Test

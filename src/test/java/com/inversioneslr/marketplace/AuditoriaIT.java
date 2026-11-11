@@ -60,8 +60,7 @@ class AuditoriaIT extends PruebaIntegracion {
         auditoria.atender(new EventoDominio("ReservaConfirmada", null, "reserva", entidad, "EXITO", Map.of("total", 100), List.of()));
 
         var fila = comoAplicacion.queryForMap("SELECT accion, resultado, detalle::text AS detalle, hash_registro FROM auditoria.evento_auditoria WHERE entidad_id = ?", entidad);
-        assertThat(fila.get("accion")).isEqualTo("ReservaConfirmada");
-        assertThat(fila.get("resultado")).isEqualTo("EXITO");
+        assertThat(fila).containsEntry("accion", "ReservaConfirmada").containsEntry("resultado", "EXITO");
         assertThat(fila.get("detalle").toString()).contains("\"total\"");
         assertThat(fila.get("hash_registro").toString()).hasSize(64);
     }

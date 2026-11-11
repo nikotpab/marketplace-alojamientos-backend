@@ -144,7 +144,7 @@ public class ServicioCotizacion implements FachadaCotizacion {
     public void actualizarTarifas(UUID administradorId, ConfiguracionTarifas nuevasTarifas) {
         ConfiguracionTarifas anteriores = tarifas.vigentes();
         tarifas.guardar(nuevasTarifas, administradorId);
-        eventos.publicar(new EventoDominio("TarifasActualizadas", administradorId, "configuracion_tarifa", null, "EXITO",
+        eventos.publicar(new EventoDominio("TarifasActualizadas", administradorId, "configuracion_tarifa", null, EventoDominio.EXITO,
                 cambios(anteriores, nuevasTarifas), List.of()));
     }
 

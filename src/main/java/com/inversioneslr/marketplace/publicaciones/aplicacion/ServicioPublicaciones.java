@@ -36,6 +36,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ServicioPublicaciones implements FachadaPublicaciones {
 
+    private static final String PUBLICACION = "publicacion";
+    private static final String HASTA = "hasta";
+
     /** Decisión temporal: queda disponible dos años y el anfitrión bloquea lo que no (ajuste 9 del README). */
     private static final Period DISPONIBILIDAD_INICIAL = Period.ofYears(2);
     /** La única política implementada. */
@@ -63,7 +66,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         LocalDate hoy = LocalDate.now(reloj);
         publicaciones.guardarPeriodo(new PeriodoDisponibilidad(UUID.randomUUID(), publicacion.id(), hoy,
                 hoy.plus(DISPONIBILIDAD_INICIAL), PeriodoDisponibilidad.Tipo.DISPONIBLE));
-        eventos.publicar(new EventoDominio("PublicacionCreada", anfitrionId, "publicacion", publicacion.id(), "EXITO", Map.of(), List.of()));
+        eventos.publicar(new EventoDominio("PublicacionCreada", anfitrionId, PUBLICACION, publicacion.id(), EventoDominio.EXITO, Map.of(), List.of()));
         return vista(publicacion.id());
     }
 
@@ -121,7 +124,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     private PublicacionVista vista(UUID publicacionId) {
         return publicaciones.buscarVista(publicacionId)
-                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La publicación no existe."));
+                .orElseThrow(ServicioPublicaciones::noExiste);
     }
 
     private static String sinTildes(String texto) {
@@ -149,7 +152,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
             editada.exigirInformacionMinima();
         }
         publicaciones.guardar(editada);
-        eventos.publicar(new EventoDominio("PublicacionEditada", usuario.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        eventos.publicar(new EventoDominio("PublicacionEditada", usuario.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
         return vista(publicacionId);
     }
 
@@ -161,7 +164,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista solicitarActivacion(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).solicitarActivacion());
-        eventos.publicar(new EventoDominio("PublicacionEnviadaARevision", anfitrion.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        eventos.publicar(new EventoDominio("PublicacionEnviadaARevision", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
         return vista(publicacionId);
     }
 
@@ -169,7 +172,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista aprobar(UUID administradorId, UUID publicacionId) {
         Publicacion aprobada = publicaciones.guardar(existente(publicacionId).aprobar());
-        eventos.publicar(new EventoDominio("PublicacionAprobada", administradorId, "publicacion", publicacionId, "EXITO",
+        eventos.publicar(new EventoDominio("PublicacionAprobada", administradorId, PUBLICACION, publicacionId, EventoDominio.EXITO,
                 Map.of(), List.of(aprobada.anfitrionId())));
         return vista(publicacionId);
     }
@@ -178,7 +181,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista rechazar(UUID administradorId, UUID publicacionId, String motivo) {
         Publicacion rechazada = publicaciones.guardar(existente(publicacionId).rechazar(motivo));
-        eventos.publicar(new EventoDominio("PublicacionRechazada", administradorId, "publicacion", publicacionId, "EXITO",
+        eventos.publicar(new EventoDominio("PublicacionRechazada", administradorId, PUBLICACION, publicacionId, EventoDominio.EXITO,
                 Map.of("motivo", rechazada.motivoEstado()), List.of(rechazada.anfitrionId())));
         return vista(publicacionId);
     }
@@ -191,14 +194,14 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista pausar(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).pausar());
-        eventos.publicar(new EventoDominio("PublicacionPausada", anfitrion.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        eventos.publicar(new EventoDominio("PublicacionPausada", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
         return vista(publicacionId);
     }
 
     @Transactional
     public PublicacionVista reactivar(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).reactivar());
-        eventos.publicar(new EventoDominio("PublicacionReactivada", anfitrion.id(), "publicacion", publicacionId, "EXITO", Map.of(), List.of()));
+        eventos.publicar(new EventoDominio("PublicacionReactivada", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
         return vista(publicacionId);
     }
 
@@ -220,7 +223,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     /** ADR-07: la publicación existe y es del usuario, salvo que sea administrador. */
     private Publicacion propia(UsuarioAutenticado usuario, UUID publicacionId) {
         Publicacion publicacion = publicaciones.buscarPorId(publicacionId)
-                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La publicación no existe."));
+                .orElseThrow(ServicioPublicaciones::noExiste);
         if (usuario.rol() != Rol.ADMINISTRADOR && !publicacion.anfitrionId().equals(usuario.id())) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta publicación no es tuya.");
         }
@@ -265,18 +268,18 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         } else {
             publicaciones.liberar(publicacionId, cambio.desde(), fin);
         }
-        eventos.publicar(new EventoDominio("DisponibilidadModificada", anfitrion.id(), "publicacion", publicacionId, "EXITO",
-                Map.of("desde", cambio.desde().toString(), "hasta", cambio.hasta().toString(), "estado", cambio.estado().name()), List.of()));
+        eventos.publicar(new EventoDominio("DisponibilidadModificada", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO,
+                Map.of("desde", cambio.desde().toString(), HASTA, cambio.hasta().toString(), "estado", cambio.estado().name()), List.of()));
         return publicaciones.disponibilidad(publicacionId, cambio.desde().withDayOfMonth(1).minusMonths(1),
                 cambio.hasta().plusMonths(2).withDayOfMonth(1).minusDays(1));
     }
 
     private static void validarRango(LocalDate desde, LocalDate hasta) {
         if (hasta.isBefore(desde)) {
-            throw datoInvalido("hasta", "La fecha final debe ser igual o posterior a la inicial.");
+            throw datoInvalido(HASTA, "La fecha final debe ser igual o posterior a la inicial.");
         }
         if (ChronoUnit.DAYS.between(desde, hasta) >= MAXIMO_DIAS_RANGO) {
-            throw datoInvalido("hasta", "El rango no puede superar un año. Elige un rango más corto.");
+            throw datoInvalido(HASTA, "El rango no puede superar un año. Elige un rango más corto.");
         }
     }
 
@@ -310,7 +313,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public void bloquear(UUID administradorId, UUID publicacionId, String motivo) {
         Publicacion bloqueada = publicaciones.guardar(existente(publicacionId).bloquear(motivo));
-        eventos.publicar(new EventoDominio("PublicacionBloqueada", administradorId, "publicacion", publicacionId, "EXITO",
+        eventos.publicar(new EventoDominio("PublicacionBloqueada", administradorId, PUBLICACION, publicacionId, EventoDominio.EXITO,
                 Map.of("motivo", bloqueada.motivoEstado()), List.of(bloqueada.anfitrionId())));
     }
 
@@ -329,7 +332,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     public TipoAlojamiento guardarTipo(UUID administradorId, TipoAlojamiento tipo) {
         TipoAlojamiento guardado = publicaciones.guardarTipo(new TipoAlojamiento(tipo.id(), tipo.nombre().strip(), tipo.activo()));
         eventos.publicar(new EventoDominio(tipo.id() == null ? "TipoAlojamientoAgregado" : "TipoAlojamientoEditado", administradorId,
-                "tipo_alojamiento", guardado.id(), "EXITO", Map.of("nombre", guardado.nombre(), "activo", guardado.activo()), List.of()));
+                "tipo_alojamiento", guardado.id(), EventoDominio.EXITO, Map.of("nombre", guardado.nombre(), "activo", guardado.activo()), List.of()));
         return guardado;
     }
 

@@ -51,7 +51,9 @@ class TokensJwtTest {
 
     @Test
     void exigeUnaClaveDeAlMenos32Caracteres() {
-        assertThatThrownBy(() -> new TokensJwt("corta", Clock.systemUTC())).isInstanceOf(IllegalArgumentException.class);
+        Clock reloj = Clock.systemUTC();
+
+        assertThatThrownBy(() -> new TokensJwt("corta", reloj)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static TokensJwt tokensEn(Instant instante) {

@@ -29,6 +29,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class ServicioCancelaciones {
 
+    private static final String RESERVA = "reserva";
+    private static final String VALOR_DEVOLUCION = "valorDevolucion";
+
     private static final Logger log = LoggerFactory.getLogger(ServicioCancelaciones.class);
 
     private final RepositorioCancelaciones cancelaciones;
@@ -97,14 +100,14 @@ public class ServicioCancelaciones {
         return transaccion.execute(estado -> {
             reservas.marcarCancelada(reservaId);
             cancelaciones.guardar(cancelacion);
-            eventos.publicar(new EventoDominio("ReservaCancelada", huespedId, "reserva", reservaId, estadoFinal.name(),
-                    Map.of("motivo", comando.motivo(), "valorDevolucion", valor), List.of(huespedId, publicacion.anfitrionId())));
+            eventos.publicar(new EventoDominio("ReservaCancelada", huespedId, RESERVA, reservaId, estadoFinal.name(),
+                    Map.of("motivo", comando.motivo(), VALOR_DEVOLUCION, valor), List.of(huespedId, publicacion.anfitrionId())));
             if (estadoFinal == EstadoFinal.DEVOLUCION_PROCESADA) {
-                eventos.publicar(new EventoDominio("DevolucionProcesada", huespedId, "reserva", reservaId, "EXITO",
-                        Map.of("valorDevolucion", valor), List.of(huespedId)));
+                eventos.publicar(new EventoDominio("DevolucionProcesada", huespedId, RESERVA, reservaId, EventoDominio.EXITO,
+                        Map.of(VALOR_DEVOLUCION, valor), List.of(huespedId)));
             } else if (estadoFinal == EstadoFinal.DEVOLUCION_NO_PROCESADA) {
-                eventos.publicar(new EventoDominio("DevolucionFallida", huespedId, "reserva", reservaId, "FALLIDO",
-                        Map.of("valorDevolucion", valor), List.of(huespedId)));
+                eventos.publicar(new EventoDominio("DevolucionFallida", huespedId, RESERVA, reservaId, "FALLIDO",
+                        Map.of(VALOR_DEVOLUCION, valor), List.of(huespedId)));
             }
             return cancelacion;
         });

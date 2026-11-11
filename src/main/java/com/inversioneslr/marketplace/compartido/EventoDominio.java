@@ -21,6 +21,9 @@ public record EventoDominio(
         Map<String, Object> detalle,
         List<UUID> destinatarios) {
 
+    /** Resultado de un caso de uso que terminó bien. */
+    public static final String EXITO = "EXITO";
+
     /** Un evento nuevo, con su propio id. */
     public EventoDominio(String tipo, UUID actorId, String entidad, UUID entidadId, String resultado,
                          Map<String, Object> detalle, List<UUID> destinatarios) {

@@ -6,8 +6,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** Conserva el desglose cobrado: los cambios de tarifas no afectan reservas ya confirmadas. */
-/** @param codigo lo asigna la base de datos al guardarla; null antes */
+/**
+ * Conserva el desglose cobrado: los cambios de tarifas no afectan reservas ya confirmadas.
+ *
+ * @param codigo lo asigna la base de datos al guardarla; null antes
+ */
 public record Reserva(UUID id, String codigo, UUID huespedId, UUID publicacionId, LocalDate fechaLlegada, LocalDate fechaSalida,
                       int numeroHuespedes, EstadoReserva estado, int noches, BigDecimal precioBase,
                       BigDecimal tarifaLimpieza, BigDecimal tarifaServicio, BigDecimal descuento, BigDecimal total) {

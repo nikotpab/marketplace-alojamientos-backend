@@ -52,8 +52,8 @@ public class GeneradorReportesPdfExcel implements GeneradorReportes {
     }
 
     private static void excel(Reporte reporte, ByteArrayOutputStream salida) {
-        try (Workbook libro = new Workbook(salida, "Marketplace Alojamientos", "1.0")) {
-            Worksheet hoja = libro.newWorksheet(reporte.titulo());
+        try (Workbook libro = new Workbook(salida, "Marketplace Alojamientos", "1.0");
+             Worksheet hoja = libro.newWorksheet(reporte.titulo())) {
             for (int columna = 0; columna < reporte.columnas().size(); columna++) {
                 hoja.value(0, columna, reporte.columnas().get(columna));
                 hoja.style(0, columna).bold().set();

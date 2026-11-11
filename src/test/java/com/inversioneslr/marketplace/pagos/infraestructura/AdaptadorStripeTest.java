@@ -71,6 +71,7 @@ class AdaptadorStripeTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2925") // El servidor falso tarda 8 s a propósito: se prueba el corte a los 7 s.
     void sinRespuestaDelProveedorCortaAntesDeSieteSegundos() {
         servidor.createContext("/v1/payment_intents", intercambio -> {
             try {

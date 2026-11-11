@@ -13,5 +13,6 @@ class AdaptadorPagosSimulado implements PasarelaPagos {
 
     @Override
     public void devolver(String referencia, BigDecimal monto) {
+        // Nada que devolver: el cobro simulado no movió dinero.
     }
 }

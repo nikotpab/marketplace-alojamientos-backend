@@ -33,7 +33,7 @@ public class TareaLatido {
         boolean correcto = !estados.containsValue(false);
 
         LoggingEventBuilder latido = correcto ? log.atInfo() : log.atWarn();
-        estados.forEach((componente, disponible) -> latido.addKeyValue(componente, disponible ? "UP" : "DOWN"));
+        estados.forEach((componente, disponible) -> latido.addKeyValue(componente, Boolean.TRUE.equals(disponible) ? "UP" : "DOWN"));
         latido.addKeyValue("latido", correcto ? "OK" : "FALLA").log("Latido");
     }
 

@@ -71,8 +71,11 @@ public class ServicioBusqueda {
                 busqueda.fechasNoDisponibles(publicacionId, hoy, hoy.plus(HORIZONTE_CALENDARIO)));
     }
 
-    /** El formato que espera la pantalla de detalle. */
-    /** @param estado siempre ACTIVA; el frontend lo usa para mostrar el calendario y la reserva */
+    /**
+     * El formato que espera la pantalla de detalle.
+     *
+     * @param estado siempre ACTIVA; el frontend lo usa para mostrar el calendario y la reserva
+     */
     public record Detalle(UUID id, String estado, String titulo, String descripcion, String ciudad, String direccion, String tipo,
                           int capacidad, BigDecimal precioNoche, List<String> servicios, List<String> reglas,
                           String politicaCancelacion, List<String> imagenes, BigDecimal calificacionPromedio,

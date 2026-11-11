@@ -93,7 +93,10 @@ class ReservasIT extends PruebaIntegracion {
         UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
         reservas.guardar(reserva(huesped, publicacion, DIA, DIA.plusDays(3)), List.of());
 
-        assertThatThrownBy(() -> reservas.guardar(reserva(huesped, publicacion, DIA.plusDays(1), DIA.plusDays(4)), List.of()))
+        var solapada = reserva(huesped, publicacion, DIA.plusDays(1), DIA.plusDays(4));
+        List<AdicionalReservado> sinAdicionales = List.of();
+
+        assertThatThrownBy(() -> reservas.guardar(solapada, sinAdicionales))
                 .isInstanceOf(PeriodoNoDisponibleException.class);
     }
 

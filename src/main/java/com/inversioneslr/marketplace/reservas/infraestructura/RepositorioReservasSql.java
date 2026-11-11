@@ -23,6 +23,13 @@ import org.springframework.stereotype.Repository;
 public class RepositorioReservasSql implements RepositorioReservas {
 
     private static final String RESTRICCION_ANTI_SOLAPE = "reserva_sin_solape";
+    private static final String CON_ALOJAMIENTO = """
+            SELECT r.*, p.titulo AS alojamiento
+            FROM reserva r
+            JOIN publicacion p ON p.id = r.publicacion_id
+            WHERE (CAST(:estado AS varchar) IS NULL OR r.estado = :estado)""";
+    private static final String DEL_HUESPED = CON_ALOJAMIENTO + " AND r.huesped_id = :usuario ORDER BY r.fecha_llegada DESC";
+    private static final String DEL_ANFITRION = CON_ALOJAMIENTO + " AND p.anfitrion_id = :usuario ORDER BY r.fecha_llegada DESC";
 
     private final JdbcClient jdbc;
 
@@ -129,21 +136,16 @@ public class RepositorioReservasSql implements RepositorioReservas {
 
     @Override
     public List<ReservaConAlojamiento> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
-        return listar("r.huesped_id = :usuario", huespedId, estado);
+        return listar(DEL_HUESPED, huespedId, estado);
     }
 
     @Override
     public List<ReservaConAlojamiento> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado) {
-        return listar("p.anfitrion_id = :usuario", anfitrionId, estado);
+        return listar(DEL_ANFITRION, anfitrionId, estado);
     }
 
-    private List<ReservaConAlojamiento> listar(String condicion, UUID usuarioId, EstadoReserva estado) {
-        return jdbc.sql("""
-                SELECT r.*, p.titulo AS alojamiento
-                FROM reserva r
-                JOIN publicacion p ON p.id = r.publicacion_id
-                WHERE %s AND (CAST(:estado AS varchar) IS NULL OR r.estado = :estado)
-                ORDER BY r.fecha_llegada DESC""".formatted(condicion))
+    private List<ReservaConAlojamiento> listar(String consulta, UUID usuarioId, EstadoReserva estado) {
+        return jdbc.sql(consulta)
                 .param("usuario", usuarioId)
                 .param("estado", estado == null ? null : estado.name())
                 .query((fila, numero) -> new ReservaConAlojamiento(aReserva(fila, numero), fila.getString("alojamiento")))

@@ -61,6 +61,7 @@ class CircuitBreakerPagosTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2925") // Hay que dejar pasar la espera del circuito: el tiempo es lo que se prueba.
     void trasLaEsperaPruebaDeNuevoYSeCierraSiResponde() throws InterruptedException {
         Duration espera = Duration.ofMillis(50);
         CircuitBreakerPagos circuito = new CircuitBreakerPagos(pasarela, espera);
@@ -113,6 +114,7 @@ class CircuitBreakerPagosTest {
 
         @Override
         public void devolver(String referencia, BigDecimal monto) {
+            // Estas pruebas solo cobran.
         }
     }
 }

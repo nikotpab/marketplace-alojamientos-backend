@@ -69,8 +69,7 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         Reserva reserva = reservas.confirmarReserva(huesped, comando, clave);
 
         var solicitud = comoAplicacion.queryForMap("SELECT huesped_id, reserva_id, resultado::text AS resultado FROM solicitud_procesada WHERE clave = ?", clave);
-        assertThat(solicitud.get("huesped_id")).isEqualTo(huesped);
-        assertThat(solicitud.get("reserva_id")).isEqualTo(reserva.id());
+        assertThat(solicitud).containsEntry("huesped_id", huesped).containsEntry("reserva_id", reserva.id());
         assertThat(solicitud.get("resultado").toString()).contains("CONFIRMADA");
     }
 

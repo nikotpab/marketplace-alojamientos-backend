@@ -37,6 +37,7 @@ class ComponenteNoCriticoIT extends PruebaIntegracion {
     ProcesadorEventos procesador;
 
     @Test
+    @SuppressWarnings("java:S2925") // Simula notificaciones lentas: se prueba que los casos críticos no las esperan.
     void conLasNotificacionesTardandoMasDeDiezSegundosLosCasosCriticosNoEsperan() throws Exception {
         doAnswer(llamada -> {
             Thread.sleep(11_000);

@@ -1,5 +1,8 @@
 package com.inversioneslr.marketplace;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
@@ -21,5 +24,7 @@ class ModulosTest {
     @Test
     void documentaLosModulos() {
         new Documenter(MODULOS).writeDocumentation();
+
+        assertThat(Path.of("target", "spring-modulith-docs")).isDirectoryContaining("glob:**.puml");
     }
 }

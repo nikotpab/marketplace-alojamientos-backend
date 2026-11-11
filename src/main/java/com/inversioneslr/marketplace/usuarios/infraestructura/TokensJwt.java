@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 /** JWT firmado con HS256. El token identifica al usuario y su rol; no guarda datos personales. */
 @Component
+@SuppressWarnings("java:S2143") // Nimbus exige java.util.Date en las fechas del token; se convierte desde Instant.
 public class TokensJwt implements Tokens {
 
     private static final Duration DURACION = Duration.ofHours(8);
