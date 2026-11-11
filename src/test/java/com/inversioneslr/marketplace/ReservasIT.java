@@ -14,7 +14,6 @@ import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleExcepti
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -37,8 +36,6 @@ class ReservasIT extends PruebaIntegracion {
     @Autowired
     ServicioReservas servicio;
 
-    @Autowired
-    Clock reloj;
 
     @Test
     void cadaNocheSeCompletanLasReservasCuyaSalidaYaPasoYSeAvisaAlHuesped() {

@@ -5,6 +5,8 @@ import static org.awaitility.Awaitility.await;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -52,6 +54,15 @@ abstract class PruebaIntegracion {
 
     @Autowired
     Tokens tokens;
+
+    /** El reloj de la aplicación, con la zona de Bogotá. */
+    @Autowired
+    Clock reloj;
+
+    /** Hoy para la aplicación. LocalDate.now() usa la zona del sistema, que en el CI es UTC (SCRUM-106). */
+    LocalDate hoy() {
+        return LocalDate.now(reloj);
+    }
 
     UUID crearUsuario(Rol rol) {
         return comoAplicacion.queryForObject("""
