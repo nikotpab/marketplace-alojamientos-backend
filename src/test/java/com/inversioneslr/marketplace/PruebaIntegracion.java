@@ -1,13 +1,25 @@
 package com.inversioneslr.marketplace;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.icegreen.greenmail.util.GreenMail;
+import com.icegreen.greenmail.util.ServerSetupTest;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import jakarta.mail.Address;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -32,8 +44,18 @@ abstract class PruebaIntegracion {
     static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine")
             .withInitScript("crear-roles.sql");
 
+    /** SMTP en memoria: recibe los correos que envía la aplicación (SCRUM-109, SCRUM-110). */
+    static final GreenMail correo = new GreenMail(ServerSetupTest.SMTP.dynamicPort());
+
     static {
         postgres.start();
+        correo.start();
+    }
+
+    @DynamicPropertySource
+    static void servidorDeCorreo(DynamicPropertyRegistry propiedades) {
+        propiedades.add("spring.mail.host", () -> correo.getSmtp().getBindTo());
+        propiedades.add("spring.mail.port", () -> correo.getSmtp().getPort());
     }
 
     @DynamicPropertySource
@@ -90,6 +112,39 @@ abstract class PruebaIntegracion {
                 SELECT count(*) = 0 FROM event_publication
                 WHERE serialized_event::jsonb ->> 'entidadId' = ? AND completion_date IS NULL""",
                 Boolean.class, entidadId.toString()));
+    }
+
+    /** Los correos que recibió esa dirección, del más antiguo al más reciente. */
+    List<MimeMessage> correosPara(String direccion) {
+        return Arrays.stream(correo.getReceivedMessages()).filter(mensaje -> esPara(mensaje, direccion)).toList();
+    }
+
+    /** El texto del último correo para esa dirección. Espera, porque los correos salen en segundo plano. */
+    String ultimoCorreoPara(String direccion) throws MessagingException, IOException {
+        await().atMost(Duration.ofSeconds(10)).until(() -> !correosPara(direccion).isEmpty());
+        List<MimeMessage> recibidos = correosPara(direccion);
+        return (String) recibidos.getLast().getContent();
+    }
+
+    /** El token del enlace a esa pantalla del frontend, por ejemplo "verificar-correo". */
+    static String tokenDelEnlace(String texto, String pantalla) {
+        Matcher enlace = Pattern.compile("/" + pantalla + "\\?token=([A-Za-z0-9_-]+)").matcher(texto);
+        assertThat(enlace.find()).as("enlace a /%s en el correo", pantalla).isTrue();
+        return enlace.group(1);
+    }
+
+    /** Para las pruebas que no son de la verificación: deja la cuenta registrada por la API lista para entrar. */
+    void verificarCorreoDe(String direccion) {
+        comoAplicacion.update("UPDATE usuario SET correo_verificado = true WHERE correo = ?", direccion);
+    }
+
+    private static boolean esPara(MimeMessage mensaje, String direccion) {
+        try {
+            Address[] destinatarios = mensaje.getAllRecipients();
+            return destinatarios != null && Arrays.stream(destinatarios).anyMatch(d -> d.toString().equalsIgnoreCase(direccion));
+        } catch (MessagingException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** @return valor de la cabecera Authorization con un JWT real para ese usuario */

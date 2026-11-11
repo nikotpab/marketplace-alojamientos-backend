@@ -7,8 +7,9 @@ import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
-import com.inversioneslr.marketplace.usuarios.dominio.CodigosRecuperacion;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
+import com.inversioneslr.marketplace.usuarios.dominio.TokensCorreo;
+import com.inversioneslr.marketplace.usuarios.dominio.TokensCorreo.Proposito;
 import com.inversioneslr.marketplace.usuarios.dominio.Usuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -30,6 +31,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     private static final String USUARIO = "usuario";
     private static final String INICIO_SESION_FALLIDO = "InicioSesionFallido";
+    private static final String TOKEN = "token";
 
     /** RNF-23: 5 intentos fallidos seguidos bloquean el inicio de sesión por 30 minutos. */
     private static final int MAXIMO_INTENTOS = 5;
@@ -40,22 +42,27 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     private final Tokens tokens;
     private final PublicadorEventos eventos;
     private final Clock reloj;
-    private final CodigosRecuperacion codigos;
+    private final TokensCorreo tokensCorreo;
+    private final CorreosCuenta correos;
     /** Se compara contra este hash cuando el correo no existe, para que la respuesta tarde lo mismo. */
     private final String hashDeRelleno;
 
-    public ServicioAutenticacion(RepositorioUsuarios usuarios, PasswordEncoder cifrador, Tokens tokens,
-                                 PublicadorEventos eventos, Clock reloj, CodigosRecuperacion codigos) {
+    ServicioAutenticacion(RepositorioUsuarios usuarios, PasswordEncoder cifrador, Tokens tokens, PublicadorEventos eventos,
+                          Clock reloj, TokensCorreo tokensCorreo, CorreosCuenta correos) {
         this.usuarios = usuarios;
         this.cifrador = cifrador;
         this.tokens = tokens;
         this.eventos = eventos;
         this.reloj = reloj;
-        this.codigos = codigos;
+        this.tokensCorreo = tokensCorreo;
+        this.correos = correos;
         this.hashDeRelleno = cifrador.encode(UUID.randomUUID().toString());
     }
 
-    /** CU-01: solo HUESPED o ANFITRION; el rol ADMINISTRADOR lo asigna el equipo. */
+    /**
+     * CU-01: solo HUESPED o ANFITRION; el rol ADMINISTRADOR lo asigna el equipo. SCRUM-109: la cuenta queda sin
+     * verificar y recibe un enlace por correo. El correo sale después del commit; si falla, el registro no se deshace.
+     */
     @Transactional
     public UsuarioResumen registrar(RegistroComando comando) {
         if (comando.rol() == Rol.ADMINISTRADOR) {
@@ -64,8 +71,9 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         }
         Usuario usuario = usuarios.guardar(new Usuario(UUID.randomUUID(), comando.nombre(), comando.apellido(),
                 normalizar(comando.correo()), comando.telefono(), cifrador.encode(comando.contrasena()),
-                comando.rol(), true, false, null, 0, null));
+                comando.rol(), true, false, null, 0, null, false));
         eventos.publicar(evento("UsuarioRegistrado", usuario, EventoDominio.EXITO, Map.of("rol", usuario.rol().name())));
+        correos.enviarVerificacion(usuario);
         return resumen(usuario);
     }
 
@@ -98,6 +106,11 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         if (!usuario.cuentaActiva()) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, "Tu cuenta está desactivada.");
         }
+        if (!usuario.correoVerificado()) {
+            eventos.publicar(evento(INICIO_SESION_FALLIDO, usuario, "CORREO_NO_VERIFICADO", Map.of()));
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CORREO_NO_VERIFICADO,
+                    "Confirma tu correo para iniciar sesión. Te enviamos un enlace al registrarte; si no lo encuentras, pide uno nuevo.");
+        }
         if (usuario.intentosFallidos() > 0) {
             usuarios.guardar(usuario.reiniciarIntentos());
         }
@@ -124,29 +137,52 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     private static UsuarioResumen resumen(Usuario usuario) {
         return new UsuarioResumen(usuario.id(), usuario.nombre(), usuario.apellido(), usuario.correo(), usuario.telefono(),
-                usuario.rol(), usuario.cuentaActiva(), usuario.restringido());
+                usuario.rol(), usuario.cuentaActiva(), usuario.restringido(), usuario.correoVerificado());
     }
 
     /**
-     * CU-03 · RF-03: recuperación simulada, sin correo real, así que el código vuelve en la respuesta.
-     * Si el correo no existe, se entrega un código que no sirve, para no revelar qué cuentas existen.
+     * CU-03 · RF-03 · SCRUM-110: envía un enlace de un solo uso, válido 15 minutos. La respuesta es la misma exista o no
+     * el correo, y no lleva el token: solo lo recibe el dueño del correo.
      */
-    public Recuperacion solicitarRecuperacion(SolicitudRecuperacionComando comando) {
-        return usuarios.buscarPorCorreo(normalizar(comando.correo()))
-                .map(usuario -> {
+    @Transactional
+    public void solicitarRecuperacion(CorreoComando comando) {
+        usuarios.buscarPorCorreo(normalizar(comando.correo()))
+                .filter(usuario -> correos.puedeEnviar(usuario, Proposito.RESTABLECER_CONTRASENA))
+                .ifPresent(usuario -> {
+                    correos.enviarRecuperacion(usuario);
                     eventos.publicar(evento("RecuperacionSolicitada", usuario, EventoDominio.EXITO, Map.of()));
-                    return new Recuperacion(codigos.generar(usuario.id()));
-                })
-                .orElseGet(() -> new Recuperacion(codigos.generar(UUID.randomUUID())));
+                });
     }
 
+    /** SCRUM-110: abrir el enlace también prueba que el correo es suyo, así que queda verificado. */
+    @Transactional
     public void restablecerContrasena(RestablecerContrasenaComando comando) {
-        String mensaje = "El código de recuperación no es válido o ya venció. Vuelve a empezar la recuperación.";
-        Usuario usuario = codigos.consumir(comando.token())
+        String mensaje = "El enlace de recuperación no es válido o ya venció. Vuelve a empezar la recuperación.";
+        Usuario usuario = tokensCorreo.consumir(comando.token(), Proposito.RESTABLECER_CONTRASENA, reloj.instant())
                 .flatMap(usuarios::buscarPorId)
-                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of("token", mensaje)));
-        usuarios.guardar(usuario.cambiarContrasena(cifrador.encode(comando.contrasenaNueva())));
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(TOKEN, mensaje)));
+        usuarios.guardar(usuario.cambiarContrasena(cifrador.encode(comando.contrasenaNueva())).verificarCorreo());
         eventos.publicar(evento("ContrasenaRestablecida", usuario, EventoDominio.EXITO, Map.of()));
+    }
+
+    /** SCRUM-109: el token llega en el enlace del correo de registro. */
+    @Transactional
+    public void verificarCorreo(VerificacionCorreoComando comando) {
+        String mensaje = "El enlace de verificación no es válido o ya venció. Pide uno nuevo.";
+        Usuario usuario = tokensCorreo.consumir(comando.token(), Proposito.VERIFICAR_CORREO, reloj.instant())
+                .flatMap(usuarios::buscarPorId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(TOKEN, mensaje)));
+        usuarios.guardar(usuario.verificarCorreo());
+        eventos.publicar(evento("CorreoVerificado", usuario, EventoDominio.EXITO, Map.of()));
+    }
+
+    /** SCRUM-109: un enlace nuevo invalida el anterior. Misma respuesta exista o no la cuenta, o si ya está verificada. */
+    @Transactional
+    public void reenviarVerificacion(CorreoComando comando) {
+        usuarios.buscarPorCorreo(normalizar(comando.correo()))
+                .filter(usuario -> !usuario.correoVerificado())
+                .filter(usuario -> correos.puedeEnviar(usuario, Proposito.VERIFICAR_CORREO))
+                .ifPresent(correos::enviarVerificacion);
     }
 
     /** CU-04: cada usuario consulta y modifica solo su propio perfil, identificado por el token. */
@@ -218,7 +254,14 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         }
     }
 
-    public record SolicitudRecuperacionComando(@NotBlank @Email String correo) {
+    public record CorreoComando(@NotBlank @Email String correo) {
+    }
+
+    public record VerificacionCorreoComando(@NotBlank String token) {
+        @Override
+        public String toString() {
+            return "VerificacionCorreoComando[***]";
+        }
     }
 
     public record RestablecerContrasenaComando(@NotBlank String token,
@@ -227,9 +270,6 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         public String toString() {
             return "RestablecerContrasenaComando[***]";
         }
-    }
-
-    public record Recuperacion(String token) {
     }
 
     public record PerfilComando(@NotBlank @Size(max = 120) String nombre,

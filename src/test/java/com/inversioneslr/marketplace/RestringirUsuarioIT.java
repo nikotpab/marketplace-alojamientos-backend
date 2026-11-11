@@ -78,6 +78,7 @@ class RestringirUsuarioIT extends PruebaIntegracion {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                 {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"HUESPED"}"""
                 .formatted(correo, CONTRASENA))).andExpect(status().isCreated());
+        verificarCorreoDe(correo);
         return correo;
     }
 }

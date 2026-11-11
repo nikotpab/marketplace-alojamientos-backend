@@ -6,9 +6,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+/** @param correoVerificado SCRUM-109: sin verificar no se puede iniciar sesión */
 public record Usuario(UUID id, String nombre, String apellido, String correo, String telefono, String hashContrasena,
                       Rol rol, boolean cuentaActiva, boolean restringido, String motivoRestriccion,
-                      int intentosFallidos, Instant bloqueadoHasta) {
+                      int intentosFallidos, Instant bloqueadoHasta, boolean correoVerificado) {
 
     public boolean bloqueadoEn(Instant ahora) {
         return bloqueadoHasta != null && bloqueadoHasta.isAfter(ahora);
@@ -26,17 +27,23 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
 
     private Usuario conIntentos(int intentos, Instant hasta) {
         return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, cuentaActiva, restringido,
-                motivoRestriccion, intentos, hasta);
+                motivoRestriccion, intentos, hasta, correoVerificado);
     }
 
     public Usuario actualizarDatos(String nuevoNombre, String nuevoApellido, String nuevoTelefono) {
         return new Usuario(id, nuevoNombre, nuevoApellido, correo, nuevoTelefono, hashContrasena, rol, cuentaActiva, restringido,
-                motivoRestriccion, intentosFallidos, bloqueadoHasta);
+                motivoRestriccion, intentosFallidos, bloqueadoHasta, correoVerificado);
     }
 
     public Usuario cambiarContrasena(String nuevoHash) {
         return new Usuario(id, nombre, apellido, correo, telefono, nuevoHash, rol, cuentaActiva, restringido,
-                motivoRestriccion, intentosFallidos, bloqueadoHasta);
+                motivoRestriccion, intentosFallidos, bloqueadoHasta, correoVerificado);
+    }
+
+    /** SCRUM-109: el dueño del correo abrió el enlace que le enviamos. */
+    public Usuario verificarCorreo() {
+        return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, cuentaActiva, restringido,
+                motivoRestriccion, intentosFallidos, bloqueadoHasta, true);
     }
 
     public Usuario desactivar() {
@@ -49,7 +56,7 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
 
     private Usuario conEstado(boolean activa) {
         return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, activa, restringido,
-                motivoRestriccion, intentosFallidos, bloqueadoHasta);
+                motivoRestriccion, intentosFallidos, bloqueadoHasta, correoVerificado);
     }
 
     /** RF-28: un usuario restringido no puede iniciar sesión. Un administrador no se restringe. */
@@ -61,6 +68,6 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "El usuario ya está restringido.");
         }
         return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, cuentaActiva, true, motivo.trim(),
-                intentosFallidos, bloqueadoHasta);
+                intentosFallidos, bloqueadoHasta, correoVerificado);
     }
 }

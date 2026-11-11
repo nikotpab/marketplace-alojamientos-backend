@@ -52,9 +52,9 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
         try {
             jdbc.sql("""
                     INSERT INTO usuario (id, nombre, apellido, correo, telefono, hash_contrasena, rol, cuenta_activa,
-                                         restringido, motivo_restriccion, intentos_fallidos, bloqueado_hasta)
+                                         restringido, motivo_restriccion, intentos_fallidos, bloqueado_hasta, correo_verificado)
                     VALUES (:id, :nombre, :apellido, :correo, :telefono, :hash, :rol, :cuentaActiva,
-                            :restringido, :motivo, :intentos, :bloqueadoHasta)
+                            :restringido, :motivo, :intentos, :bloqueadoHasta, :correoVerificado)
                     ON CONFLICT (id) DO UPDATE SET
                         nombre = EXCLUDED.nombre,
                         apellido = EXCLUDED.apellido,
@@ -65,7 +65,8 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
                         restringido = EXCLUDED.restringido,
                         motivo_restriccion = EXCLUDED.motivo_restriccion,
                         intentos_fallidos = EXCLUDED.intentos_fallidos,
-                        bloqueado_hasta = EXCLUDED.bloqueado_hasta""")
+                        bloqueado_hasta = EXCLUDED.bloqueado_hasta,
+                        correo_verificado = EXCLUDED.correo_verificado""")
                     .param("id", usuario.id())
                     .param("nombre", usuario.nombre())
                     .param("apellido", usuario.apellido())
@@ -78,6 +79,7 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
                     .param("motivo", usuario.motivoRestriccion())
                     .param("intentos", usuario.intentosFallidos())
                     .param("bloqueadoHasta", usuario.bloqueadoHasta() == null ? null : Timestamp.from(usuario.bloqueadoHasta()))
+                    .param("correoVerificado", usuario.correoVerificado())
                     .update();
             return usuario;
         } catch (DuplicateKeyException e) {
@@ -100,6 +102,7 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
                 fila.getBoolean("restringido"),
                 fila.getString("motivo_restriccion"),
                 fila.getInt("intentos_fallidos"),
-                bloqueadoHasta == null ? null : bloqueadoHasta.toInstant());
+                bloqueadoHasta == null ? null : bloqueadoHasta.toInstant(),
+                fila.getBoolean("correo_verificado"));
     }
 }

@@ -84,6 +84,8 @@ class AutorizacionIT extends PruebaIntegracion {
             "POST /api/v1/auth/register",
             "POST /api/v1/auth/password/recover",
             "POST /api/v1/auth/password/reset",
+            "POST /api/v1/auth/email/verify",
+            "POST /api/v1/auth/email/resend",
             "GET /api/v1/alojamientos",
             "GET /api/v1/alojamientos/{id}",
             "GET /api/v1/catalogos",

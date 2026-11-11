@@ -15,7 +15,7 @@ public interface FachadaUsuarios {
     DatosContacto datosContacto(UUID usuarioId);
 
     record UsuarioResumen(UUID id, String nombre, String apellido, String correo, String telefono, Rol rol,
-                          boolean cuentaActiva, boolean restringido) {
+                          boolean cuentaActiva, boolean restringido, boolean correoVerificado) {
     }
 
     record DatosContacto(String telefono, String correo) {

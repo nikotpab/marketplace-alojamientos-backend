@@ -12,10 +12,12 @@ Requiere Java 21, Maven y Docker.
 
 ```bash
 cp .env.example .env      # y cambiar las contraseñas
-docker compose up -d --wait db
+docker compose up -d --wait db correo
 mvn spring-boot:run
 curl localhost:8080/actuator/health
 ```
+
+Los correos de desarrollo (verificación y recuperación) llegan a Mailpit: http://localhost:8025.
 
 `mvn test` corre las pruebas unitarias y de arquitectura, y deja los diagramas de los módulos en `target/spring-modulith-docs`. `mvn verify` agrega las de integración, que usan Docker.
 
@@ -39,6 +41,36 @@ docker compose exec db psql -U marketplace_owner -d marketplace \
 Luego vuelve a iniciar sesión, porque el rol va en el token.
 
 El frontend llama a `/api/...` y el backend responde en `/api/v1/...`. En desarrollo, el proxy de Angular une los dos: reenvía `/api` a `http://localhost:8080` y lo reescribe como `/api/v1`.
+
+### Correos (SCRUM-109, SCRUM-110)
+
+Al registrarse, el usuario recibe un enlace para verificar su correo y, hasta usarlo, no puede iniciar sesión. La recuperación de contraseña también envía un enlace. Los dos son de un solo uso: el token tiene 256 bits aleatorios y en la base (`token_correo`) solo se guarda su hash SHA-256. Pedir un enlace nuevo anula el anterior, y entre dos correos del mismo tipo a la misma cuenta pasa al menos 1 minuto.
+
+El correo se envía por SMTP después del commit y en otro hilo. Si el servidor de correo falla, el registro no se deshace (ASR-05) y el usuario puede pedir otro enlace.
+
+| Variable | Desarrollo (Mailpit) | Gmail | Amazon SES |
+|---|---|---|---|
+| `CORREO_SERVIDOR` | `localhost` | `smtp.gmail.com` | `email-smtp.us-east-1.amazonaws.com` |
+| `CORREO_PUERTO` | `1025` | `587` | `587` |
+| `CORREO_USUARIO` / `CORREO_CONTRASENA` | vacías | la cuenta y una contraseña de aplicación | las credenciales SMTP de SES |
+| `CORREO_SEGURO` | `false` | `true` | `true` |
+| `CORREO_REMITENTE` | por defecto | la misma cuenta de Gmail | una identidad verificada en SES |
+| `URL_PUBLICA` | `http://localhost:4200` | `https://` + el dominio | igual |
+
+En el servidor, `deploy/compose.yaml` arma `URL_PUBLICA` con `DOMINIO`, y las demás van a SSM Parameter Store (`CORREO_CONTRASENA` como SecureString). Sin dominio propio, Gmail es lo más simple. SES necesita verificar el remitente y, para escribirle a cualquier dirección, pedir que la cuenta salga del sandbox.
+
+**Contrato para el frontend:**
+
+| Endpoint | Cuerpo | Respuesta |
+|---|---|---|
+| `POST /api/v1/auth/register` | igual que antes | 201; ahora incluye `correoVerificado: false` |
+| `POST /api/v1/auth/login` | igual | 403 con `codigo: CORREO_NO_VERIFICADO` si falta verificar, solo con la contraseña correcta |
+| `POST /api/v1/auth/email/verify` | `{"token"}` | 204, o 400 con `campos.token` si no sirve o venció |
+| `POST /api/v1/auth/email/resend` | `{"correo"}` | 202 siempre |
+| `POST /api/v1/auth/password/recover` | `{"correo"}` | 202 siempre, **sin token** (antes lo devolvía) |
+| `POST /api/v1/auth/password/reset` | `{"token", "contrasenaNueva"}` | 204; también deja verificado el correo |
+
+Los enlaces llevan a `URL_PUBLICA + /verificar-correo?token=…` (vence en 24 horas) y `URL_PUBLICA + /recuperar?token=…` (15 minutos). El frontend lee el token de la dirección y lo envía a la API.
 
 ### Documentación de la API (Swagger)
 
@@ -211,6 +243,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 14. **Tabla de eventos.** El modelo de datos define `evento_pendiente` para el outbox. Con Spring Modulith, el outbox es su tabla `event_publication`, con el esquema oficial (`V8`, SCRUM-98). Además, `EventoDominio` lleva un `id`, que no está en los documentos, para que una entrega repetida no duplique la notificación.
 15. **Indicadores del dashboard.** RF-33 no define "ingresos estimados" ni el periodo. Los ingresos son la suma de las tarifas de servicio de las reservas confirmadas y completadas, que es lo que gana la plataforma. El periodo cuenta las reservas por la fecha en que se hicieron y, si no se elige, son los últimos 30 días. Usuarios y publicaciones activas son el total actual.
 16. **Confirmaciones simultáneas (ADR-03).** La restricción de exclusión sola no basta: con varios `INSERT` simultáneos por la misma publicación, PostgreSQL puede detectar un deadlock al verificarla y abortar solicitudes que debían rechazarse con "periodo no disponible". Antes del `INSERT`, cada confirmación toma un candado de transacción por publicación (`pg_advisory_xact_lock`), así que entran de a una. La restricción sigue siendo la garantía de no solape (SCRUM-102).
+17. **Verificación del correo (SCRUM-109).** Los documentos no la piden: CU-01 crea la cuenta lista para usarse. Se agregó para que nadie se registre con un correo ajeno, ahora que la recuperación de contraseña llega por correo. Hasta verificar, el inicio de sesión responde 403 `CORREO_NO_VERIFICADO`, pero solo con la contraseña correcta, para no revelar el estado de la cuenta. Las cuentas que ya existían, las de los datos de demostración y las creadas por SQL (como el primer administrador) quedan verificadas: la columna nace en `true` y el registro guarda `false`.
 
 ## Consultar los logs
 
@@ -271,7 +304,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`, y la cotización la cobra en 0 hasta que el administrador le asigne un porcentaje en `PUT /api/v1/admin/tarifas`.
 6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase. Decisión tomada en SCRUM-38: mientras no se definan, una política sin clase responde 409 con un mensaje claro, en vez de inventar reglas.
-7. **Código de recuperación (CU-03).** No hay tabla donde guardarlo. Por ahora vive en memoria 15 minutos y, como la recuperación es simulada, la API lo devuelve en la respuesta. **Cualquiera que conozca un correo puede cambiar esa contraseña: no debe llegar a producción así.**
+7. **Código de recuperación (CU-03).** Resuelto en SCRUM-110: el enlace llega por correo y la API ya no devuelve el código. Los tokens se guardan en `token_correo`, solo con su hash. Ver "Correos".
 8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
 9. **Duración del JWT y revocación.** Por ahora los tokens duran 8 horas. Un usuario restringido o desactivado conserva su token hasta que venza, salvo que se verifique en cada petición.
 

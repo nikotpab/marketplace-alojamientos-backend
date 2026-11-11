@@ -5,6 +5,9 @@ services:
     image: ${IMAGEN_API}
     restart: always
     env_file: .env
+    environment:
+      # Los enlaces de los correos llevan al frontend publicado (SCRUM-109, SCRUM-110).
+      URL_PUBLICA: https://${DOMINIO}
     logging:
       driver: awslogs
       options:

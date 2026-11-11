@@ -36,15 +36,31 @@ public class ControladorUsuarios {
         return servicio.iniciarSesion(comando);
     }
 
+    /** SCRUM-110: 202 siempre, exista o no el correo. El enlace llega por correo. */
     @PostMapping("/auth/password/recover")
-    public ServicioAutenticacion.Recuperacion solicitarRecuperacion(@Valid @RequestBody ServicioAutenticacion.SolicitudRecuperacionComando comando) {
-        return servicio.solicitarRecuperacion(comando);
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void solicitarRecuperacion(@Valid @RequestBody ServicioAutenticacion.CorreoComando comando) {
+        servicio.solicitarRecuperacion(comando);
     }
 
     @PostMapping("/auth/password/reset")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void restablecerContrasena(@Valid @RequestBody ServicioAutenticacion.RestablecerContrasenaComando comando) {
         servicio.restablecerContrasena(comando);
+    }
+
+    /** SCRUM-109: el token del enlace que llegó al registrarse. */
+    @PostMapping("/auth/email/verify")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void verificarCorreo(@Valid @RequestBody ServicioAutenticacion.VerificacionCorreoComando comando) {
+        servicio.verificarCorreo(comando);
+    }
+
+    /** SCRUM-109: 202 siempre, exista o no la cuenta, o si ya está verificada. */
+    @PostMapping("/auth/email/resend")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void reenviarVerificacion(@Valid @RequestBody ServicioAutenticacion.CorreoComando comando) {
+        servicio.reenviarVerificacion(comando);
     }
 
     @GetMapping("/usuarios/me")
