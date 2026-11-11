@@ -26,8 +26,9 @@ jobs:
           cache: maven
       - run: mvn -B verify
       # SCRUM-104: análisis en SonarQube Cloud con la cobertura de JaCoCo. Sin el secreto (PR de Dependabot), se omite.
+      # SCRUM-107: espera el quality gate y falla si queda en ERROR, así que bloquea el merge.
       - if: env.SONAR_TOKEN != ''
-        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.qualitygate.wait=true
       # SCRUM-100: reporte de cobertura de JaCoCo, descargable desde la ejecución del CI.
       - uses: actions/upload-artifact@v7
         with:
