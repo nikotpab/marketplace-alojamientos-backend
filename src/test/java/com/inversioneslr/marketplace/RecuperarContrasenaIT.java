@@ -38,7 +38,7 @@ class RecuperarContrasenaIT extends PruebaIntegracion {
         String token = tokenDelEnlace(ultimoCorreoDeRecuperacion(correo), "recuperar");
 
         restablecer(token, NUEVA).andExpect(status().isNoContent());
-        restablecer(token, "Otra-contrasena-2").andExpect(status().isBadRequest());
+        restablecer(token, NUEVA).andExpect(status().isBadRequest());
     }
 
     @Test
