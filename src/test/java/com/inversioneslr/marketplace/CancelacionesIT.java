@@ -88,7 +88,7 @@ class CancelacionesIT extends PruebaIntegracion {
     void cancelarDevuelveElDineroLiberaElPeriodoYAvisaAAmbos() throws Exception {
         UUID reserva = reservar(10, "CONFIRMADA");
         String referencia = pagar(reserva);
-        LocalDate llegada = LocalDate.now().plusDays(10);
+        LocalDate llegada = hoy().plusDays(10);
         assertThat(publicaciones.periodoDisponible(publicacion, llegada, llegada.plusDays(3))).isFalse();
 
         cancelar(reserva, "Cambié de planes")
@@ -193,7 +193,7 @@ class CancelacionesIT extends PruebaIntegracion {
 
     /** @param diasAntes cuántos días faltan, desde hoy, para la llegada */
     UUID reservar(int diasAntes, String estado) {
-        LocalDate llegada = LocalDate.now().plusDays(diasAntes);
+        LocalDate llegada = hoy().plusDays(diasAntes);
         return comoAplicacion.queryForObject("""
                 INSERT INTO reserva (huesped_id, publicacion_id, fecha_llegada, fecha_salida, numero_huespedes, estado,
                                      noches, precio_base, tarifa_limpieza, tarifa_servicio, descuento, total)

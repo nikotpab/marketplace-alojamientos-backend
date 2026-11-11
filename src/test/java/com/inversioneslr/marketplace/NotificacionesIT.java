@@ -14,7 +14,6 @@ import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.infraestructura.ProcesadorEventos;
 import com.inversioneslr.marketplace.notificaciones.dominio.Notificacion;
 import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificaciones;
-import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,8 +32,6 @@ class NotificacionesIT extends PruebaIntegracion {
     @Autowired
     RepositorioNotificaciones notificaciones;
 
-    @Autowired
-    Clock reloj;
 
     @Test
     void publicarGuardaLaAuditoriaYRegistraElEvento() {

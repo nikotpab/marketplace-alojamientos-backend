@@ -45,7 +45,7 @@ class BloquearPublicacionIT extends PruebaIntegracion {
     @Test
     void lasReservasFuturasPasanARevisionManualYSeAvisaAlHuesped() throws Exception {
         UUID huesped = crearUsuario(Rol.HUESPED);
-        LocalDate hoy = LocalDate.now();
+        LocalDate hoy = hoy();
         UUID futura = reservar(huesped, hoy.plusDays(10), "CONFIRMADA");
         UUID enCurso = reservar(huesped, hoy.minusDays(1), "CONFIRMADA");
         UUID cancelada = reservar(huesped, hoy.plusDays(10), "CANCELADA");
