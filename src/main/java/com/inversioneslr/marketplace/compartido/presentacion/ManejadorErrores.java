@@ -32,6 +32,7 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
             Map.entry(ExcepcionNegocio.Tipo.CUENTA_BLOQUEADA, HttpStatus.LOCKED),
             Map.entry(ExcepcionNegocio.Tipo.CUENTA_RESTRINGIDA, HttpStatus.FORBIDDEN),
             Map.entry(ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, HttpStatus.FORBIDDEN),
+            Map.entry(ExcepcionNegocio.Tipo.CORREO_NO_VERIFICADO, HttpStatus.FORBIDDEN),
             Map.entry(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, HttpStatus.FORBIDDEN),
             Map.entry(ExcepcionNegocio.Tipo.NO_ENCONTRADO, HttpStatus.NOT_FOUND),
             Map.entry(ExcepcionNegocio.Tipo.CONFLICTO, HttpStatus.CONFLICT),

@@ -24,6 +24,21 @@ spring:
         published: 1m
         processing: 1m
         resubmitted: 1m
+  # SCRUM-109 y SCRUM-110. Por defecto, Mailpit de desarrollo (compose.yaml). En producción, Gmail o Amazon SES por SMTP
+  # con CORREO_SEGURO=true (README, "Correos").
+  mail:
+    host: ${CORREO_SERVIDOR:localhost}
+    port: ${CORREO_PUERTO:1025}
+    username: ${CORREO_USUARIO:}
+    password: ${CORREO_CONTRASENA:}
+    default-encoding: UTF-8
+    properties:
+      "[mail.smtp.auth]": ${CORREO_SEGURO:false}
+      "[mail.smtp.starttls.enable]": ${CORREO_SEGURO:false}
+      "[mail.smtp.starttls.required]": ${CORREO_SEGURO:false}
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 5000
+      "[mail.smtp.writetimeout]": 5000
   mvc:
     format:
       date: iso
@@ -60,6 +75,10 @@ management:
     health:
       probes:
         enabled: true
+  # ASR-05: el correo no es crítico; si el servidor SMTP cae, la API sigue sana.
+  health:
+    mail:
+      enabled: false
 
 # SCRUM-99: Swagger UI en /swagger-ui.html y la especificación en /v3/api-docs. Solo se documenta la API.
 springdoc:
@@ -71,3 +90,7 @@ marketplace:
     stripe-clave-secreta: ${STRIPE_CLAVE_SECRETA:}
     stripe-metodo-pago: ${STRIPE_METODO_PAGO:pm_card_visa}
   jwt-secreto: ${JWT_SECRETO}
+  correo:
+    remitente: ${CORREO_REMITENTE:Marketplace de Alojamientos <no-responder@marketplace.local>}
+    # Los enlaces de los correos llevan a pantallas del frontend.
+    enlace-base: ${URL_PUBLICA:http://localhost:4200}
