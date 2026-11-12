@@ -75,8 +75,7 @@ class AutorizacionIT extends PruebaIntegracion {
             entry("PATCH /api/v1/usuarios/me/estado", CUALQUIER_ROL),
             entry("GET /api/v1/notificaciones", CUALQUIER_ROL),
             entry("POST /api/v1/notificaciones/{id}/lectura", CUALQUIER_ROL),
-            entry("POST /api/v1/notificaciones/lectura", CUALQUIER_ROL),
-            entry("GET /api/v1/publicaciones/{publicacionId}/resenas", CUALQUIER_ROL));
+            entry("POST /api/v1/notificaciones/lectura", CUALQUIER_ROL));
 
     /** No exigen sesión. */
     private static final Set<String> PUBLICOS = Set.of(
@@ -90,7 +89,8 @@ class AutorizacionIT extends PruebaIntegracion {
             "GET /api/v1/alojamientos/{id}",
             "GET /api/v1/catalogos",
             "GET /api/v1/configuracion/tipos-alojamiento",
-            "GET /api/v1/publicaciones/{id}/disponibilidad");
+            "GET /api/v1/publicaciones/{id}/disponibilidad",
+            "GET /api/v1/publicaciones/{publicacionId}/resenas");
 
     @Autowired
     @Qualifier("requestMappingHandlerMapping")

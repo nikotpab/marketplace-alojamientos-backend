@@ -50,7 +50,7 @@ public class ConfiguracionSeguridad {
                         // Sin sesión
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/alojamientos/**", "/api/v1/catalogos", "/api/v1/configuracion/tipos-alojamiento",
-                                "/api/v1/publicaciones/*/disponibilidad").permitAll()
+                                "/api/v1/publicaciones/*/disponibilidad", "/api/v1/publicaciones/*/resenas").permitAll()
 
                         // Administrador
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMINISTRADOR)
@@ -74,7 +74,6 @@ public class ConfiguracionSeguridad {
 
                         // Cualquier usuario con sesión
                         .requestMatchers("/api/v1/usuarios/me/**", "/api/v1/notificaciones/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/publicaciones/*/resenas").authenticated()
 
                         .anyRequest().denyAll())
                 .build();
