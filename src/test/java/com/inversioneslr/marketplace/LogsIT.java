@@ -3,7 +3,6 @@ package com.inversioneslr.marketplace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +35,7 @@ class LogsIT extends PruebaIntegracion {
 
     @Test
     void unEventoDelSistemaTambienSeRegistra(CapturedOutput salida) {
-        eventos.publicar(new EventoDominio("EventoDelSistema", null, "reserva", UUID.randomUUID(), "EXITO", Map.of(), List.of()));
+        eventos.publicar(new EventoDePrueba("EventoDelSistema", null, "reserva", UUID.randomUUID(), "EXITO", Map.of(), List.of()));
 
         assertThat(salida.getOut()).contains("\"tipoEvento\":\"EventoDelSistema\"");
     }

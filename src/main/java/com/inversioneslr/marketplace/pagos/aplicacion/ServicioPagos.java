@@ -1,8 +1,8 @@
 package com.inversioneslr.marketplace.pagos.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.pagos.EventosPagos.CobroRevertido;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.Pago;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
@@ -10,8 +10,6 @@ import com.inversioneslr.marketplace.pagos.dominio.RepositorioPagos;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,8 +91,7 @@ public class ServicioPagos implements FachadaPagos {
             String referencia = pasarela.cobrar(pago.monto(), pago.claveIdempotencia());
             pasarela.devolver(referencia, pago.monto());
             pagos.marcarDevueltoSinReserva(pago.claveIdempotencia(), referencia);
-            eventos.publicar(new EventoDominio("CobroRevertido", null, "pago", pago.id(), EventoDominio.EXITO,
-                    Map.of("monto", pago.monto(), "referencia", referencia), List.of()));
+            eventos.publicar(new CobroRevertido(pago.id(), pago.monto(), referencia));
         } catch (ExcepcionNegocio error) {
             if (error.tipo() == ExcepcionNegocio.Tipo.PAGO_RECHAZADO) {
                 pagos.marcarRechazado(pago.claveIdempotencia());

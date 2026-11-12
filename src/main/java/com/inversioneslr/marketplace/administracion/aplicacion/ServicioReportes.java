@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.administracion.aplicacion;
 
+import com.inversioneslr.marketplace.administracion.EventosAdministracion.ReporteExportado;
 import com.inversioneslr.marketplace.administracion.dominio.FiltrosReporte;
 import com.inversioneslr.marketplace.administracion.dominio.FormatoReporte;
 import com.inversioneslr.marketplace.administracion.dominio.GeneradorReportes;
@@ -8,13 +9,11 @@ import com.inversioneslr.marketplace.administracion.dominio.Reporte;
 import com.inversioneslr.marketplace.administracion.dominio.RepositorioIndicadores;
 import com.inversioneslr.marketplace.administracion.dominio.RepositorioReportes;
 import com.inversioneslr.marketplace.administracion.dominio.TipoReporte;
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -74,7 +73,7 @@ public class ServicioReportes {
         detalle.put("desde", String.valueOf(filtros.desde()));
         detalle.put("hasta", String.valueOf(filtros.hasta()));
         detalle.put("ciudad", String.valueOf(filtros.ciudad()));
-        eventos.publicar(new EventoDominio("ReporteExportado", administradorId, "reporte", null, EventoDominio.EXITO, detalle, List.of()));
+        eventos.publicar(new ReporteExportado(administradorId, detalle));
         return CompletableFuture.completedFuture(contenido);
     }
 

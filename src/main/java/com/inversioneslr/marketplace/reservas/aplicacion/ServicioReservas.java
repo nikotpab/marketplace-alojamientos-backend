@@ -1,6 +1,5 @@
 package com.inversioneslr.marketplace.reservas.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
@@ -11,6 +10,11 @@ import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.DatosPublicacion;
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
+import com.inversioneslr.marketplace.reservas.EventosReservas.DevolucionFallida;
+import com.inversioneslr.marketplace.reservas.EventosReservas.PagoFallido;
+import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaCompletada;
+import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaConfirmada;
+import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaEnRevision;
 import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
@@ -38,9 +42,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class ServicioReservas implements FachadaReservas {
-
-    private static final String RESERVA = "reserva";
-    private static final String TOTAL = "total";
 
     private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
 
@@ -104,8 +105,7 @@ public class ServicioReservas implements FachadaReservas {
                 }
                 Reserva guardada = reservas.guardar(reserva, adicionales);
                 pagos.registrarPago(guardada.id(), referencia, claveSolicitud, guardada.total());
-                eventos.publicar(new EventoDominio("ReservaConfirmada", huespedId, RESERVA, guardada.id(), EventoDominio.EXITO,
-                        Map.of(TOTAL, guardada.total(), "codigo", guardada.codigo()), List.of(huespedId, publicacion.anfitrionId())));
+                eventos.publicar(new ReservaConfirmada(huespedId, guardada.id(), guardada.total(), guardada.codigo(), publicacion.anfitrionId()));
                 reservas.completarSolicitud(claveSolicitud, guardada.id(), json.writeValueAsString(guardada));
                 return guardada;
             });
@@ -141,8 +141,7 @@ public class ServicioReservas implements FachadaReservas {
             pagos.devolverCobroSinReserva(claveSolicitud, referencia, reserva.total());
         } catch (ExcepcionNegocio error) {
             log.error("No se pudo devolver el cobro {} tras perder el periodo", referencia);
-            eventos.publicar(new EventoDominio("DevolucionFallida", huespedId, "publicacion", publicacion.id(), error.tipo().name(),
-                    Map.of("referencia", referencia, TOTAL, reserva.total()), List.of()));
+            eventos.publicar(new DevolucionFallida(huespedId, publicacion.id(), error.tipo().name(), referencia, reserva.total()));
         }
     }
 
@@ -180,8 +179,7 @@ public class ServicioReservas implements FachadaReservas {
         try {
             return pagos.cobrar(cotizacionFinal.total(), claveSolicitud);
         } catch (ExcepcionNegocio error) {
-            eventos.publicar(new EventoDominio("PagoFallido", huespedId, "publicacion", publicacion.id(), error.tipo().name(),
-                    Map.of(TOTAL, cotizacionFinal.total()), List.of()));
+            eventos.publicar(new PagoFallido(huespedId, publicacion.id(), error.tipo().name(), cotizacionFinal.total()));
             throw error;
         }
     }
@@ -226,8 +224,7 @@ public class ServicioReservas implements FachadaReservas {
     public void completarReservasFinalizadas() {
         reservas.listarConfirmadasConSalidaAntesDe(LocalDate.now(reloj)).forEach(reserva -> transaccion.executeWithoutResult(estado -> {
             reservas.actualizarEstado(reserva.id(), reserva.completar().estado());
-            eventos.publicar(new EventoDominio("ReservaCompletada", null, RESERVA, reserva.id(), EventoDominio.EXITO, Map.of(),
-                    List.of(reserva.huespedId())));
+            eventos.publicar(new ReservaCompletada(reserva.id(), reserva.huespedId()));
         }));
     }
 
@@ -252,8 +249,7 @@ public class ServicioReservas implements FachadaReservas {
     @Override
     public void marcarFuturasEnRevision(UUID publicacionId) {
         reservas.marcarFuturasEnRevision(publicacionId, LocalDate.now(reloj)).forEach(reserva ->
-                eventos.publicar(new EventoDominio("ReservaEnRevision", null, RESERVA, reserva.id(), EventoDominio.EXITO,
-                        Map.of("publicacionId", publicacionId), List.of(reserva.huespedId()))));
+                eventos.publicar(new ReservaEnRevision(reserva.id(), publicacionId, reserva.huespedId())));
     }
 
     /** Con los nombres que envía el frontend. */

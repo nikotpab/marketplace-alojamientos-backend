@@ -1,8 +1,9 @@
 package com.inversioneslr.marketplace.resenas.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.resenas.EventosResenas.ResenaOcultada;
+import com.inversioneslr.marketplace.resenas.EventosResenas.ResenaPublicada;
 import com.inversioneslr.marketplace.resenas.FachadaResenas;
 import com.inversioneslr.marketplace.resenas.dominio.RepositorioResenas;
 import com.inversioneslr.marketplace.resenas.dominio.Resena;
@@ -15,7 +16,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,8 +48,7 @@ public class ServicioResenias implements FachadaResenas {
         }
         Resena resena = resenas.guardar(new Resena(UUID.randomUUID(), reservaId, comando.calificacion(), comando.contenido().strip(),
                 false, null));
-        eventos.publicar(new EventoDominio("ResenaPublicada", huespedId, "resena", resena.id(), EventoDominio.EXITO,
-                Map.of("reservaId", reservaId, "publicacionId", reserva.publicacionId(), "calificacion", resena.calificacion()), List.of()));
+        eventos.publicar(new ResenaPublicada(huespedId, resena.id(), reservaId, reserva.publicacionId(), resena.calificacion()));
         return resenas.buscarVisible(resena.id()).orElseThrow();
     }
 
@@ -65,7 +64,7 @@ public class ServicioResenias implements FachadaResenas {
         Resena resena = resenas.buscarPorId(resenaId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La reseña no existe."));
         resenas.guardar(resena.ocultar(administradorId));
-        eventos.publicar(new EventoDominio("ResenaOcultada", administradorId, "resena", resenaId, EventoDominio.EXITO, Map.of(), List.of()));
+        eventos.publicar(new ResenaOcultada(administradorId, resenaId));
     }
 
     public record PublicarResenaComando(

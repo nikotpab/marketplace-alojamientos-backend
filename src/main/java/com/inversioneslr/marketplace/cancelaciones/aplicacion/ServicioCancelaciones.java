@@ -1,11 +1,13 @@
 package com.inversioneslr.marketplace.cancelaciones.aplicacion;
 
+import com.inversioneslr.marketplace.cancelaciones.EventosCancelaciones.DevolucionFallida;
+import com.inversioneslr.marketplace.cancelaciones.EventosCancelaciones.DevolucionProcesada;
+import com.inversioneslr.marketplace.cancelaciones.EventosCancelaciones.ReservaCancelada;
 import com.inversioneslr.marketplace.cancelaciones.dominio.Cancelacion;
 import com.inversioneslr.marketplace.cancelaciones.dominio.Cancelacion.EstadoFinal;
 import com.inversioneslr.marketplace.cancelaciones.dominio.PoliticaCancelacion;
-import com.inversioneslr.marketplace.cancelaciones.dominio.ReservaCancelable;
 import com.inversioneslr.marketplace.cancelaciones.dominio.RepositorioCancelaciones;
-import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.cancelaciones.dominio.ReservaCancelable;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
@@ -18,8 +20,6 @@ import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +28,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class ServicioCancelaciones {
-
-    private static final String RESERVA = "reserva";
-    private static final String VALOR_DEVOLUCION = "valorDevolucion";
 
     private static final Logger log = LoggerFactory.getLogger(ServicioCancelaciones.class);
 
@@ -100,14 +97,11 @@ public class ServicioCancelaciones {
         return transaccion.execute(estado -> {
             reservas.marcarCancelada(reservaId);
             cancelaciones.guardar(cancelacion);
-            eventos.publicar(new EventoDominio("ReservaCancelada", huespedId, RESERVA, reservaId, estadoFinal.name(),
-                    Map.of("motivo", comando.motivo(), VALOR_DEVOLUCION, valor), List.of(huespedId, publicacion.anfitrionId())));
+            eventos.publicar(new ReservaCancelada(huespedId, reservaId, estadoFinal.name(), comando.motivo(), valor, publicacion.anfitrionId()));
             if (estadoFinal == EstadoFinal.DEVOLUCION_PROCESADA) {
-                eventos.publicar(new EventoDominio("DevolucionProcesada", huespedId, RESERVA, reservaId, EventoDominio.EXITO,
-                        Map.of(VALOR_DEVOLUCION, valor), List.of(huespedId)));
+                eventos.publicar(new DevolucionProcesada(huespedId, reservaId, valor));
             } else if (estadoFinal == EstadoFinal.DEVOLUCION_NO_PROCESADA) {
-                eventos.publicar(new EventoDominio("DevolucionFallida", huespedId, RESERVA, reservaId, "FALLIDO",
-                        Map.of(VALOR_DEVOLUCION, valor), List.of(huespedId)));
+                eventos.publicar(new DevolucionFallida(huespedId, reservaId, valor));
             }
             return cancelacion;
         });
