@@ -4,10 +4,10 @@ import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.DatosPublicacion;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.ServicioAdicional;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.TipoAlojamiento;
-import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.PoliticaOfrecida;
+import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionConAnfitrion;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
 import com.inversioneslr.marketplace.publicaciones.dominio.RepositorioPublicaciones;
@@ -17,7 +17,8 @@ import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
 
     /** Consulta base de la vista para el frontend; se completa con el filtro y el orden. */
     private static final String VISTA = """
-            SELECT p.id, p.estado, p.actualizado_en, p.motivo_estado, concat_ws(' ', u.nombre, u.apellido) AS anfitrion,
+            SELECT p.id, p.estado, p.actualizado_en, p.motivo_estado, p.anfitrion_id,
                    p.titulo, p.descripcion, p.ubicacion_textual, t.codigo AS tipo, p.capacidad, p.precio_noche,
                    ARRAY(SELECT s.nombre FROM publicacion_servicio ps JOIN servicio s ON s.id = ps.servicio_id
                          WHERE ps.publicacion_id = p.id ORDER BY s.nombre) AS servicios,
@@ -40,7 +41,6 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                    ARRAY(SELECT i.ruta FROM imagen_publicacion i WHERE i.publicacion_id = p.id ORDER BY i.orden) AS imagenes,
                    c.nombre AS politica
             FROM publicacion p
-            JOIN usuario u ON u.id = p.anfitrion_id
             LEFT JOIN tipo_alojamiento t ON t.id = p.tipo_alojamiento_id
             LEFT JOIN politica_cancelacion c ON c.id = p.politica_cancelacion_id
             """;
@@ -81,7 +81,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     }
 
     @Override
-    public Optional<PublicacionVista> buscarVista(UUID id) {
+    public Optional<PublicacionConAnfitrion> buscarVista(UUID id) {
         return jdbc.sql(VISTA + "WHERE p.id = :id")
                 .param("id", id)
                 .query(RepositorioPublicacionesSql::aVista)
@@ -112,7 +112,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     }
 
     @Override
-    public List<PublicacionVista> listarVistas(UUID anfitrionId, EstadoPublicacion estado) {
+    public List<PublicacionConAnfitrion> listarVistas(UUID anfitrionId, EstadoPublicacion estado) {
         return jdbc.sql(VISTA + """
                 WHERE (CAST(:anfitrion AS uuid) IS NULL OR p.anfitrion_id = :anfitrion)
                   AND (CAST(:estado AS text) IS NULL OR p.estado = :estado)
@@ -183,40 +183,20 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     }
 
     @Override
-    public Disponibilidad disponibilidad(UUID publicacionId, LocalDate desde, LocalDate hasta) {
-        List<LocalDate> bloqueados = new ArrayList<>();
-        List<LocalDate> reservados = new ArrayList<>();
-        jdbc.sql("""
-                SELECT dia::date AS dia,
-                       EXISTS (SELECT 1 FROM reserva r WHERE r.publicacion_id = :id AND r.estado = 'CONFIRMADA'
-                                 AND dia >= r.fecha_llegada AND dia < r.fecha_salida) AS reservado
+    public List<LocalDate> diasNoDisponibles(UUID publicacionId, LocalDate desde, LocalDate hasta) {
+        return jdbc.sql("""
+                SELECT dia::date AS dia
                 FROM generate_series(CAST(:desde AS date), CAST(:hasta AS date), interval '1 day') AS dia
                 WHERE NOT EXISTS (SELECT 1 FROM periodo_disponibilidad d WHERE d.publicacion_id = :id AND d.tipo = 'DISPONIBLE'
                                     AND dia >= d.fecha_inicio AND dia < d.fecha_fin)
                    OR EXISTS (SELECT 1 FROM periodo_disponibilidad d WHERE d.publicacion_id = :id AND d.tipo = 'BLOQUEADO'
                                 AND dia >= d.fecha_inicio AND dia < d.fecha_fin)
-                   OR EXISTS (SELECT 1 FROM reserva r WHERE r.publicacion_id = :id AND r.estado = 'CONFIRMADA'
-                                AND dia >= r.fecha_llegada AND dia < r.fecha_salida)
                 ORDER BY dia""")
                 .param("id", publicacionId)
                 .param("desde", desde)
                 .param("hasta", hasta)
-                .query(fila -> {
-                    (fila.getBoolean("reservado") ? reservados : bloqueados).add(fila.getObject("dia", LocalDate.class));
-                });
-        return new Disponibilidad(bloqueados, reservados);
-    }
-
-    @Override
-    public boolean hayReservasConfirmadas(UUID publicacionId, LocalDate inicio, LocalDate fin) {
-        return jdbc.sql("""
-                SELECT EXISTS (SELECT 1 FROM reserva WHERE publicacion_id = :id AND estado = 'CONFIRMADA'
-                                 AND daterange(fecha_llegada, fecha_salida, '[)') && daterange(CAST(:inicio AS date), CAST(:fin AS date), '[)'))""")
-                .param("id", publicacionId)
-                .param("inicio", inicio)
-                .param("fin", fin)
-                .query(Boolean.class)
-                .single();
+                .query((fila, numero) -> fila.getObject("dia", LocalDate.class))
+                .list();
     }
 
     @Override
@@ -253,15 +233,34 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                                  AND fecha_inicio <= :llegada AND fecha_fin >= :salida)
                    AND NOT EXISTS (SELECT 1 FROM periodo_disponibilidad
                                    WHERE publicacion_id = :publicacion AND tipo = 'BLOQUEADO'
-                                     AND daterange(fecha_inicio, fecha_fin, '[)') && daterange(CAST(:llegada AS date), CAST(:salida AS date), '[)'))
-                   AND NOT EXISTS (SELECT 1 FROM reserva
-                                   WHERE publicacion_id = :publicacion AND estado = 'CONFIRMADA'
-                                     AND daterange(fecha_llegada, fecha_salida, '[)') && daterange(CAST(:llegada AS date), CAST(:salida AS date), '[)'))""")
+                                     AND daterange(fecha_inicio, fecha_fin, '[)') && daterange(CAST(:llegada AS date), CAST(:salida AS date), '[)'))""")
                 .param("publicacion", publicacionId)
                 .param("llegada", llegada)
                 .param("salida", salida)
                 .query(Boolean.class)
                 .single();
+    }
+
+    @Override
+    public Map<UUID, String> titulos(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, String> titulos = new HashMap<>();
+        jdbc.sql("SELECT id, titulo FROM publicacion WHERE id IN (:ids)")
+                .param("ids", ids)
+                .query(fila -> {
+                    titulos.put(fila.getObject("id", UUID.class), fila.getString("titulo"));
+                });
+        return titulos;
+    }
+
+    @Override
+    public List<UUID> idsDelAnfitrion(UUID anfitrionId) {
+        return jdbc.sql("SELECT id FROM publicacion WHERE anfitrion_id = :anfitrion")
+                .param("anfitrion", anfitrionId)
+                .query(UUID.class)
+                .list();
     }
 
     @Override
@@ -345,15 +344,16 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                 .list();
     }
 
-    private static PublicacionVista aVista(ResultSet fila, int numero) throws SQLException {
+    /** El nombre del anfitrión queda vacío: lo completa ServicioPublicaciones con la fachada de usuarios (SCRUM-142). */
+    private static PublicacionConAnfitrion aVista(ResultSet fila, int numero) throws SQLException {
         EstadoPublicacion estado = EstadoPublicacion.valueOf(fila.getString("estado"));
-        return new PublicacionVista(
+        return new PublicacionConAnfitrion(new PublicacionVista(
                 fila.getObject("id", UUID.class),
                 estado,
                 fila.getTimestamp("actualizado_en").toInstant(),
                 estado == EstadoPublicacion.BORRADOR ? fila.getString("motivo_estado") : null,
                 estado == EstadoPublicacion.BLOQUEADA ? fila.getString("motivo_estado") : null,
-                fila.getString("anfitrion"),
+                null,
                 fila.getString("titulo"),
                 fila.getString("descripcion"),
                 fila.getString("ubicacion_textual"),
@@ -363,7 +363,8 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                 textos(fila.getArray("servicios")),
                 textos(fila.getArray("reglas")),
                 textos(fila.getArray("imagenes")),
-                fila.getString("politica"));
+                fila.getString("politica")),
+                fila.getObject("anfitrion_id", UUID.class));
     }
 
     private static List<String> textos(Array arreglo) throws SQLException {

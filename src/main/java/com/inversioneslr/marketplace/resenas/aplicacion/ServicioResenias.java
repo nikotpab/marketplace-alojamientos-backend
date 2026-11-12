@@ -6,9 +6,12 @@ import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.resenas.FachadaResenas;
 import com.inversioneslr.marketplace.resenas.dominio.RepositorioResenas;
 import com.inversioneslr.marketplace.resenas.dominio.Resena;
+import com.inversioneslr.marketplace.resenas.dominio.ResenaGuardada;
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.FachadaReservas.DatosReserva;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios.Persona;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -16,7 +19,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,11 +32,13 @@ public class ServicioResenias implements FachadaResenas {
 
     private final RepositorioResenas resenas;
     private final FachadaReservas reservas;
+    private final FachadaUsuarios usuarios;
     private final PublicadorEventos eventos;
 
-    public ServicioResenias(RepositorioResenas resenas, FachadaReservas reservas, PublicadorEventos eventos) {
+    public ServicioResenias(RepositorioResenas resenas, FachadaReservas reservas, FachadaUsuarios usuarios, PublicadorEventos eventos) {
         this.resenas = resenas;
         this.reservas = reservas;
+        this.usuarios = usuarios;
         this.eventos = eventos;
     }
 
@@ -50,12 +59,34 @@ public class ServicioResenias implements FachadaResenas {
                 false, null));
         eventos.publicar(new EventoDominio("ResenaPublicada", huespedId, "resena", resena.id(), EventoDominio.EXITO,
                 Map.of("reservaId", reservaId, "publicacionId", reserva.publicacionId(), "calificacion", resena.calificacion()), List.of()));
-        return resenas.buscarVisible(resena.id()).orElseThrow();
+        ResenaGuardada guardada = resenas.buscarVisible(resena.id()).orElseThrow();
+        return visible(guardada, usuarios.personas(Set.of(huespedId)).get(huespedId));
     }
 
+    /** SCRUM-142: el huésped de cada reserva y su nombre en una consulta a cada fachada, sin leer sus tablas. */
     @Override
     public List<ResenaVisible> listarVisibles(UUID publicacionId) {
-        return resenas.listarVisibles(publicacionId);
+        Map<UUID, UUID> huespedes = reservas.huespedPorReserva(publicacionId);
+        List<ResenaGuardada> guardadas = resenas.listarVisibles(huespedes.keySet());
+        Map<UUID, Persona> autores = usuarios.personas(guardadas.stream().map(guardada -> huespedes.get(guardada.reservaId())).toList());
+        return guardadas.stream()
+                .filter(guardada -> autores.containsKey(huespedes.get(guardada.reservaId())))
+                .map(guardada -> visible(guardada, autores.get(huespedes.get(guardada.reservaId()))))
+                .toList();
+    }
+
+    private static ResenaVisible visible(ResenaGuardada guardada, Persona huesped) {
+        return new ResenaVisible(guardada.id(), autor(huesped), guardada.calificacion(), guardada.contenido(), guardada.creadoEn());
+    }
+
+    /**
+     * El nombre y la inicial del apellido, para no exponer los datos del huésped. Como el antiguo
+     * concat_ws(' ', nombre, left(apellido, 1) || '.'): omite lo que falte.
+     */
+    private static String autor(Persona huesped) {
+        String inicial = huesped.apellido() == null ? null
+                : huesped.apellido().substring(0, huesped.apellido().isEmpty() ? 0 : huesped.apellido().offsetByCodePoints(0, 1)) + ".";
+        return Stream.of(huesped.nombre(), inicial).filter(Objects::nonNull).collect(Collectors.joining(" "));
     }
 
     /** CU-26: queda en la auditoría quién la ocultó. */

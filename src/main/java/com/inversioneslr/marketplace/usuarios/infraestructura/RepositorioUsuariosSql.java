@@ -7,6 +7,7 @@ import com.inversioneslr.marketplace.usuarios.dominio.Usuario;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +39,17 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
                 .param("correo", correo)
                 .query(RepositorioUsuariosSql::aUsuario)
                 .optional();
+    }
+
+    @Override
+    public List<Usuario> buscarPorIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql("SELECT * FROM usuario WHERE id IN (:ids)")
+                .param("ids", ids)
+                .query(RepositorioUsuariosSql::aUsuario)
+                .list();
     }
 
     @Override

@@ -14,6 +14,10 @@ public interface FachadaAuditoria {
     /** @param actor y rol quedan vacíos si el evento lo provocó el sistema */
     record EventoAuditoria(UUID id, UUID actorId, String actor, String rol, String accion, String entidad, UUID entidadId,
                            String resultado, Map<String, Object> detalle, String hashRegistro, Instant fecha) {
+
+        public EventoAuditoria conActor(String nombre, String rolActor) {
+            return new EventoAuditoria(id, actorId, nombre, rolActor, accion, entidad, entidadId, resultado, detalle, hashRegistro, fecha);
+        }
     }
 
     /** Todos los filtros son opcionales. Las fechas se interpretan en hora de Colombia. */

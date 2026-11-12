@@ -2,7 +2,9 @@ package com.inversioneslr.marketplace.publicaciones;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface FachadaPublicaciones {
@@ -10,6 +12,12 @@ public interface FachadaPublicaciones {
     DatosPublicacion datosPublicacion(UUID publicacionId);
 
     boolean periodoDisponible(UUID publicacionId, LocalDate llegada, LocalDate salida);
+
+    /** SCRUM-142: una sola consulta para todas; las que no existen no aparecen. */
+    Map<UUID, String> titulos(Collection<UUID> publicacionIds);
+
+    /** SCRUM-142: todas las del anfitrión, en cualquier estado. */
+    List<UUID> publicacionesDelAnfitrion(UUID anfitrionId);
 
     /** CU-24. */
     void bloquear(UUID administradorId, UUID publicacionId, String motivo);
