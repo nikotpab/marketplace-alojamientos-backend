@@ -113,9 +113,25 @@ Dentro de cada módulo, las capas que necesita:
 | `dominio` | Modelo y puertos, sin frameworks | raíz propia |
 | `infraestructura` | SQL y adaptadores | `dominio` |
 
+Cada módulo se declara en su `package-info.java` con `@ApplicationModule`: un nombre legible (`displayName`) y los módulos de los que puede depender (`allowedDependencies`, SCRUM-145). Las dependencias declaradas son las reales:
+
+| Módulo | Puede depender de |
+|---|---|
+| `compartido` | ninguno |
+| `notificaciones`, `pagos`, `usuarios` | `compartido` |
+| `auditoria`, `publicaciones` | `compartido`, `usuarios` |
+| `cotizacion` | `compartido`, `publicaciones` |
+| `reservas` | `compartido`, `cotizacion`, `pagos`, `publicaciones`, `usuarios` |
+| `cancelaciones` | `compartido`, `pagos`, `publicaciones`, `reservas` |
+| `resenas` | `compartido`, `reservas`, `usuarios` |
+| `busqueda` | `compartido`, `resenas` |
+| `administracion` | `auditoria`, `compartido`, `cotizacion`, `publicaciones`, `resenas`, `reservas`, `usuarios` |
+
+Para depender de un módulo nuevo hay que agregarlo a esa lista a propósito; si no, `ModulosTest` falla.
+
 Dos pruebas hacen cumplir estas fronteras y bloquean el merge si se rompen:
 
-- `ModulosTest`: con Spring Modulith, que no haya ciclos entre módulos ni accesos a la parte interna de otro. También genera los diagramas.
+- `ModulosTest`: con Spring Modulith, que no haya ciclos entre módulos, ni accesos a la parte interna de otro, ni dependencias que el módulo no declara. También genera los diagramas.
 - `ArquitecturaTest`: con ArchUnit, las capas dentro de cada módulo.
 
 ### Eventos
