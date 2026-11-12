@@ -146,7 +146,7 @@ class NotificacionesIT extends PruebaIntegracion {
     }
 
     private static EventoDominio evento(String tipo, UUID actor, UUID entidad, List<UUID> destinatarios) {
-        return new EventoDominio(tipo, actor, "reserva", entidad, "EXITO", Map.of(), destinatarios);
+        return new EventoDePrueba(tipo, actor, "reserva", entidad, "EXITO", Map.of(), destinatarios);
     }
 
     /** Estado e intentos de la entrega a las notificaciones, por ejemplo "FAILED:2". */

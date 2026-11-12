@@ -1,11 +1,20 @@
 package com.inversioneslr.marketplace.usuarios.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.ContrasenaRestablecida;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CorreoVerificado;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaActivada;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaDesactivada;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.InicioSesionExitoso;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.InicioSesionFallido;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.PerfilActualizado;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.RecuperacionSolicitada;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.UsuarioRegistrado;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.UsuarioRestringido;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.RepositorioUsuarios;
 import com.inversioneslr.marketplace.usuarios.dominio.TokensCorreo;
@@ -32,8 +41,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ServicioAutenticacion implements FachadaUsuarios {
 
-    private static final String USUARIO = "usuario";
-    private static final String INICIO_SESION_FALLIDO = "InicioSesionFallido";
     private static final String TOKEN = "token";
 
     /** RNF-23: 5 intentos fallidos seguidos bloquean el inicio de sesión por 30 minutos. */
@@ -75,7 +82,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         Usuario usuario = usuarios.guardar(new Usuario(UUID.randomUUID(), comando.nombre(), comando.apellido(),
                 normalizar(comando.correo()), comando.telefono(), cifrador.encode(comando.contrasena()),
                 comando.rol(), true, false, null, 0, null, false));
-        eventos.publicar(evento("UsuarioRegistrado", usuario, EventoDominio.EXITO, Map.of("rol", usuario.rol().name())));
+        eventos.publicar(new UsuarioRegistrado(usuario.id(), usuario.rol().name()));
         correos.enviarVerificacion(usuario);
         return resumen(usuario);
     }
@@ -89,18 +96,18 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         if (usuario == null) {
             cifrador.matches(comando.contrasena(), hashDeRelleno);
             // RNF-23: también se registra, sin el correo, para detectar fuerza bruta contra cuentas que no existen.
-            eventos.publicar(new EventoDominio(INICIO_SESION_FALLIDO, null, USUARIO, null, "CORREO_DESCONOCIDO", Map.of(), List.of()));
+            eventos.publicar(new InicioSesionFallido(null, "CORREO_DESCONOCIDO"));
             throw credencialesInvalidas();
         }
         Instant ahora = reloj.instant();
         if (usuario.bloqueadoEn(ahora)) {
-            eventos.publicar(evento(INICIO_SESION_FALLIDO, usuario, "CUENTA_BLOQUEADA", Map.of()));
+            eventos.publicar(new InicioSesionFallido(usuario.id(), "CUENTA_BLOQUEADA"));
             throw cuentaBloqueada();
         }
         if (!cifrador.matches(comando.contrasena(), usuario.hashContrasena())) {
             // Sin transacción a propósito: el intento debe quedar guardado aunque se responda con error.
             Usuario conIntento = usuarios.guardar(usuario.registrarIntentoFallido(ahora, MAXIMO_INTENTOS, BLOQUEO));
-            eventos.publicar(evento(INICIO_SESION_FALLIDO, usuario, "FALLIDO", Map.of()));
+            eventos.publicar(new InicioSesionFallido(usuario.id(), "FALLIDO"));
             throw conIntento.bloqueadoEn(ahora) ? cuentaBloqueada() : credencialesInvalidas();
         }
         if (usuario.restringido()) {
@@ -110,14 +117,14 @@ public class ServicioAutenticacion implements FachadaUsuarios {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CUENTA_DESACTIVADA, "Tu cuenta está desactivada.");
         }
         if (!usuario.correoVerificado()) {
-            eventos.publicar(evento(INICIO_SESION_FALLIDO, usuario, "CORREO_NO_VERIFICADO", Map.of()));
+            eventos.publicar(new InicioSesionFallido(usuario.id(), "CORREO_NO_VERIFICADO"));
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CORREO_NO_VERIFICADO,
                     "Confirma tu correo para iniciar sesión. Te enviamos un enlace al registrarte; si no lo encuentras, pide uno nuevo.");
         }
         if (usuario.intentosFallidos() > 0) {
             usuarios.guardar(usuario.reiniciarIntentos());
         }
-        eventos.publicar(evento("InicioSesionExitoso", usuario, EventoDominio.EXITO, Map.of()));
+        eventos.publicar(new InicioSesionExitoso(usuario.id()));
         return new Sesion(tokens.emitir(new UsuarioAutenticado(usuario.id(), usuario.rol())),
                 new UsuarioSesion(usuario.id(), usuario.nombre(), usuario.correo(), usuario.rol()));
     }
@@ -132,10 +139,6 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     private static String normalizar(String correo) {
         return correo.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private static EventoDominio evento(String tipo, Usuario usuario, String resultado, Map<String, Object> detalle) {
-        return new EventoDominio(tipo, usuario.id(), USUARIO, usuario.id(), resultado, detalle, List.of());
     }
 
     private static UsuarioResumen resumen(Usuario usuario) {
@@ -153,7 +156,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 .filter(usuario -> correos.puedeEnviar(usuario, Proposito.RESTABLECER_CONTRASENA))
                 .ifPresent(usuario -> {
                     correos.enviarRecuperacion(usuario);
-                    eventos.publicar(evento("RecuperacionSolicitada", usuario, EventoDominio.EXITO, Map.of()));
+                    eventos.publicar(new RecuperacionSolicitada(usuario.id()));
                 });
     }
 
@@ -165,7 +168,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 .flatMap(usuarios::buscarPorId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(TOKEN, mensaje)));
         usuarios.guardar(usuario.cambiarContrasena(cifrador.encode(comando.contrasenaNueva())).verificarCorreo());
-        eventos.publicar(evento("ContrasenaRestablecida", usuario, EventoDominio.EXITO, Map.of()));
+        eventos.publicar(new ContrasenaRestablecida(usuario.id()));
     }
 
     /** SCRUM-109: el token llega en el enlace del correo de registro. */
@@ -176,7 +179,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 .flatMap(usuarios::buscarPorId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(TOKEN, mensaje)));
         usuarios.guardar(usuario.verificarCorreo());
-        eventos.publicar(evento("CorreoVerificado", usuario, EventoDominio.EXITO, Map.of()));
+        eventos.publicar(new CorreoVerificado(usuario.id()));
     }
 
     /** SCRUM-109: un enlace nuevo invalida el anterior. Misma respuesta exista o no la cuenta, o si ya está verificada. */
@@ -196,7 +199,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     /** CU-04: el correo y el rol no se editan aquí. */
     public Perfil actualizarPerfil(UUID usuarioId, PerfilComando comando) {
         Usuario usuario = usuarios.guardar(buscar(usuarioId).actualizarDatos(comando.nombre(), comando.apellido(), comando.telefono()));
-        eventos.publicar(evento("PerfilActualizado", usuario, EventoDominio.EXITO, Map.of()));
+        eventos.publicar(new PerfilActualizado(usuario.id()));
         return perfil(usuario);
     }
 
@@ -213,7 +216,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public Perfil cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
         Usuario actual = buscar(usuarioId);
         Usuario usuario = usuarios.guardar(comando.activo() ? actual.activar() : actual.desactivar());
-        eventos.publicar(evento(comando.activo() ? "CuentaActivada" : "CuentaDesactivada", usuario, EventoDominio.EXITO, Map.of()));
+        eventos.publicar(comando.activo() ? new CuentaActivada(usuario.id()) : new CuentaDesactivada(usuario.id()));
         return perfil(usuario);
     }
 
@@ -228,8 +231,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     @Transactional
     public void restringir(UUID administradorId, UUID usuarioId, String motivo) {
         Usuario restringido = usuarios.guardar(buscar(usuarioId).restringir(motivo));
-        eventos.publicar(new EventoDominio("UsuarioRestringido", administradorId, USUARIO, usuarioId, EventoDominio.EXITO,
-                Map.of("motivo", restringido.motivoRestriccion()), List.of()));
+        eventos.publicar(new UsuarioRestringido(administradorId, usuarioId, restringido.motivoRestriccion()));
     }
 
     @Override

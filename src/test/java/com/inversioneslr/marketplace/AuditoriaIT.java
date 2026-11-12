@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.inversioneslr.marketplace.auditoria.aplicacion.ServicioAuditoria;
 import com.inversioneslr.marketplace.auditoria.aplicacion.VerificacionAuditoria;
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.Rol;
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,7 +30,7 @@ class AuditoriaIT extends PruebaIntegracion {
     @Test
     void losRegistrosValidosPasanLaVerificacionAunqueTenganDecimales() {
         UUID entidad = UUID.randomUUID();
-        auditoria.atender(new EventoDominio("ReservaConfirmada", null, "reserva", entidad, "EXITO",
+        auditoria.atender(new EventoDePrueba("ReservaConfirmada", null, "reserva", entidad, "EXITO",
                 Map.of("total", new BigDecimal("330000.00"), "devolucion", new BigDecimal("150000"), "codigo", "LR-2030-0001",
                         "publicacionId", UUID.randomUUID(), "filas", 3), List.of()));
         UUID registro = comoAplicacion.queryForObject("SELECT id FROM auditoria.evento_auditoria WHERE entidad_id = ?", UUID.class, entidad);
@@ -57,7 +56,7 @@ class AuditoriaIT extends PruebaIntegracion {
     void registraElEventoConSuHash() {
         UUID entidad = UUID.randomUUID();
 
-        auditoria.atender(new EventoDominio("ReservaConfirmada", null, "reserva", entidad, "EXITO", Map.of("total", 100), List.of()));
+        auditoria.atender(new EventoDePrueba("ReservaConfirmada", null, "reserva", entidad, "EXITO", Map.of("total", 100), List.of()));
 
         var fila = comoAplicacion.queryForMap("SELECT accion, resultado, detalle::text AS detalle, hash_registro FROM auditoria.evento_auditoria WHERE entidad_id = ?", entidad);
         assertThat(fila).containsEntry("accion", "ReservaConfirmada").containsEntry("resultado", "EXITO");
@@ -69,8 +68,8 @@ class AuditoriaIT extends PruebaIntegracion {
     void administradorConsultaPorTipoDeEvento() throws Exception {
         UUID administrador = crearUsuario(Rol.ADMINISTRADOR);
         String tipo = "Prueba" + UUID.randomUUID().toString().substring(0, 8);
-        auditoria.atender(new EventoDominio(tipo, administrador, "reserva", UUID.randomUUID(), "EXITO", Map.of(), List.of()));
-        auditoria.atender(new EventoDominio("OtroEvento", administrador, "reserva", UUID.randomUUID(), "EXITO", Map.of(), List.of()));
+        auditoria.atender(new EventoDePrueba(tipo, administrador, "reserva", UUID.randomUUID(), "EXITO", Map.of(), List.of()));
+        auditoria.atender(new EventoDePrueba("OtroEvento", administrador, "reserva", UUID.randomUUID(), "EXITO", Map.of(), List.of()));
 
         mvc.perform(get("/api/v1/admin/auditoria").param("accion", tipo).header("Authorization", sesionDe(administrador, Rol.ADMINISTRADOR)))
                 .andExpect(status().isOk())

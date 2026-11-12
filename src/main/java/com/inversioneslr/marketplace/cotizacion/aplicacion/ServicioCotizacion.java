@@ -1,10 +1,10 @@
 package com.inversioneslr.marketplace.cotizacion.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
+import com.inversioneslr.marketplace.cotizacion.EventosCotizacion.TarifasActualizadas;
 import com.inversioneslr.marketplace.cotizacion.FachadaCotizacion;
 import com.inversioneslr.marketplace.cotizacion.dominio.RepositorioTarifas;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
@@ -144,8 +144,7 @@ public class ServicioCotizacion implements FachadaCotizacion {
     public void actualizarTarifas(UUID administradorId, ConfiguracionTarifas nuevasTarifas) {
         ConfiguracionTarifas anteriores = tarifas.vigentes();
         tarifas.guardar(nuevasTarifas, administradorId);
-        eventos.publicar(new EventoDominio("TarifasActualizadas", administradorId, "configuracion_tarifa", null, EventoDominio.EXITO,
-                cambios(anteriores, nuevasTarifas), List.of()));
+        eventos.publicar(new TarifasActualizadas(administradorId, cambios(anteriores, nuevasTarifas)));
     }
 
     /** Por ejemplo, "Tarifa de servicio" → "9 % → 10 %". Solo incluye lo que cambió. */

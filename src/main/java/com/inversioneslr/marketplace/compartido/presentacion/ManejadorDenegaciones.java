@@ -1,12 +1,10 @@
 package com.inversioneslr.marketplace.compartido.presentacion;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
+import com.inversioneslr.marketplace.compartido.AccesoDenegado;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +34,12 @@ public class ManejadorDenegaciones implements AccessDeniedHandler {
     }
 
     void registrar(HttpServletRequest solicitud) {
-        Map<String, Object> detalle = Map.of("metodo", solicitud.getMethod(), "ruta", solicitud.getRequestURI());
+        AccesoDenegado denegacion = new AccesoDenegado(actorActual(), solicitud.getMethod(), solicitud.getRequestURI());
         try {
-            eventos.publicar(new EventoDominio("AccesoDenegado", actorActual(), "ruta", null, "DENEGADO", detalle, List.of()));
+            eventos.publicar(denegacion);
         } catch (RuntimeException e) {
             // Una falla al registrar no puede convertir la denegación en otra respuesta.
-            log.error("No se pudo registrar la denegación {}", detalle, e);
+            log.error("No se pudo registrar la denegación {}", denegacion.detalle(), e);
         }
     }
 

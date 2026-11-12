@@ -1,10 +1,19 @@
 package com.inversioneslr.marketplace.publicaciones.aplicacion;
 
-import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.DisponibilidadModificada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionAprobada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionBloqueada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionCreada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionEditada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionEnviadaARevision;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionPausada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionReactivada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionRechazada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.TipoAlojamientoGuardado;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.OcupacionReservas;
 import com.inversioneslr.marketplace.publicaciones.OcupacionReservas.RangoOcupado;
@@ -47,7 +56,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ServicioPublicaciones implements FachadaPublicaciones {
 
-    private static final String PUBLICACION = "publicacion";
     private static final String HASTA = "hasta";
 
     /** Decisión temporal: queda disponible dos años y el anfitrión bloquea lo que no (ajuste 9 del README). */
@@ -82,7 +90,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         LocalDate hoy = LocalDate.now(reloj);
         publicaciones.guardarPeriodo(new PeriodoDisponibilidad(UUID.randomUUID(), publicacion.id(), hoy,
                 hoy.plus(DISPONIBILIDAD_INICIAL), PeriodoDisponibilidad.Tipo.DISPONIBLE));
-        eventos.publicar(new EventoDominio("PublicacionCreada", anfitrionId, PUBLICACION, publicacion.id(), EventoDominio.EXITO, Map.of(), List.of()));
+        eventos.publicar(new PublicacionCreada(anfitrionId, publicacion.id()));
         return vista(publicacion.id());
     }
 
@@ -181,7 +189,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
             editada.exigirInformacionMinima();
         }
         publicaciones.guardar(editada);
-        eventos.publicar(new EventoDominio("PublicacionEditada", usuario.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
+        eventos.publicar(new PublicacionEditada(usuario.id(), publicacionId));
         return vista(publicacionId);
     }
 
@@ -193,7 +201,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista solicitarActivacion(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).solicitarActivacion());
-        eventos.publicar(new EventoDominio("PublicacionEnviadaARevision", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
+        eventos.publicar(new PublicacionEnviadaARevision(anfitrion.id(), publicacionId));
         return vista(publicacionId);
     }
 
@@ -201,8 +209,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista aprobar(UUID administradorId, UUID publicacionId) {
         Publicacion aprobada = publicaciones.guardar(existente(publicacionId).aprobar());
-        eventos.publicar(new EventoDominio("PublicacionAprobada", administradorId, PUBLICACION, publicacionId, EventoDominio.EXITO,
-                Map.of(), List.of(aprobada.anfitrionId())));
+        eventos.publicar(new PublicacionAprobada(administradorId, publicacionId, aprobada.anfitrionId()));
         return vista(publicacionId);
     }
 
@@ -210,8 +217,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista rechazar(UUID administradorId, UUID publicacionId, String motivo) {
         Publicacion rechazada = publicaciones.guardar(existente(publicacionId).rechazar(motivo));
-        eventos.publicar(new EventoDominio("PublicacionRechazada", administradorId, PUBLICACION, publicacionId, EventoDominio.EXITO,
-                Map.of("motivo", rechazada.motivoEstado()), List.of(rechazada.anfitrionId())));
+        eventos.publicar(new PublicacionRechazada(administradorId, publicacionId, rechazada.motivoEstado(), rechazada.anfitrionId()));
         return vista(publicacionId);
     }
 
@@ -223,14 +229,14 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public PublicacionVista pausar(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).pausar());
-        eventos.publicar(new EventoDominio("PublicacionPausada", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
+        eventos.publicar(new PublicacionPausada(anfitrion.id(), publicacionId));
         return vista(publicacionId);
     }
 
     @Transactional
     public PublicacionVista reactivar(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).reactivar());
-        eventos.publicar(new EventoDominio("PublicacionReactivada", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO, Map.of(), List.of()));
+        eventos.publicar(new PublicacionReactivada(anfitrion.id(), publicacionId));
         return vista(publicacionId);
     }
 
@@ -317,8 +323,8 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         } else {
             publicaciones.liberar(publicacionId, cambio.desde(), fin);
         }
-        eventos.publicar(new EventoDominio("DisponibilidadModificada", anfitrion.id(), PUBLICACION, publicacionId, EventoDominio.EXITO,
-                Map.of("desde", cambio.desde().toString(), HASTA, cambio.hasta().toString(), "estado", cambio.estado().name()), List.of()));
+        eventos.publicar(new DisponibilidadModificada(anfitrion.id(), publicacionId, cambio.desde().toString(), cambio.hasta().toString(),
+                cambio.estado().name()));
         return disponibilidad(publicacionId, cambio.desde().withDayOfMonth(1).minusMonths(1),
                 cambio.hasta().plusMonths(2).withDayOfMonth(1).minusDays(1));
     }
@@ -373,8 +379,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public void bloquear(UUID administradorId, UUID publicacionId, String motivo) {
         Publicacion bloqueada = publicaciones.guardar(existente(publicacionId).bloquear(motivo));
-        eventos.publicar(new EventoDominio("PublicacionBloqueada", administradorId, PUBLICACION, publicacionId, EventoDominio.EXITO,
-                Map.of("motivo", bloqueada.motivoEstado()), List.of(bloqueada.anfitrionId())));
+        eventos.publicar(new PublicacionBloqueada(administradorId, publicacionId, bloqueada.motivoEstado(), bloqueada.anfitrionId()));
     }
 
     /** CU-31: todos, también los inactivos, para la pantalla de configuración. */
@@ -391,8 +396,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public TipoAlojamiento guardarTipo(UUID administradorId, TipoAlojamiento tipo) {
         TipoAlojamiento guardado = publicaciones.guardarTipo(new TipoAlojamiento(tipo.id(), tipo.nombre().strip(), tipo.activo()));
-        eventos.publicar(new EventoDominio(tipo.id() == null ? "TipoAlojamientoAgregado" : "TipoAlojamientoEditado", administradorId,
-                "tipo_alojamiento", guardado.id(), EventoDominio.EXITO, Map.of("nombre", guardado.nombre(), "activo", guardado.activo()), List.of()));
+        eventos.publicar(new TipoAlojamientoGuardado(administradorId, guardado.id(), guardado.nombre(), guardado.activo(), tipo.id() == null));
         return guardado;
     }
 

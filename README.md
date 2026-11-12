@@ -122,13 +122,24 @@ Dos pruebas hacen cumplir estas fronteras y bloquean el merge si se rompen:
 
 Los módulos se avisan con eventos de Spring (ADR-06). Por ejemplo, al confirmar una reserva:
 
-1. `ServicioReservas` publica un `EventoDominio` con `PublicadorEventos`.
+1. `ServicioReservas` publica un `ReservaConfirmada` con `PublicadorEventos`.
 2. En la misma transacción, `ServicioAuditoria` lo registra (`@EventListener`). Si falla, la reserva no se confirma.
 3. También en esa transacción, Spring Modulith lo guarda en `event_publication`, que hace de outbox.
 4. Después de confirmar, en otro hilo, `ServicioNotificaciones` crea una notificación por destinatario (`@ApplicationModuleListener`).
 5. Si eso falla, `ProcesadorEventos` lo reintenta cada 5 s, hasta 5 intentos. Una entrega que queda a medias, por ejemplo porque la aplicación se reinició, se marca fallida al minuto y también se reintenta.
 
 Una entrega repetida no duplica la notificación, porque su id sale del id del evento y del destinatario.
+
+Cada evento es un record en la raíz del módulo que lo emite, agrupados en `EventosReservas`, `EventosPublicaciones`, `EventosUsuarios`, etc. (SCRUM-143). Todos implementan `compartido.EventoDominio`, que es lo que atienden la auditoría y las notificaciones: el nombre del record es la acción que queda en la auditoría, y cada record dice su entidad, su resultado, su detalle y sus destinatarios. Para agregar un evento se crea un record; si debe notificar, se agrega su mensaje en `Notificacion`.
+
+**Al desplegar un cambio en la clase de un evento.** `event_publication` guarda el nombre de la clase y el evento serializado, así que una entrega pendiente o fallida de una clase que cambió ya no se puede reintentar. Antes de desplegar:
+
+```sql
+SELECT event_type, status, completion_attempts, publication_date
+FROM marketplace.event_publication WHERE completion_date IS NULL;
+```
+
+Si devuelve filas, espera: los reintentos son cada 5 s. Las que lleguen a 5 intentos no se reintentan solas; revisa la causa en los logs antes de seguir. Al pasar de `EventoDominio` genérico a los records (V10), las entregas pendientes de la clase anterior se marcan como completadas para que no queden pendientes para siempre: sus notificaciones no se entregan, por eso hay que comprobar antes que no quede ninguna.
 
 ## Dónde vive cada decisión
 
@@ -218,7 +229,7 @@ Para mantener el MVP mínimo:
 - **Filtro de autorización:** el `FiltroAutorizacion` del Patrón 6 es el `AuthorizationFilter` de Spring Security con una sola tabla de rutas, no una clase propia.
 - **Fachadas:** solo tienen fachada los módulos a los que otro módulo llama. `busqueda`, `cancelaciones`, `notificaciones` y `administracion` no la necesitan todavía.
 - **Casos de uso:** son métodos del `Servicio` de cada módulo. Por ejemplo, `ServicioReservas.confirmarReserva` es el `ConfirmarReserva` de SEC-01.
-- **Eventos:** hay un solo tipo, `EventoDominio`, con un campo `tipo` (por ejemplo, `"ReservaConfirmada"`), en vez de una clase por evento.
+- **Eventos:** hay un record por evento (SCRUM-143), pero la auditoría y las notificaciones atienden una sola interfaz, `EventoDominio`, en vez de un listener por evento.
 - **Historial de tarifas:** RF-32 pide mostrar quién cambió las tarifas y cuándo. Cada cambio queda en la auditoría como `TarifasActualizadas`, con el valor anterior y el nuevo (por ejemplo, "10 % → 12 %"), así que el historial se consulta en `GET /api/v1/admin/auditoria`. La tabla solo guarda quién hizo el último cambio.
 
 Elecciones técnicas que los documentos dejaban abiertas: Spring JDBC en vez de JPA, Flyway, Resilience4j y BCrypt.
