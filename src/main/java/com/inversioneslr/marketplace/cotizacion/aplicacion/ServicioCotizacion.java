@@ -1,7 +1,9 @@
 package com.inversioneslr.marketplace.cotizacion.aplicacion;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.EventosCotizacion.TarifasActualizadas;
@@ -52,14 +54,14 @@ public class ServicioCotizacion implements FachadaCotizacion {
         if (llegada.isBefore(LocalDate.now(reloj))) {
             throw datoInvalido("llegada", "La llegada ya pasó. Elige una fecha de hoy en adelante.");
         }
-        DatosPublicacion publicacion = publicaciones.datosPublicacion(publicacionId);
+        DatosPublicacion publicacion = publicaciones.datosPublicacion(new PublicacionId(publicacionId));
         if (!publicacion.activa()) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "El alojamiento no está disponible.");
         }
         if (huespedes > publicacion.capacidad()) {
             throw datoInvalido("huespedes", "El alojamiento admite hasta " + publicacion.capacidad() + " huéspedes. Reduce el número.");
         }
-        if (!publicaciones.periodoDisponible(publicacionId, llegada, salida)) {
+        if (!publicaciones.periodoDisponible(new PublicacionId(publicacionId), llegada, salida)) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Las fechas elegidas no están disponibles. Elige otras en el calendario.");
         }
         return desglosar(publicacion, llegada, salida, adicionales);
@@ -67,7 +69,7 @@ public class ServicioCotizacion implements FachadaCotizacion {
 
     /** CU-17 la incluye después de validar la reserva. */
     @Override
-    public Cotizacion cotizar(UUID publicacionId, LocalDate llegada, LocalDate salida, List<UUID> serviciosAdicionales) {
+    public Cotizacion cotizar(PublicacionId publicacionId, LocalDate llegada, LocalDate salida, List<UUID> serviciosAdicionales) {
         Desglose desglose = desglosar(publicaciones.datosPublicacion(publicacionId), llegada, salida, serviciosAdicionales);
         return new Cotizacion(desglose.noches(), desglose.subtotal(), desglose.tarifaLimpieza(), desglose.tarifaServicio(),
                 suma(desglose.descuentos()), suma(desglose.adicionales()), desglose.total());
@@ -141,10 +143,10 @@ public class ServicioCotizacion implements FachadaCotizacion {
      */
     @Override
     @Transactional
-    public void actualizarTarifas(UUID administradorId, ConfiguracionTarifas nuevasTarifas) {
+    public void actualizarTarifas(UsuarioId administradorId, ConfiguracionTarifas nuevasTarifas) {
         ConfiguracionTarifas anteriores = tarifas.vigentes();
-        tarifas.guardar(nuevasTarifas, administradorId);
-        eventos.publicar(new TarifasActualizadas(administradorId, cambios(anteriores, nuevasTarifas)));
+        tarifas.guardar(nuevasTarifas, administradorId.valor());
+        eventos.publicar(new TarifasActualizadas(administradorId.valor(), cambios(anteriores, nuevasTarifas)));
     }
 
     /** Por ejemplo, "Tarifa de servicio" → "9 % → 10 %". Solo incluye lo que cambió. */

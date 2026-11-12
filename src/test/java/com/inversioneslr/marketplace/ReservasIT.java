@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
+import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
@@ -47,8 +49,8 @@ class ReservasIT extends PruebaIntegracion {
 
         servicio.completarReservasFinalizadas();
 
-        assertThat(fachada.datosReserva(terminada).estado()).isEqualTo(EstadoReserva.COMPLETADA);
-        assertThat(fachada.datosReserva(enCurso).estado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(fachada.datosReserva(new ReservaId(terminada)).estado()).isEqualTo(EstadoReserva.COMPLETADA);
+        assertThat(fachada.datosReserva(new ReservaId(enCurso)).estado()).isEqualTo(EstadoReserva.CONFIRMADA);
         esperarEventosDe(terminada);
         assertThat(comoAplicacion.queryForObject(
                 "SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaCompletada'", Long.class, huesped)).isEqualTo(1);
@@ -104,7 +106,7 @@ class ReservasIT extends PruebaIntegracion {
         Reserva reserva = reserva(huesped, publicacion, DIA.plusDays(10), DIA.plusDays(13));
         reservas.guardar(reserva, List.of());
 
-        var datos = fachada.datosReserva(reserva.id());
+        var datos = fachada.datosReserva(new ReservaId(reserva.id()));
 
         assertThat(datos.huespedId()).isEqualTo(huesped);
         assertThat(datos.publicacionId()).isEqualTo(publicacion);
@@ -115,7 +117,7 @@ class ReservasIT extends PruebaIntegracion {
 
     @Test
     void unaReservaInexistenteSeInforma() {
-        assertThatThrownBy(() -> fachada.datosReserva(UUID.randomUUID()))
+        assertThatThrownBy(() -> fachada.datosReserva(new ReservaId(UUID.randomUUID())))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.NO_ENCONTRADO));
     }
@@ -127,12 +129,12 @@ class ReservasIT extends PruebaIntegracion {
         LocalDate llegada = DIA.plusDays(20);
         Reserva reserva = reserva(huesped, publicacion, llegada, llegada.plusDays(3));
         reservas.guardar(reserva, List.of());
-        assertThat(publicaciones.periodoDisponible(publicacion, llegada, llegada.plusDays(3))).isFalse();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), llegada, llegada.plusDays(3))).isFalse();
 
-        fachada.marcarCancelada(reserva.id());
+        fachada.marcarCancelada(new ReservaId(reserva.id()));
 
-        assertThat(fachada.datosReserva(reserva.id()).estado()).isEqualTo(EstadoReserva.CANCELADA);
-        assertThat(publicaciones.periodoDisponible(publicacion, llegada, llegada.plusDays(3))).isTrue();
+        assertThat(fachada.datosReserva(new ReservaId(reserva.id())).estado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), llegada, llegada.plusDays(3))).isTrue();
         reservas.guardar(reserva(huesped, publicacion, llegada, llegada.plusDays(3)), List.of());
     }
 
@@ -141,9 +143,9 @@ class ReservasIT extends PruebaIntegracion {
         UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
         Reserva reserva = reserva(crearUsuario(Rol.HUESPED), publicacion, DIA.plusDays(30), DIA.plusDays(33));
         reservas.guardar(reserva, List.of());
-        fachada.marcarCancelada(reserva.id());
+        fachada.marcarCancelada(new ReservaId(reserva.id()));
 
-        assertThatThrownBy(() -> fachada.marcarCancelada(reserva.id()))
+        assertThatThrownBy(() -> fachada.marcarCancelada(new ReservaId(reserva.id())))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.CONFLICTO));
     }

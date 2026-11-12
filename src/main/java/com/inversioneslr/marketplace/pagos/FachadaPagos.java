@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.pagos;
 
+import com.inversioneslr.marketplace.compartido.ReservaId;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -22,8 +23,8 @@ public interface FachadaPagos {
      * @throws com.inversioneslr.marketplace.compartido.ExcepcionNegocio CONFLICTO si no hay un pago aprobado que devolver,
      *                                                                   o PAGO_NO_PROCESADO si la pasarela falla
      */
-    void devolverPagoDeReserva(UUID reservaId, BigDecimal monto);
+    void devolverPagoDeReserva(ReservaId reservaId, BigDecimal monto);
 
     /** Se llama dentro de la transacción que confirma la reserva (SEC-01, paso 10). */
-    void registrarPago(UUID reservaId, String referencia, String claveSolicitud, BigDecimal monto);
+    void registrarPago(ReservaId reservaId, String referencia, String claveSolicitud, BigDecimal monto);
 }

@@ -9,7 +9,9 @@ import com.inversioneslr.marketplace.cancelaciones.dominio.PoliticaCancelacion;
 import com.inversioneslr.marketplace.cancelaciones.dominio.RepositorioCancelaciones;
 import com.inversioneslr.marketplace.cancelaciones.dominio.ReservaCancelable;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.DatosPublicacion;
@@ -54,12 +56,12 @@ public class ServicioCancelaciones {
     /** CU-20, paso 2: muestra la devolución antes de pedir la confirmación. */
     public EstimacionDevolucion estimarDevolucion(UUID huespedId, UUID reservaId) {
         DatosReserva reserva = reservaCancelable(huespedId, reservaId);
-        String politica = publicaciones.datosPublicacion(reserva.publicacionId()).politicaCancelacion();
+        String politica = publicaciones.datosPublicacion(new PublicacionId(reserva.publicacionId())).politicaCancelacion();
         return new EstimacionDevolucion(devolucion(reserva, politica), politica);
     }
 
     private DatosReserva reservaCancelable(UUID huespedId, UUID reservaId) {
-        DatosReserva reserva = reservas.datosReserva(reservaId);
+        DatosReserva reserva = reservas.datosReserva(new ReservaId(reservaId));
         if (!reserva.huespedId().equals(huespedId)) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta reserva no es tuya.");
         }
@@ -89,13 +91,13 @@ public class ServicioCancelaciones {
      */
     public Cancelacion cancelarReserva(UUID huespedId, UUID reservaId, CancelarReservaComando comando) {
         DatosReserva reserva = reservaCancelable(huespedId, reservaId);
-        DatosPublicacion publicacion = publicaciones.datosPublicacion(reserva.publicacionId());
+        DatosPublicacion publicacion = publicaciones.datosPublicacion(new PublicacionId(reserva.publicacionId()));
         BigDecimal valor = devolucion(reserva, publicacion.politicaCancelacion());
         EstadoFinal estadoFinal = devolver(reserva, valor);
         Cancelacion cancelacion = new Cancelacion(UUID.randomUUID(), reservaId, huespedId, reloj.instant(), comando.motivo(),
                 valor, estadoFinal);
         return transaccion.execute(estado -> {
-            reservas.marcarCancelada(reservaId);
+            reservas.marcarCancelada(new ReservaId(reservaId));
             cancelaciones.guardar(cancelacion);
             eventos.publicar(new ReservaCancelada(huespedId, reservaId, estadoFinal.name(), comando.motivo(), valor, publicacion.anfitrionId()));
             if (estadoFinal == EstadoFinal.DEVOLUCION_PROCESADA) {
@@ -113,7 +115,7 @@ public class ServicioCancelaciones {
             return EstadoFinal.SIN_DEVOLUCION;
         }
         try {
-            pagos.devolverPagoDeReserva(reserva.id(), valor);
+            pagos.devolverPagoDeReserva(new ReservaId(reserva.id()), valor);
             return EstadoFinal.DEVOLUCION_PROCESADA;
         } catch (RuntimeException e) {
             log.error("No se pudo devolver el pago de la reserva {}", reserva.id(), e);

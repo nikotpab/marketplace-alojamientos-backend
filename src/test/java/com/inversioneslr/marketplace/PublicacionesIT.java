@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
@@ -32,7 +33,7 @@ class PublicacionesIT extends PruebaIntegracion {
         UUID publicacion = crearPublicacionActiva(anfitrion);
         comoAplicacion.update("INSERT INTO servicio_adicional (publicacion_id, nombre, costo) VALUES (?, 'Desayuno', 120000)", publicacion);
 
-        var datos = publicaciones.datosPublicacion(publicacion);
+        var datos = publicaciones.datosPublicacion(new PublicacionId(publicacion));
 
         assertThat(datos.anfitrionId()).isEqualTo(anfitrion);
         assertThat(datos.activa()).isTrue();
@@ -58,7 +59,7 @@ class PublicacionesIT extends PruebaIntegracion {
 
     @Test
     void publicacionInexistenteSeInforma() {
-        assertThatThrownBy(() -> publicaciones.datosPublicacion(UUID.randomUUID()))
+        assertThatThrownBy(() -> publicaciones.datosPublicacion(new PublicacionId(UUID.randomUUID())))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.NO_ENCONTRADO));
     }
@@ -67,8 +68,8 @@ class PublicacionesIT extends PruebaIntegracion {
     void elPeriodoDebeEstarDentroDeUnoDisponible() {
         UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
 
-        assertThat(publicaciones.periodoDisponible(publicacion, DIA, DIA.plusDays(3))).isTrue();
-        assertThat(publicaciones.periodoDisponible(publicacion, FUERA_DEL_PERIODO, FUERA_DEL_PERIODO.plusDays(3))).isFalse();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), DIA, DIA.plusDays(3))).isTrue();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), FUERA_DEL_PERIODO, FUERA_DEL_PERIODO.plusDays(3))).isFalse();
     }
 
     @Test
@@ -77,7 +78,7 @@ class PublicacionesIT extends PruebaIntegracion {
         comoAplicacion.update("INSERT INTO periodo_disponibilidad (publicacion_id, fecha_inicio, fecha_fin, tipo) VALUES (?, ?, ?, 'BLOQUEADO')",
                 publicacion, DIA.plusDays(1), DIA.plusDays(2));
 
-        assertThat(publicaciones.periodoDisponible(publicacion, DIA, DIA.plusDays(3))).isFalse();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), DIA, DIA.plusDays(3))).isFalse();
     }
 
     @Test
@@ -87,11 +88,11 @@ class PublicacionesIT extends PruebaIntegracion {
         String insertar = "INSERT INTO reserva (huesped_id, publicacion_id, fecha_llegada, fecha_salida, numero_huespedes, estado) VALUES (?, ?, ?, ?, 1, ?)";
 
         comoAplicacion.update(insertar, huesped, publicacion, DIA, DIA.plusDays(3), "CANCELADA");
-        assertThat(publicaciones.periodoDisponible(publicacion, DIA, DIA.plusDays(3))).isTrue();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), DIA, DIA.plusDays(3))).isTrue();
 
         comoAplicacion.update(insertar, huesped, publicacion, DIA, DIA.plusDays(3), "CONFIRMADA");
-        assertThat(publicaciones.periodoDisponible(publicacion, DIA, DIA.plusDays(3))).isFalse();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), DIA, DIA.plusDays(3))).isFalse();
         // La salida es libre para la siguiente llegada.
-        assertThat(publicaciones.periodoDisponible(publicacion, DIA.plusDays(3), DIA.plusDays(5))).isTrue();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), DIA.plusDays(3), DIA.plusDays(5))).isTrue();
     }
 }

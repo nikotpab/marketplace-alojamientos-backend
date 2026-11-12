@@ -3,6 +3,9 @@ package com.inversioneslr.marketplace.administracion.aplicacion;
 import com.inversioneslr.marketplace.auditoria.FachadaAuditoria;
 import com.inversioneslr.marketplace.auditoria.FachadaAuditoria.EventoAuditoria;
 import com.inversioneslr.marketplace.auditoria.FachadaAuditoria.FiltrosAuditoria;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
+import com.inversioneslr.marketplace.compartido.ResenaId;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.cotizacion.FachadaCotizacion;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
@@ -42,8 +45,8 @@ public class ServicioAdministracion {
     /** CU-24: publicación BLOQUEADA y reservas futuras en revisión manual, todo o nada. */
     @Transactional
     public void bloquearPublicacion(UUID administradorId, UUID publicacionId, MotivoComando comando) {
-        publicaciones.bloquear(administradorId, publicacionId, comando.motivo());
-        reservas.marcarFuturasEnRevision(publicacionId);
+        publicaciones.bloquear(new UsuarioId(administradorId), new PublicacionId(publicacionId), comando.motivo());
+        reservas.marcarFuturasEnRevision(new PublicacionId(publicacionId));
     }
 
     public List<UsuarioResumen> listarUsuarios() {
@@ -51,11 +54,11 @@ public class ServicioAdministracion {
     }
 
     public void restringirUsuario(UUID administradorId, UUID usuarioId, MotivoComando comando) {
-        usuarios.restringir(administradorId, usuarioId, comando.motivo());
+        usuarios.restringir(new UsuarioId(administradorId), new UsuarioId(usuarioId), comando.motivo());
     }
 
     public void ocultarResena(UUID administradorId, UUID resenaId) {
-        resenas.ocultar(administradorId, resenaId);
+        resenas.ocultar(new UsuarioId(administradorId), new ResenaId(resenaId));
     }
 
     public List<EventoAuditoria> consultarAuditoria(FiltrosAuditoria filtros) {
@@ -67,7 +70,7 @@ public class ServicioAdministracion {
     }
 
     public void actualizarTarifas(UUID administradorId, ConfiguracionTarifas tarifas) {
-        cotizacion.actualizarTarifas(administradorId, tarifas);
+        cotizacion.actualizarTarifas(new UsuarioId(administradorId), tarifas);
     }
 
     public List<TipoAlojamiento> listarTipos() {
@@ -76,7 +79,7 @@ public class ServicioAdministracion {
 
     /** @param tipoId null para agregar un tipo nuevo */
     public TipoAlojamiento guardarTipo(UUID administradorId, UUID tipoId, TipoAlojamientoComando comando) {
-        return publicaciones.guardarTipo(administradorId, new TipoAlojamiento(tipoId, comando.nombre(), comando.activo()));
+        return publicaciones.guardarTipo(new UsuarioId(administradorId), new TipoAlojamiento(tipoId, comando.nombre(), comando.activo()));
     }
 
     public record MotivoComando(@NotBlank(message = "Indica el motivo.") String motivo) {

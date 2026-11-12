@@ -1,10 +1,10 @@
 package com.inversioneslr.marketplace.reservas.aplicacion;
 
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.publicaciones.OcupacionReservas;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,8 +21,8 @@ class OcupacionReservasConfirmadas implements OcupacionReservas {
     }
 
     @Override
-    public List<RangoOcupado> confirmadas(UUID publicacionId, LocalDate desde, LocalDate hasta) {
-        return reservas.listarConfirmadasQueSeCruzan(publicacionId, desde, hasta).stream()
+    public List<RangoOcupado> confirmadas(PublicacionId publicacionId, LocalDate desde, LocalDate hasta) {
+        return reservas.listarConfirmadasQueSeCruzan(publicacionId.valor(), desde, hasta).stream()
                 .map(reserva -> new RangoOcupado(reserva.fechaLlegada(), reserva.fechaSalida()))
                 .toList();
     }
