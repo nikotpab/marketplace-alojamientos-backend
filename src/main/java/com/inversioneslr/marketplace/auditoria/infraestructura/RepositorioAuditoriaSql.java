@@ -51,10 +51,9 @@ public class RepositorioAuditoriaSql implements RepositorioAuditoria {
     @Override
     public List<EventoAuditoria> consultar(FiltrosAuditoria filtros) {
         StringBuilder sql = new StringBuilder("""
-                SELECT e.id, e.actor_id, u.nombre || ' ' || u.apellido AS actor, u.rol, e.accion, e.entidad, e.entidad_id,
-                       e.resultado, e.detalle::text AS detalle, e.hash_registro, e.creado_en
+                SELECT e.id, e.actor_id, e.accion, e.entidad, e.entidad_id, e.resultado, e.detalle::text AS detalle,
+                       e.hash_registro, e.creado_en
                 FROM auditoria.evento_auditoria e
-                LEFT JOIN usuario u ON u.id = e.actor_id
                 WHERE true""");
         Map<String, Object> parametros = new HashMap<>();
         filtrar(sql, parametros, "e.actor_id = :actor", "actor", filtros.actorId());
@@ -100,12 +99,13 @@ public class RepositorioAuditoriaSql implements RepositorioAuditoria {
         }
     }
 
+    /** El actor y su rol quedan vacíos: los completa ServicioAuditoria con la fachada de usuarios (SCRUM-142). */
     private EventoAuditoria aEvento(ResultSet fila, int numero) throws SQLException {
         return new EventoAuditoria(
                 fila.getObject("id", UUID.class),
                 fila.getObject("actor_id", UUID.class),
-                fila.getString("actor"),
-                fila.getString("rol"),
+                null,
+                null,
                 fila.getString("accion"),
                 fila.getString("entidad"),
                 fila.getObject("entidad_id", UUID.class),

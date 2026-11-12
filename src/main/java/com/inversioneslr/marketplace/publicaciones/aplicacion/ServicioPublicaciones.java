@@ -15,15 +15,20 @@ import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.Publicac
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionRechazada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.TipoAlojamientoGuardado;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
+import com.inversioneslr.marketplace.publicaciones.OcupacionReservas;
+import com.inversioneslr.marketplace.publicaciones.OcupacionReservas.RangoOcupado;
 import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PeriodoDisponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.PoliticaOfrecida;
 import com.inversioneslr.marketplace.publicaciones.dominio.Publicacion;
+import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionConAnfitrion;
 import com.inversioneslr.marketplace.publicaciones.dominio.PublicacionVista;
 import com.inversioneslr.marketplace.publicaciones.dominio.RepositorioPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.Servicio;
 import com.inversioneslr.marketplace.publicaciones.dominio.TipoConfigurado;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios.Persona;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -33,11 +38,17 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,11 +66,16 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     private static final int MAXIMO_DIAS_RANGO = 366;
 
     private final RepositorioPublicaciones publicaciones;
+    private final OcupacionReservas ocupacion;
+    private final FachadaUsuarios usuarios;
     private final PublicadorEventos eventos;
     private final Clock reloj;
 
-    public ServicioPublicaciones(RepositorioPublicaciones publicaciones, PublicadorEventos eventos, Clock reloj) {
+    public ServicioPublicaciones(RepositorioPublicaciones publicaciones, OcupacionReservas ocupacion, FachadaUsuarios usuarios,
+                                 PublicadorEventos eventos, Clock reloj) {
         this.publicaciones = publicaciones;
+        this.ocupacion = ocupacion;
+        this.usuarios = usuarios;
         this.eventos = eventos;
         this.reloj = reloj;
     }
@@ -131,8 +147,21 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     private PublicacionVista vista(UUID publicacionId) {
-        return publicaciones.buscarVista(publicacionId)
-                .orElseThrow(ServicioPublicaciones::noExiste);
+        return conAnfitriones(List.of(publicaciones.buscarVista(publicacionId).orElseThrow(ServicioPublicaciones::noExiste))).get(0);
+    }
+
+    /** SCRUM-142: los nombres de los anfitriones en una sola consulta al módulo de usuarios. */
+    private List<PublicacionVista> conAnfitriones(List<PublicacionConAnfitrion> listadas) {
+        Map<UUID, Persona> anfitriones = usuarios.personas(listadas.stream().map(PublicacionConAnfitrion::anfitrionId).toList());
+        return listadas.stream().map(listada -> listada.vista().conAnfitrion(nombre(anfitriones.get(listada.anfitrionId())))).toList();
+    }
+
+    /** Como el antiguo concat_ws(' ', nombre, apellido): omite lo que falte. */
+    private static String nombre(Persona anfitrion) {
+        if (anfitrion == null) {
+            return null;
+        }
+        return Stream.of(anfitrion.nombre(), anfitrion.apellido()).filter(Objects::nonNull).collect(Collectors.joining(" "));
     }
 
     private static String sinTildes(String texto) {
@@ -213,12 +242,12 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     /** CU-11: el anfitrión ve las suyas en cualquier estado. El huésped ve las activas en la búsqueda. */
     public List<PublicacionVista> listarDelAnfitrion(UUID anfitrionId) {
-        return publicaciones.listarVistas(anfitrionId, null);
+        return conAnfitriones(publicaciones.listarVistas(anfitrionId, null));
     }
 
     /** CU-11: el administrador ve todas. */
     public List<PublicacionVista> listarTodas(EstadoPublicacion estado) {
-        return publicaciones.listarVistas(null, estado);
+        return conAnfitriones(publicaciones.listarVistas(null, estado));
     }
 
     /** Para editarla: solo el propietario o un administrador. */
@@ -249,7 +278,27 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
             throw noExiste();
         }
         validarRango(desde, hasta);
-        return publicaciones.disponibilidad(publicacionId, desde, hasta);
+        return disponibilidad(publicacionId, desde, hasta);
+    }
+
+    /**
+     * Días entre {@code desde} y {@code hasta}, ambos incluidos. Un día con una reserva confirmada cuenta como reservado
+     * aunque además esté bloqueado, como en la consulta que reemplaza (SCRUM-142).
+     */
+    private Disponibilidad disponibilidad(UUID publicacionId, LocalDate desde, LocalDate hasta) {
+        List<RangoOcupado> ocupados = ocupacion.confirmadas(publicacionId, desde, hasta.plusDays(1));
+        Set<LocalDate> sinPeriodo = new HashSet<>(publicaciones.diasNoDisponibles(publicacionId, desde, hasta));
+        List<LocalDate> bloqueados = new ArrayList<>();
+        List<LocalDate> reservados = new ArrayList<>();
+        for (LocalDate dia = desde; !dia.isAfter(hasta); dia = dia.plusDays(1)) {
+            LocalDate actual = dia;
+            if (ocupados.stream().anyMatch(rango -> rango.incluye(actual))) {
+                reservados.add(dia);
+            } else if (sinPeriodo.contains(dia)) {
+                bloqueados.add(dia);
+            }
+        }
+        return new Disponibilidad(bloqueados, reservados);
     }
 
     /**
@@ -265,7 +314,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
             throw datoInvalido("desde", "No se pueden cambiar fechas pasadas. Elige desde hoy en adelante.");
         }
         LocalDate fin = cambio.hasta().plusDays(1);
-        if (publicaciones.hayReservasConfirmadas(publicacionId, cambio.desde(), fin)) {
+        if (!ocupacion.confirmadas(publicacionId, cambio.desde(), fin).isEmpty()) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO,
                     "El rango incluye días con reservas confirmadas. Elige un rango sin días reservados.");
         }
@@ -276,7 +325,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         }
         eventos.publicar(new DisponibilidadModificada(anfitrion.id(), publicacionId, cambio.desde().toString(), cambio.hasta().toString(),
                 cambio.estado().name()));
-        return publicaciones.disponibilidad(publicacionId, cambio.desde().withDayOfMonth(1).minusMonths(1),
+        return disponibilidad(publicacionId, cambio.desde().withDayOfMonth(1).minusMonths(1),
                 cambio.hasta().plusMonths(2).withDayOfMonth(1).minusDays(1));
     }
 
@@ -311,7 +360,18 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     @Override
     public boolean periodoDisponible(UUID publicacionId, LocalDate llegada, LocalDate salida) {
-        return publicaciones.periodoDisponible(publicacionId, llegada, salida);
+        return publicaciones.periodoDisponible(publicacionId, llegada, salida)
+                && ocupacion.confirmadas(publicacionId, llegada, salida).isEmpty();
+    }
+
+    @Override
+    public Map<UUID, String> titulos(Collection<UUID> publicacionIds) {
+        return publicaciones.titulos(Set.copyOf(publicacionIds));
+    }
+
+    @Override
+    public List<UUID> publicacionesDelAnfitrion(UUID anfitrionId) {
+        return publicaciones.idsDelAnfitrion(anfitrionId);
     }
 
     /** CU-24: deja de aparecer en la búsqueda, que solo muestra las activas, y se avisa al anfitrión. */

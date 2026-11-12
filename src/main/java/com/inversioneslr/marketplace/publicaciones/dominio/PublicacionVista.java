@@ -17,4 +17,9 @@ public record PublicacionVista(UUID id, EstadoPublicacion estado, Instant actual
                                String titulo, String descripcion, String ubicacion, String tipo, Integer capacidad,
                                BigDecimal precioNoche, List<String> servicios, List<String> reglas, List<String> imagenes,
                                String politicaCancelacion) {
+
+    public PublicacionVista conAnfitrion(String nombre) {
+        return new PublicacionVista(id, estado, actualizadaEn, motivoRechazo, motivoBloqueo, nombre, titulo, descripcion, ubicacion,
+                tipo, capacidad, precioNoche, servicios, reglas, imagenes, politicaCancelacion);
+    }
 }

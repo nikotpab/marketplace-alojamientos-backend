@@ -27,10 +27,13 @@ import jakarta.validation.constraints.Size;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -229,6 +232,12 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public void restringir(UUID administradorId, UUID usuarioId, String motivo) {
         Usuario restringido = usuarios.guardar(buscar(usuarioId).restringir(motivo));
         eventos.publicar(new UsuarioRestringido(administradorId, usuarioId, restringido.motivoRestriccion()));
+    }
+
+    @Override
+    public Map<UUID, Persona> personas(Collection<UUID> usuarioIds) {
+        return usuarios.buscarPorIds(Set.copyOf(usuarioIds)).stream()
+                .collect(Collectors.toMap(Usuario::id, usuario -> new Persona(usuario.nombre(), usuario.apellido(), usuario.rol())));
     }
 
     @Override

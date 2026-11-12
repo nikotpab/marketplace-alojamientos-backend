@@ -20,7 +20,6 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
-import com.inversioneslr.marketplace.reservas.dominio.ReservaConAlojamiento;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
@@ -199,14 +198,15 @@ public class ServicioReservas implements FachadaReservas {
      * anfitrión, y solo si la reserva está confirmada (RNF-21).
      */
     public List<ReservaVista> consultarHistorial(UsuarioAutenticado usuario, EstadoReserva estado) {
-        if (usuario.rol() == Rol.ANFITRION) {
-            return reservas.listarPorAnfitrion(usuario.id(), estado).stream()
-                    .map(listada -> ReservaVista.de(listada, listada.reserva().estado() == EstadoReserva.CONFIRMADA
-                            ? usuarios.datosContacto(listada.reserva().huespedId()) : null))
-                    .toList();
-        }
-        return reservas.listarPorHuesped(usuario.id(), estado).stream()
-                .map(listada -> ReservaVista.de(listada, null))
+        boolean anfitrion = usuario.rol() == Rol.ANFITRION;
+        List<Reserva> listadas = anfitrion
+                ? reservas.listarPorPublicaciones(publicaciones.publicacionesDelAnfitrion(usuario.id()), estado)
+                : reservas.listarPorHuesped(usuario.id(), estado);
+        // SCRUM-142: los títulos en una sola consulta a la fachada de publicaciones, sin leer su tabla
+        Map<UUID, String> alojamientos = publicaciones.titulos(listadas.stream().map(Reserva::publicacionId).toList());
+        return listadas.stream()
+                .map(reserva -> ReservaVista.de(reserva, alojamientos.get(reserva.publicacionId()),
+                        anfitrion && reserva.estado() == EstadoReserva.CONFIRMADA ? usuarios.datosContacto(reserva.huespedId()) : null))
                 .toList();
     }
 
@@ -252,6 +252,11 @@ public class ServicioReservas implements FachadaReservas {
                 eventos.publicar(new ReservaEnRevision(reserva.id(), publicacionId, reserva.huespedId())));
     }
 
+    @Override
+    public Map<UUID, UUID> huespedPorReserva(UUID publicacionId) {
+        return reservas.huespedPorReserva(publicacionId);
+    }
+
     /** Con los nombres que envía el frontend. */
     public record ConfirmarReservaComando(@NotNull UUID publicacionId,
                                           @NotNull LocalDate llegada,
@@ -265,9 +270,8 @@ public class ServicioReservas implements FachadaReservas {
                                LocalDate llegada, LocalDate salida, int huespedes, int noches, BigDecimal total,
                                FachadaUsuarios.DatosContacto contactoHuesped) {
 
-        static ReservaVista de(ReservaConAlojamiento listada, FachadaUsuarios.DatosContacto contacto) {
-            Reserva reserva = listada.reserva();
-            return new ReservaVista(reserva.id(), reserva.codigo(), reserva.estado(), reserva.publicacionId(), listada.alojamiento(),
+        static ReservaVista de(Reserva reserva, String alojamiento, FachadaUsuarios.DatosContacto contacto) {
+            return new ReservaVista(reserva.id(), reserva.codigo(), reserva.estado(), reserva.publicacionId(), alojamiento,
                     reserva.fechaLlegada(), reserva.fechaSalida(), reserva.numeroHuespedes(), reserva.noches(), reserva.total(), contacto);
         }
     }

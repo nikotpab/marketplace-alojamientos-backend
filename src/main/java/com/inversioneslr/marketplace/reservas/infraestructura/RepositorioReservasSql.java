@@ -5,14 +5,16 @@ import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
-import com.inversioneslr.marketplace.reservas.dominio.ReservaConAlojamiento;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,13 +25,8 @@ import org.springframework.stereotype.Repository;
 public class RepositorioReservasSql implements RepositorioReservas {
 
     private static final String RESTRICCION_ANTI_SOLAPE = "reserva_sin_solape";
-    private static final String CON_ALOJAMIENTO = """
-            SELECT r.*, p.titulo AS alojamiento
-            FROM reserva r
-            JOIN publicacion p ON p.id = r.publicacion_id
-            WHERE (CAST(:estado AS varchar) IS NULL OR r.estado = :estado)""";
-    private static final String DEL_HUESPED = CON_ALOJAMIENTO + " AND r.huesped_id = :usuario ORDER BY r.fecha_llegada DESC";
-    private static final String DEL_ANFITRION = CON_ALOJAMIENTO + " AND p.anfitrion_id = :usuario ORDER BY r.fecha_llegada DESC";
+    /** Solo su tabla: el título del alojamiento lo da la fachada de publicaciones (SCRUM-142). */
+    private static final String POR_ESTADO = "SELECT * FROM reserva WHERE (CAST(:estado AS varchar) IS NULL OR estado = :estado)";
 
     private final JdbcClient jdbc;
 
@@ -135,21 +132,49 @@ public class RepositorioReservasSql implements RepositorioReservas {
     }
 
     @Override
-    public List<ReservaConAlojamiento> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
-        return listar(DEL_HUESPED, huespedId, estado);
+    public List<Reserva> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
+        return jdbc.sql(POR_ESTADO + " AND huesped_id = :huesped ORDER BY fecha_llegada DESC")
+                .param("huesped", huespedId)
+                .param("estado", estado == null ? null : estado.name())
+                .query(RepositorioReservasSql::aReserva)
+                .list();
     }
 
     @Override
-    public List<ReservaConAlojamiento> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado) {
-        return listar(DEL_ANFITRION, anfitrionId, estado);
+    public List<Reserva> listarPorPublicaciones(Collection<UUID> publicacionIds, EstadoReserva estado) {
+        if (publicacionIds.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql(POR_ESTADO + " AND publicacion_id IN (:publicaciones) ORDER BY fecha_llegada DESC")
+                .param("publicaciones", publicacionIds)
+                .param("estado", estado == null ? null : estado.name())
+                .query(RepositorioReservasSql::aReserva)
+                .list();
     }
 
-    private List<ReservaConAlojamiento> listar(String consulta, UUID usuarioId, EstadoReserva estado) {
-        return jdbc.sql(consulta)
-                .param("usuario", usuarioId)
-                .param("estado", estado == null ? null : estado.name())
-                .query((fila, numero) -> new ReservaConAlojamiento(aReserva(fila, numero), fila.getString("alojamiento")))
+    @Override
+    public List<Reserva> listarConfirmadasQueSeCruzan(UUID publicacionId, LocalDate desde, LocalDate hasta) {
+        return jdbc.sql("""
+                SELECT * FROM reserva
+                WHERE publicacion_id = :publicacion AND estado = 'CONFIRMADA'
+                  AND daterange(fecha_llegada, fecha_salida, '[)') && daterange(CAST(:desde AS date), CAST(:hasta AS date), '[)')
+                ORDER BY fecha_llegada""")
+                .param("publicacion", publicacionId)
+                .param("desde", desde)
+                .param("hasta", hasta)
+                .query(RepositorioReservasSql::aReserva)
                 .list();
+    }
+
+    @Override
+    public Map<UUID, UUID> huespedPorReserva(UUID publicacionId) {
+        Map<UUID, UUID> huespedes = new HashMap<>();
+        jdbc.sql("SELECT id, huesped_id FROM reserva WHERE publicacion_id = :publicacion")
+                .param("publicacion", publicacionId)
+                .query(fila -> {
+                    huespedes.put(fila.getObject("id", UUID.class), fila.getObject("huesped_id", UUID.class));
+                });
+        return huespedes;
     }
 
     private static Reserva aReserva(ResultSet fila, int numero) throws SQLException {

@@ -5,9 +5,13 @@ import com.inversioneslr.marketplace.auditoria.dominio.RegistroAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RepositorioAuditoria;
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
+import com.inversioneslr.marketplace.usuarios.FachadaUsuarios.Persona;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +19,12 @@ import org.springframework.stereotype.Service;
 public class ServicioAuditoria implements FachadaAuditoria {
 
     private final RepositorioAuditoria auditoria;
+    private final FachadaUsuarios usuarios;
     private final Clock reloj;
 
-    public ServicioAuditoria(RepositorioAuditoria auditoria, Clock reloj) {
+    public ServicioAuditoria(RepositorioAuditoria auditoria, FachadaUsuarios usuarios, Clock reloj) {
         this.auditoria = auditoria;
+        this.usuarios = usuarios;
         this.reloj = reloj;
     }
 
@@ -38,6 +44,17 @@ public class ServicioAuditoria implements FachadaAuditoria {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, "El rango de fechas no es válido.",
                     Map.of("desde", "La fecha inicial es posterior a la final. Elige una fecha igual o anterior."));
         }
-        return auditoria.consultar(filtros);
+        List<EventoAuditoria> eventos = auditoria.consultar(filtros);
+        Map<UUID, Persona> actores = usuarios.personas(eventos.stream().map(EventoAuditoria::actorId).filter(Objects::nonNull).toList());
+        return eventos.stream().map(evento -> conActor(evento, actores.get(evento.actorId()))).toList();
+    }
+
+    /** Como el antiguo LEFT JOIN: nombre || ' ' || apellido, que queda vacío si falta alguno de los dos. */
+    private static EventoAuditoria conActor(EventoAuditoria evento, Persona actor) {
+        if (actor == null) {
+            return evento;
+        }
+        String nombre = actor.nombre() == null || actor.apellido() == null ? null : actor.nombre() + " " + actor.apellido();
+        return evento.conActor(nombre, actor.rol().name());
     }
 }
