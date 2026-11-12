@@ -30,6 +30,18 @@ class ResenasIT extends PruebaIntegracion {
     }
 
     @Test
+    void unVisitanteSinSesionVeLasResenasVisibles() throws Exception {
+        UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
+        resenar(publicacion, 4, "Buena relación calidad precio", false);
+        resenar(publicacion, 1, "Contenido ofensivo", true);
+
+        mvc.perform(get("/api/v1/publicaciones/{id}/resenas", publicacion))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].comentario").value("Buena relación calidad precio"));
+    }
+
+    @Test
     void elHuespedResenaUnaEstadiaCompletada() throws Exception {
         UUID huesped = crearUsuario(Rol.HUESPED);
         UUID publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
