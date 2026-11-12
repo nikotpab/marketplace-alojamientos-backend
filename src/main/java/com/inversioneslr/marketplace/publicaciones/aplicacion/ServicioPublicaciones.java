@@ -1,9 +1,11 @@
 package com.inversioneslr.marketplace.publicaciones.aplicacion;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.DisponibilidadModificada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionAprobada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionBloqueada;
@@ -152,8 +154,10 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     /** SCRUM-142: los nombres de los anfitriones en una sola consulta al módulo de usuarios. */
     private List<PublicacionVista> conAnfitriones(List<PublicacionConAnfitrion> listadas) {
-        Map<UUID, Persona> anfitriones = usuarios.personas(listadas.stream().map(PublicacionConAnfitrion::anfitrionId).toList());
-        return listadas.stream().map(listada -> listada.vista().conAnfitrion(nombre(anfitriones.get(listada.anfitrionId())))).toList();
+        Map<UsuarioId, Persona> anfitriones = usuarios.personas(listadas.stream().map(listada -> new UsuarioId(listada.anfitrionId())).toList());
+        return listadas.stream()
+                .map(listada -> listada.vista().conAnfitrion(nombre(anfitriones.get(new UsuarioId(listada.anfitrionId())))))
+                .toList();
     }
 
     /** Como el antiguo concat_ws(' ', nombre, apellido): omite lo que falte. */
@@ -286,7 +290,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
      * aunque además esté bloqueado, como en la consulta que reemplaza (SCRUM-142).
      */
     private Disponibilidad disponibilidad(UUID publicacionId, LocalDate desde, LocalDate hasta) {
-        List<RangoOcupado> ocupados = ocupacion.confirmadas(publicacionId, desde, hasta.plusDays(1));
+        List<RangoOcupado> ocupados = ocupacion.confirmadas(new PublicacionId(publicacionId), desde, hasta.plusDays(1));
         Set<LocalDate> sinPeriodo = new HashSet<>(publicaciones.diasNoDisponibles(publicacionId, desde, hasta));
         List<LocalDate> bloqueados = new ArrayList<>();
         List<LocalDate> reservados = new ArrayList<>();
@@ -314,7 +318,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
             throw datoInvalido("desde", "No se pueden cambiar fechas pasadas. Elige desde hoy en adelante.");
         }
         LocalDate fin = cambio.hasta().plusDays(1);
-        if (!ocupacion.confirmadas(publicacionId, cambio.desde(), fin).isEmpty()) {
+        if (!ocupacion.confirmadas(new PublicacionId(publicacionId), cambio.desde(), fin).isEmpty()) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO,
                     "El rango incluye días con reservas confirmadas. Elige un rango sin días reservados.");
         }
@@ -353,33 +357,35 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     @Override
-    public DatosPublicacion datosPublicacion(UUID publicacionId) {
-        return publicaciones.buscarDatos(publicacionId)
+    public DatosPublicacion datosPublicacion(PublicacionId publicacionId) {
+        return publicaciones.buscarDatos(publicacionId.valor())
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "El alojamiento no existe."));
     }
 
     @Override
-    public boolean periodoDisponible(UUID publicacionId, LocalDate llegada, LocalDate salida) {
-        return publicaciones.periodoDisponible(publicacionId, llegada, salida)
+    public boolean periodoDisponible(PublicacionId publicacionId, LocalDate llegada, LocalDate salida) {
+        return publicaciones.periodoDisponible(publicacionId.valor(), llegada, salida)
                 && ocupacion.confirmadas(publicacionId, llegada, salida).isEmpty();
     }
 
     @Override
-    public Map<UUID, String> titulos(Collection<UUID> publicacionIds) {
-        return publicaciones.titulos(Set.copyOf(publicacionIds));
+    public Map<PublicacionId, String> titulos(Collection<PublicacionId> publicacionIds) {
+        return publicaciones.titulos(publicacionIds.stream().map(PublicacionId::valor).collect(Collectors.toSet())).entrySet().stream()
+                .collect(Collectors.toMap(fila -> new PublicacionId(fila.getKey()), Map.Entry::getValue));
     }
 
     @Override
-    public List<UUID> publicacionesDelAnfitrion(UUID anfitrionId) {
-        return publicaciones.idsDelAnfitrion(anfitrionId);
+    public List<PublicacionId> publicacionesDelAnfitrion(UsuarioId anfitrionId) {
+        return publicaciones.idsDelAnfitrion(anfitrionId.valor()).stream().map(PublicacionId::new).toList();
     }
 
     /** CU-24: deja de aparecer en la búsqueda, que solo muestra las activas, y se avisa al anfitrión. */
     @Override
     @Transactional
-    public void bloquear(UUID administradorId, UUID publicacionId, String motivo) {
-        Publicacion bloqueada = publicaciones.guardar(existente(publicacionId).bloquear(motivo));
-        eventos.publicar(new PublicacionBloqueada(administradorId, publicacionId, bloqueada.motivoEstado(), bloqueada.anfitrionId()));
+    public void bloquear(UsuarioId administradorId, PublicacionId publicacionId, String motivo) {
+        Publicacion bloqueada = publicaciones.guardar(existente(publicacionId.valor()).bloquear(motivo));
+        eventos.publicar(new PublicacionBloqueada(administradorId.valor(), publicacionId.valor(), bloqueada.motivoEstado(),
+                bloqueada.anfitrionId()));
     }
 
     /** CU-31: todos, también los inactivos, para la pantalla de configuración. */
@@ -394,9 +400,9 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
      */
     @Override
     @Transactional
-    public TipoAlojamiento guardarTipo(UUID administradorId, TipoAlojamiento tipo) {
+    public TipoAlojamiento guardarTipo(UsuarioId administradorId, TipoAlojamiento tipo) {
         TipoAlojamiento guardado = publicaciones.guardarTipo(new TipoAlojamiento(tipo.id(), tipo.nombre().strip(), tipo.activo()));
-        eventos.publicar(new TipoAlojamientoGuardado(administradorId, guardado.id(), guardado.nombre(), guardado.activo(), tipo.id() == null));
+        eventos.publicar(new TipoAlojamientoGuardado(administradorId.valor(), guardado.id(), guardado.nombre(), guardado.activo(), tipo.id() == null));
         return guardado;
     }
 

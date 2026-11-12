@@ -5,6 +5,7 @@ import com.inversioneslr.marketplace.busqueda.dominio.FiltrosBusqueda;
 import com.inversioneslr.marketplace.busqueda.dominio.PaginaAlojamientos;
 import com.inversioneslr.marketplace.busqueda.dominio.RepositorioBusqueda;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.resenas.FachadaResenas;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -67,7 +68,7 @@ public class ServicioBusqueda {
         return new Detalle(alojamiento.id(), ESTADO_VISIBLE, alojamiento.titulo(), alojamiento.descripcion(), alojamiento.ciudad(),
                 alojamiento.direccion(), alojamiento.tipo(), alojamiento.capacidad(), alojamiento.precioNoche(),
                 alojamiento.servicios(), alojamiento.reglas(), alojamiento.politicaCancelacion(), alojamiento.imagenes(),
-                alojamiento.calificacionPromedio(), resenas.listarVisibles(publicacionId),
+                alojamiento.calificacionPromedio(), resenas.listarVisibles(new PublicacionId(publicacionId)),
                 busqueda.fechasNoDisponibles(publicacionId, hoy, hoy.plus(HORIZONTE_CALENDARIO)));
     }
 

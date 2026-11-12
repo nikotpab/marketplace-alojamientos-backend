@@ -2,6 +2,7 @@ package com.inversioneslr.marketplace.pagos.aplicacion;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.pagos.EventosPagos.CobroRevertido;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.pagos.dominio.Pago;
@@ -60,20 +61,21 @@ public class ServicioPagos implements FachadaPagos {
 
     /** Marca el pago antes de llamar a la pasarela: así dos cancelaciones simultáneas no devuelven dos veces. */
     @Override
-    public void devolverPagoDeReserva(UUID reservaId, BigDecimal monto) {
-        String referencia = pagos.marcarDevuelto(reservaId)
+    public void devolverPagoDeReserva(ReservaId reservaId, BigDecimal monto) {
+        String referencia = pagos.marcarDevuelto(reservaId.valor())
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La reserva no tiene un pago aprobado que devolver."));
         try {
             pasarela.devolver(referencia, monto);
         } catch (RuntimeException e) {
-            pagos.marcarAprobado(reservaId);
+            pagos.marcarAprobado(reservaId.valor());
             throw e;
         }
     }
 
+    /** @param reservaId null si el pago todavía no tiene reserva, como antes de SCRUM-144 */
     @Override
-    public void registrarPago(UUID reservaId, String referencia, String claveSolicitud, BigDecimal monto) {
-        pagos.guardar(new Pago(UUID.randomUUID(), reservaId, referencia, claveSolicitud, monto, Pago.Estado.APROBADO));
+    public void registrarPago(ReservaId reservaId, String referencia, String claveSolicitud, BigDecimal monto) {
+        pagos.guardar(new Pago(UUID.randomUUID(), reservaId == null ? null : reservaId.valor(), referencia, claveSolicitud, monto, Pago.Estado.APROBADO));
     }
 
     /**

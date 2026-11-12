@@ -8,7 +8,9 @@ import static org.mockito.Mockito.when;
 
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.aplicacion.ServicioCotizacion.Desglose;
@@ -63,7 +65,7 @@ class ServicioCotizacionTest {
         prepararPublicacion(new BigDecimal("100000"));
         when(tarifas.vigentes()).thenReturn(TARIFAS);
 
-        Cotizacion cotizacion = servicio.cotizar(PUBLICACION, LLEGADA, LLEGADA.plusDays(3), List.of());
+        Cotizacion cotizacion = servicio.cotizar(new PublicacionId(PUBLICACION), LLEGADA, LLEGADA.plusDays(3), List.of());
 
         assertThat(cotizacion.noches()).isEqualTo(3);
         assertThat(cotizacion.precioBase()).isEqualByComparingTo("300000");
@@ -78,7 +80,7 @@ class ServicioCotizacionTest {
         prepararPublicacion(new BigDecimal("100000"));
         when(tarifas.vigentes()).thenReturn(TARIFAS);
 
-        Cotizacion cotizacion = servicio.cotizar(PUBLICACION, LLEGADA, LLEGADA.plusDays(10), List.of(SALIDA_TARDIA.id()));
+        Cotizacion cotizacion = servicio.cotizar(new PublicacionId(PUBLICACION), LLEGADA, LLEGADA.plusDays(10), List.of(SALIDA_TARDIA.id()));
 
         assertThat(cotizacion.precioBase()).isEqualByComparingTo("1000000");
         assertThat(cotizacion.descuento()).isEqualByComparingTo("150000");
@@ -92,7 +94,7 @@ class ServicioCotizacionTest {
         when(tarifas.vigentes()).thenReturn(new ConfiguracionTarifas(new BigDecimal("8"), new BigDecimal("10"),
                 new BigDecimal("5"), new BigDecimal("10"), 7));
 
-        Cotizacion cotizacion = servicio.cotizar(PUBLICACION, LLEGADA, LLEGADA.plusDays(1), List.of());
+        Cotizacion cotizacion = servicio.cotizar(new PublicacionId(PUBLICACION), LLEGADA, LLEGADA.plusDays(1), List.of());
 
         assertThat(cotizacion.tarifaLimpieza()).isEqualByComparingTo("2667");
         assertThat(cotizacion.tarifaServicio()).isEqualByComparingTo("3333");
@@ -105,7 +107,7 @@ class ServicioCotizacionTest {
         prepararPublicacion(new BigDecimal("100000"));
         when(tarifas.vigentes()).thenReturn(TARIFAS);
 
-        assertThatThrownBy(() -> servicio.cotizar(PUBLICACION, LLEGADA, LLEGADA.plusDays(2), List.of(UUID.randomUUID())))
+        assertThatThrownBy(() -> servicio.cotizar(new PublicacionId(PUBLICACION), LLEGADA, LLEGADA.plusDays(2), List.of(UUID.randomUUID())))
                 .satisfies(datoInvalido("adicionales"));
     }
 
@@ -116,15 +118,15 @@ class ServicioCotizacionTest {
         assertThatThrownBy(() -> servicio.cotizarParaHuesped(PUBLICACION, LocalDate.now(RELOJ).minusDays(1), LLEGADA, 2, List.of()))
                 .satisfies(datoInvalido("llegada"));
 
-        when(publicaciones.datosPublicacion(PUBLICACION)).thenReturn(publicacion(false, new BigDecimal("100000")));
+        when(publicaciones.datosPublicacion(new PublicacionId(PUBLICACION))).thenReturn(publicacion(false, new BigDecimal("100000")));
         assertThatThrownBy(() -> servicio.cotizarParaHuesped(PUBLICACION, LLEGADA, LLEGADA.plusDays(2), 2, List.of()))
                 .satisfies(conflicto());
 
-        when(publicaciones.datosPublicacion(PUBLICACION)).thenReturn(publicacion(true, new BigDecimal("100000")));
+        when(publicaciones.datosPublicacion(new PublicacionId(PUBLICACION))).thenReturn(publicacion(true, new BigDecimal("100000")));
         assertThatThrownBy(() -> servicio.cotizarParaHuesped(PUBLICACION, LLEGADA, LLEGADA.plusDays(2), 9, List.of()))
                 .satisfies(datoInvalido("huespedes"));
 
-        when(publicaciones.periodoDisponible(PUBLICACION, LLEGADA, LLEGADA.plusDays(2))).thenReturn(false);
+        when(publicaciones.periodoDisponible(new PublicacionId(PUBLICACION), LLEGADA, LLEGADA.plusDays(2))).thenReturn(false);
         assertThatThrownBy(() -> servicio.cotizarParaHuesped(PUBLICACION, LLEGADA, LLEGADA.plusDays(2), 2, List.of()))
                 .satisfies(conflicto());
         verifyNoInteractions(tarifas);
@@ -133,7 +135,7 @@ class ServicioCotizacionTest {
     @Test
     void elDesgloseParaElHuespedIncluyeLosAdicionalesDisponibles() {
         prepararPublicacion(new BigDecimal("100000"));
-        when(publicaciones.periodoDisponible(PUBLICACION, LLEGADA, LLEGADA.plusDays(3))).thenReturn(true);
+        when(publicaciones.periodoDisponible(new PublicacionId(PUBLICACION), LLEGADA, LLEGADA.plusDays(3))).thenReturn(true);
         when(tarifas.vigentes()).thenReturn(TARIFAS);
 
         Desglose desglose = servicio.cotizarParaHuesped(PUBLICACION, LLEGADA, LLEGADA.plusDays(3), 2, List.of());
@@ -150,7 +152,7 @@ class ServicioCotizacionTest {
         ConfiguracionTarifas nuevas = new ConfiguracionTarifas(BigDecimal.ZERO, new BigDecimal("12"), new BigDecimal("5"),
                 new BigDecimal("10"), 7);
 
-        servicio.actualizarTarifas(ADMINISTRADOR, nuevas);
+        servicio.actualizarTarifas(new UsuarioId(ADMINISTRADOR), nuevas);
 
         verify(tarifas).guardar(nuevas, ADMINISTRADOR);
         ArgumentCaptor<EventoDominio> evento = ArgumentCaptor.forClass(EventoDominio.class);
@@ -162,7 +164,7 @@ class ServicioCotizacionTest {
     }
 
     private void prepararPublicacion(BigDecimal precioNoche) {
-        when(publicaciones.datosPublicacion(PUBLICACION)).thenReturn(publicacion(true, precioNoche));
+        when(publicaciones.datosPublicacion(new PublicacionId(PUBLICACION))).thenReturn(publicacion(true, precioNoche));
     }
 
     private static DatosPublicacion publicacion(boolean activa, BigDecimal precioNoche) {

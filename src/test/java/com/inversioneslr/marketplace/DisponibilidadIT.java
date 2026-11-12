@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import java.time.LocalDate;
@@ -63,8 +64,8 @@ class DisponibilidadIT extends PruebaIntegracion {
         cambiar("2030-03-12", "2030-03-12", "DISPONIBLE")
                 .andExpect(jsonPath("$.bloqueados", contains("2030-03-10", "2030-03-11", "2030-03-13", "2030-03-14")));
 
-        assertThat(fachada.periodoDisponible(publicacion, LocalDate.of(2030, 3, 12), LocalDate.of(2030, 3, 13))).isTrue();
-        assertThat(fachada.periodoDisponible(publicacion, LocalDate.of(2030, 3, 12), LocalDate.of(2030, 3, 14))).isFalse();
+        assertThat(fachada.periodoDisponible(new PublicacionId(publicacion), LocalDate.of(2030, 3, 12), LocalDate.of(2030, 3, 13))).isTrue();
+        assertThat(fachada.periodoDisponible(new PublicacionId(publicacion), LocalDate.of(2030, 3, 12), LocalDate.of(2030, 3, 14))).isFalse();
     }
 
     @Test
@@ -79,7 +80,7 @@ class DisponibilidadIT extends PruebaIntegracion {
     void liberarFueraDelPeriodoLoExtiendeSinPartirlo() throws Exception {
         cambiar("2030-12-20", "2031-01-10", "DISPONIBLE").andExpect(status().isOk());
 
-        assertThat(fachada.periodoDisponible(publicacion, LocalDate.of(2030, 12, 28), LocalDate.of(2031, 1, 5))).isTrue();
+        assertThat(fachada.periodoDisponible(new PublicacionId(publicacion), LocalDate.of(2030, 12, 28), LocalDate.of(2031, 1, 5))).isTrue();
         assertThat(comoAplicacion.queryForObject("SELECT count(*) FROM periodo_disponibilidad WHERE publicacion_id = ? AND tipo = 'DISPONIBLE'",
                 Long.class, publicacion)).isEqualTo(1);
     }

@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
@@ -89,7 +90,7 @@ class CancelacionesIT extends PruebaIntegracion {
         UUID reserva = reservar(10, "CONFIRMADA");
         String referencia = pagar(reserva);
         LocalDate llegada = hoy().plusDays(10);
-        assertThat(publicaciones.periodoDisponible(publicacion, llegada, llegada.plusDays(3))).isFalse();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), llegada, llegada.plusDays(3))).isFalse();
 
         cancelar(reserva, "Cambié de planes")
                 .andExpect(status().isOk())
@@ -102,7 +103,7 @@ class CancelacionesIT extends PruebaIntegracion {
         assertThat(texto("SELECT estado FROM pago WHERE reserva_id = ?", reserva)).isEqualTo("DEVUELTO");
         assertThat(texto("SELECT estado_final FROM cancelacion WHERE reserva_id = ?", reserva)).isEqualTo("DEVOLUCION_PROCESADA");
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'ReservaCancelada'", reserva)).isEqualTo(1);
-        assertThat(publicaciones.periodoDisponible(publicacion, llegada, llegada.plusDays(3))).isTrue();
+        assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), llegada, llegada.plusDays(3))).isTrue();
         esperarEventosDe(reserva);
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaCancelada'", huesped)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaCancelada'", anfitrion)).isEqualTo(1);

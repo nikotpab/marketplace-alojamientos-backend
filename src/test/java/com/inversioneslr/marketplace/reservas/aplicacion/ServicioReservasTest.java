@@ -12,7 +12,9 @@ import static org.mockito.Mockito.when;
 
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.FachadaCotizacion;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
@@ -111,8 +113,8 @@ class ServicioReservasTest {
     @Test
     void unPeriodoNoDisponibleSeRechazaSinCotizarNiCobrar() {
         when(reservas.buscarSolicitud(CLAVE)).thenReturn(Optional.empty());
-        when(publicaciones.datosPublicacion(PUBLICACION)).thenReturn(publicacionActiva());
-        when(publicaciones.periodoDisponible(PUBLICACION, LLEGADA, SALIDA)).thenReturn(false);
+        when(publicaciones.datosPublicacion(new PublicacionId(PUBLICACION))).thenReturn(publicacionActiva());
+        when(publicaciones.periodoDisponible(new PublicacionId(PUBLICACION), LLEGADA, SALIDA)).thenReturn(false);
 
         assertThatThrownBy(() -> servicio.confirmarReserva(HUESPED, COMANDO, CLAVE))
                 .isInstanceOf(PeriodoNoDisponibleException.class);
@@ -166,7 +168,7 @@ class ServicioReservasTest {
         assertThat(reserva.codigo()).isEqualTo("LR-2026-00042");
         assertThat(reserva.total()).isEqualByComparingTo(TOTAL);
         assertThat(reserva.huespedId()).isEqualTo(HUESPED);
-        verify(pagos).registrarPago(reserva.id(), REFERENCIA, CLAVE, TOTAL);
+        verify(pagos).registrarPago(new ReservaId(reserva.id()), REFERENCIA, CLAVE, TOTAL);
         verify(reservas).completarSolicitud(CLAVE, reserva.id(), json.writeValueAsString(reserva));
 
         EventoDominio evento = unicoEventoPublicado();
@@ -179,9 +181,9 @@ class ServicioReservasTest {
 
     private void prepararPeriodoDisponible() {
         when(reservas.buscarSolicitud(CLAVE)).thenReturn(Optional.empty());
-        when(publicaciones.datosPublicacion(PUBLICACION)).thenReturn(publicacionActiva());
-        when(publicaciones.periodoDisponible(PUBLICACION, LLEGADA, SALIDA)).thenReturn(true);
-        when(cotizacion.cotizar(PUBLICACION, LLEGADA, SALIDA, List.of())).thenReturn(new Cotizacion(3, new BigDecimal("300000"),
+        when(publicaciones.datosPublicacion(new PublicacionId(PUBLICACION))).thenReturn(publicacionActiva());
+        when(publicaciones.periodoDisponible(new PublicacionId(PUBLICACION), LLEGADA, SALIDA)).thenReturn(true);
+        when(cotizacion.cotizar(new PublicacionId(PUBLICACION), LLEGADA, SALIDA, List.of())).thenReturn(new Cotizacion(3, new BigDecimal("300000"),
                 BigDecimal.ZERO, new BigDecimal("30000"), new BigDecimal("15000"), BigDecimal.ZERO, TOTAL));
     }
 

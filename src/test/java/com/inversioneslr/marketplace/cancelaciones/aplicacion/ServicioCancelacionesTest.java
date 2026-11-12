@@ -17,7 +17,9 @@ import com.inversioneslr.marketplace.cancelaciones.dominio.Cancelacion.EstadoFin
 import com.inversioneslr.marketplace.cancelaciones.dominio.RepositorioCancelaciones;
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.DatosPublicacion;
@@ -97,8 +99,8 @@ class ServicioCancelacionesTest {
 
         assertThat(cancelacion.estadoFinal()).isEqualTo(EstadoFinal.DEVOLUCION_PROCESADA);
         assertThat(cancelacion.valorDevolucion()).isEqualByComparingTo(DEVOLUCION_TOTAL);
-        verify(pagos).devolverPagoDeReserva(RESERVA, DEVOLUCION_TOTAL);
-        verify(reservas).marcarCancelada(RESERVA);
+        verify(pagos).devolverPagoDeReserva(new ReservaId(RESERVA), DEVOLUCION_TOTAL);
+        verify(reservas).marcarCancelada(new ReservaId(RESERVA));
         verify(cancelaciones).guardar(cancelacion);
 
         List<EventoDominio> publicados = eventosPublicados(2);
@@ -112,12 +114,12 @@ class ServicioCancelacionesTest {
     @Test
     void siLaDevolucionFallaLaReservaSeCancelaIgualYQuedaDevolucionFallida() {
         prepararReserva(HOY.plusDays(10), EstadoReserva.CONFIRMADA, HUESPED, "Flexible");
-        doThrow(new IllegalStateException("La pasarela no responde")).when(pagos).devolverPagoDeReserva(RESERVA, DEVOLUCION_TOTAL);
+        doThrow(new IllegalStateException("La pasarela no responde")).when(pagos).devolverPagoDeReserva(new ReservaId(RESERVA), DEVOLUCION_TOTAL);
 
         Cancelacion cancelacion = servicio.cancelarReserva(HUESPED, RESERVA, COMANDO);
 
         assertThat(cancelacion.estadoFinal()).isEqualTo(EstadoFinal.DEVOLUCION_NO_PROCESADA);
-        verify(reservas).marcarCancelada(RESERVA);
+        verify(reservas).marcarCancelada(new ReservaId(RESERVA));
         List<EventoDominio> publicados = eventosPublicados(2);
         assertThat(publicados.get(0).resultado()).isEqualTo("DEVOLUCION_NO_PROCESADA");
         assertThat(publicados.get(1).tipo()).isEqualTo("DevolucionFallida");
@@ -139,7 +141,7 @@ class ServicioCancelacionesTest {
 
     @Test
     void unaReservaAjenaNoSePuedeCancelar() {
-        when(reservas.datosReserva(RESERVA)).thenReturn(datosReserva(HOY.plusDays(10), EstadoReserva.CONFIRMADA, UUID.randomUUID()));
+        when(reservas.datosReserva(new ReservaId(RESERVA))).thenReturn(datosReserva(HOY.plusDays(10), EstadoReserva.CONFIRMADA, UUID.randomUUID()));
 
         assertThatThrownBy(() -> servicio.cancelarReserva(HUESPED, RESERVA, COMANDO))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
@@ -150,7 +152,7 @@ class ServicioCancelacionesTest {
 
     @Test
     void soloSeCancelaUnaReservaConfirmada() {
-        when(reservas.datosReserva(RESERVA)).thenReturn(datosReserva(HOY.plusDays(10), EstadoReserva.CANCELADA, HUESPED));
+        when(reservas.datosReserva(new ReservaId(RESERVA))).thenReturn(datosReserva(HOY.plusDays(10), EstadoReserva.CANCELADA, HUESPED));
 
         assertThatThrownBy(() -> servicio.cancelarReserva(HUESPED, RESERVA, COMANDO))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
@@ -170,8 +172,8 @@ class ServicioCancelacionesTest {
     }
 
     private void prepararReserva(LocalDate llegada, EstadoReserva estado, UUID huesped, String politica) {
-        when(reservas.datosReserva(RESERVA)).thenReturn(datosReserva(llegada, estado, huesped));
-        when(publicaciones.datosPublicacion(PUBLICACION)).thenReturn(
+        when(reservas.datosReserva(new ReservaId(RESERVA))).thenReturn(datosReserva(llegada, estado, huesped));
+        when(publicaciones.datosPublicacion(new PublicacionId(PUBLICACION))).thenReturn(
                 new DatosPublicacion(PUBLICACION, ANFITRION, true, new BigDecimal("100000"), 4, politica, List.of()));
     }
 
