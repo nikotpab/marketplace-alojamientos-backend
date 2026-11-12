@@ -9,7 +9,27 @@ import java.util.UUID;
 /** Eventos que emite el módulo de reservas (SCRUM-143). */
 public interface EventosReservas {
 
-    record ReservaConfirmada(UUID id, UUID huespedId, UUID reservaId, BigDecimal total, String codigo, UUID anfitrionId) implements EventoDominio {
+    String TOTAL = "total";
+    String PUBLICACION = "publicacion";
+
+    /** Sobre una reserva. */
+    interface DeReserva extends EventoDominio {
+
+        UUID reservaId();
+
+        @Override
+        default String entidad() {
+            return "reserva";
+        }
+
+        @Override
+        default UUID entidadId() {
+            return reservaId();
+        }
+    }
+
+    record ReservaConfirmada(UUID id, UUID huespedId, UUID reservaId, BigDecimal total, String codigo, UUID anfitrionId)
+            implements DeReserva {
 
         public ReservaConfirmada(UUID huespedId, UUID reservaId, BigDecimal total, String codigo, UUID anfitrionId) {
             this(UUID.randomUUID(), huespedId, reservaId, total, codigo, anfitrionId);
@@ -21,18 +41,8 @@ public interface EventosReservas {
         }
 
         @Override
-        public String entidad() {
-            return "reserva";
-        }
-
-        @Override
-        public UUID entidadId() {
-            return reservaId;
-        }
-
-        @Override
         public Map<String, Object> detalle() {
-            return Map.of("total", total, "codigo", codigo);
+            return Map.of(TOTAL, total, "codigo", codigo);
         }
 
         @Override
@@ -42,7 +52,7 @@ public interface EventosReservas {
     }
 
     /** La provoca el sistema cuando pasa la fecha de salida. */
-    record ReservaCompletada(UUID id, UUID reservaId, UUID huespedId) implements EventoDominio {
+    record ReservaCompletada(UUID id, UUID reservaId, UUID huespedId) implements DeReserva {
 
         public ReservaCompletada(UUID reservaId, UUID huespedId) {
             this(UUID.randomUUID(), reservaId, huespedId);
@@ -51,49 +61,6 @@ public interface EventosReservas {
         @Override
         public UUID actorId() {
             return null;
-        }
-
-        @Override
-        public String entidad() {
-            return "reserva";
-        }
-
-        @Override
-        public UUID entidadId() {
-            return reservaId;
-        }
-
-        @Override
-        public List<UUID> destinatarios() {
-            return List.of(huespedId);
-        }
-    }
-
-    /** CU-24: la publicación fue bloqueada con esta reserva pendiente. */
-    record ReservaEnRevision(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements EventoDominio {
-
-        public ReservaEnRevision(UUID reservaId, UUID publicacionId, UUID huespedId) {
-            this(UUID.randomUUID(), reservaId, publicacionId, huespedId);
-        }
-
-        @Override
-        public UUID actorId() {
-            return null;
-        }
-
-        @Override
-        public String entidad() {
-            return "reserva";
-        }
-
-        @Override
-        public UUID entidadId() {
-            return reservaId;
-        }
-
-        @Override
-        public Map<String, Object> detalle() {
-            return Map.of("publicacionId", publicacionId);
         }
 
         @Override
@@ -116,7 +83,7 @@ public interface EventosReservas {
 
         @Override
         public String entidad() {
-            return "publicacion";
+            return PUBLICACION;
         }
 
         @Override
@@ -131,12 +98,36 @@ public interface EventosReservas {
 
         @Override
         public Map<String, Object> detalle() {
-            return Map.of("total", total);
+            return Map.of(TOTAL, total);
+        }
+    }
+
+    /** CU-24: la publicación fue bloqueada con esta reserva pendiente. */
+    record ReservaEnRevision(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements DeReserva {
+
+        public ReservaEnRevision(UUID reservaId, UUID publicacionId, UUID huespedId) {
+            this(UUID.randomUUID(), reservaId, publicacionId, huespedId);
+        }
+
+        @Override
+        public UUID actorId() {
+            return null;
+        }
+
+        @Override
+        public Map<String, Object> detalle() {
+            return Map.of("publicacionId", publicacionId);
+        }
+
+        @Override
+        public List<UUID> destinatarios() {
+            return List.of(huespedId);
         }
     }
 
     /** SEC-03: otra reserva ganó el periodo y el cobro no se pudo devolver. La reconciliación lo reintenta. */
-    record DevolucionFallida(UUID id, UUID huespedId, UUID publicacionId, String causa, String referencia, BigDecimal total) implements EventoDominio {
+    record DevolucionFallida(UUID id, UUID huespedId, UUID publicacionId, String causa, String referencia, BigDecimal total)
+            implements EventoDominio {
 
         public DevolucionFallida(UUID huespedId, UUID publicacionId, String causa, String referencia, BigDecimal total) {
             this(UUID.randomUUID(), huespedId, publicacionId, causa, referencia, total);
@@ -149,7 +140,7 @@ public interface EventosReservas {
 
         @Override
         public String entidad() {
-            return "publicacion";
+            return PUBLICACION;
         }
 
         @Override
@@ -164,7 +155,7 @@ public interface EventosReservas {
 
         @Override
         public Map<String, Object> detalle() {
-            return Map.of("referencia", referencia, "total", total);
+            return Map.of("referencia", referencia, TOTAL, total);
         }
     }
 }

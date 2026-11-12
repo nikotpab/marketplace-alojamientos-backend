@@ -13,8 +13,7 @@ import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.Publicac
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionPausada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionReactivada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionRechazada;
-import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.TipoAlojamientoAgregado;
-import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.TipoAlojamientoEditado;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.TipoAlojamientoGuardado;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.dominio.Disponibilidad;
 import com.inversioneslr.marketplace.publicaciones.dominio.EstadoPublicacion;
@@ -337,9 +336,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     @Transactional
     public TipoAlojamiento guardarTipo(UUID administradorId, TipoAlojamiento tipo) {
         TipoAlojamiento guardado = publicaciones.guardarTipo(new TipoAlojamiento(tipo.id(), tipo.nombre().strip(), tipo.activo()));
-        eventos.publicar(tipo.id() == null
-                ? new TipoAlojamientoAgregado(administradorId, guardado.id(), guardado.nombre(), guardado.activo())
-                : new TipoAlojamientoEditado(administradorId, guardado.id(), guardado.nombre(), guardado.activo()));
+        eventos.publicar(new TipoAlojamientoGuardado(administradorId, guardado.id(), guardado.nombre(), guardado.activo(), tipo.id() == null));
         return guardado;
     }
 

@@ -9,25 +9,36 @@ import java.util.UUID;
 /** Eventos que emite el módulo de cancelaciones (SCRUM-143). */
 public interface EventosCancelaciones {
 
-    record ReservaCancelada(UUID id, UUID huespedId, UUID reservaId, String estadoFinal, String motivo, BigDecimal valorDevolucion, UUID anfitrionId) implements EventoDominio {
+    String VALOR_DEVOLUCION = "valorDevolucion";
 
-        public ReservaCancelada(UUID huespedId, UUID reservaId, String estadoFinal, String motivo, BigDecimal valorDevolucion, UUID anfitrionId) {
-            this(UUID.randomUUID(), huespedId, reservaId, estadoFinal, motivo, valorDevolucion, anfitrionId);
+    /** Sobre una reserva, por decisión de su huésped. */
+    interface DeCancelacion extends EventoDominio {
+
+        UUID reservaId();
+
+        UUID huespedId();
+
+        @Override
+        default UUID actorId() {
+            return huespedId();
         }
 
         @Override
-        public UUID actorId() {
-            return huespedId;
-        }
-
-        @Override
-        public String entidad() {
+        default String entidad() {
             return "reserva";
         }
 
         @Override
-        public UUID entidadId() {
-            return reservaId;
+        default UUID entidadId() {
+            return reservaId();
+        }
+    }
+
+    record ReservaCancelada(UUID id, UUID huespedId, UUID reservaId, String estadoFinal, String motivo, BigDecimal valorDevolucion, UUID anfitrionId)
+            implements DeCancelacion {
+
+        public ReservaCancelada(UUID huespedId, UUID reservaId, String estadoFinal, String motivo, BigDecimal valorDevolucion, UUID anfitrionId) {
+            this(UUID.randomUUID(), huespedId, reservaId, estadoFinal, motivo, valorDevolucion, anfitrionId);
         }
 
         @Override
@@ -37,7 +48,7 @@ public interface EventosCancelaciones {
 
         @Override
         public Map<String, Object> detalle() {
-            return Map.of("motivo", motivo, "valorDevolucion", valorDevolucion);
+            return Map.of("motivo", motivo, VALOR_DEVOLUCION, valorDevolucion);
         }
 
         @Override
@@ -46,30 +57,15 @@ public interface EventosCancelaciones {
         }
     }
 
-    record DevolucionProcesada(UUID id, UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) implements EventoDominio {
+    record DevolucionProcesada(UUID id, UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) implements DeCancelacion {
 
         public DevolucionProcesada(UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) {
             this(UUID.randomUUID(), huespedId, reservaId, valorDevolucion);
         }
 
         @Override
-        public UUID actorId() {
-            return huespedId;
-        }
-
-        @Override
-        public String entidad() {
-            return "reserva";
-        }
-
-        @Override
-        public UUID entidadId() {
-            return reservaId;
-        }
-
-        @Override
         public Map<String, Object> detalle() {
-            return Map.of("valorDevolucion", valorDevolucion);
+            return Map.of(VALOR_DEVOLUCION, valorDevolucion);
         }
 
         @Override
@@ -79,25 +75,10 @@ public interface EventosCancelaciones {
     }
 
     /** La reserva queda cancelada igual (pendiente 3 del README). */
-    record DevolucionFallida(UUID id, UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) implements EventoDominio {
+    record DevolucionFallida(UUID id, UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) implements DeCancelacion {
 
         public DevolucionFallida(UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) {
             this(UUID.randomUUID(), huespedId, reservaId, valorDevolucion);
-        }
-
-        @Override
-        public UUID actorId() {
-            return huespedId;
-        }
-
-        @Override
-        public String entidad() {
-            return "reserva";
-        }
-
-        @Override
-        public UUID entidadId() {
-            return reservaId;
         }
 
         @Override
@@ -107,7 +88,7 @@ public interface EventosCancelaciones {
 
         @Override
         public Map<String, Object> detalle() {
-            return Map.of("valorDevolucion", valorDevolucion);
+            return Map.of(VALOR_DEVOLUCION, valorDevolucion);
         }
 
         @Override
