@@ -40,7 +40,7 @@ docker compose exec db psql -U marketplace_owner -d marketplace \
 
 Luego vuelve a iniciar sesión, porque el rol va en el token.
 
-El frontend llama a `/api/...` y el backend responde en `/api/v1/...`. En desarrollo, el proxy de Angular une los dos: reenvía `/api` a `http://localhost:8080` y lo reescribe como `/api/v1`.
+El frontend agrega la versión: sus servicios llaman a `/api/...` y su interceptor (`version-api.interceptor.ts`) las convierte en `/api/v1/...`. En desarrollo, el proxy de Angular reenvía `/api` a `http://localhost:8080` sin reescribir la ruta, y en el servidor Caddy reenvía `/api/*` tal cual (`deploy/Caddyfile`). No hay que agregar un `uri replace` en Caddy: las peticiones quedarían en `/api/v1/v1/...`.
 
 ### Correos (SCRUM-109, SCRUM-110)
 
