@@ -13,7 +13,6 @@ import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -66,14 +65,8 @@ public class ServicioReportes {
         }
         Reporte reporte = reportes.consultar(tipo, filtros);
         byte[] contenido = generador.generar(reporte, formato);
-        Map<String, Object> detalle = new LinkedHashMap<>();
-        detalle.put("tipo", tipo.name());
-        detalle.put("formato", formato.name());
-        detalle.put("filas", reporte.filas().size());
-        detalle.put("desde", String.valueOf(filtros.desde()));
-        detalle.put("hasta", String.valueOf(filtros.hasta()));
-        detalle.put("ciudad", String.valueOf(filtros.ciudad()));
-        eventos.publicar(new ReporteExportado(administradorId, detalle));
+        eventos.publicar(new ReporteExportado(administradorId, tipo.name(), formato.name(), reporte.filas().size(),
+                String.valueOf(filtros.desde()), String.valueOf(filtros.hasta()), String.valueOf(filtros.ciudad())));
         return CompletableFuture.completedFuture(contenido);
     }
 

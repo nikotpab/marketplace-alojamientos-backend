@@ -10,7 +10,6 @@ import java.util.UUID;
 public interface EventosReservas {
 
     String TOTAL = "total";
-    String PUBLICACION = "publicacion";
 
     /** Sobre una reserva. */
     interface DeReserva extends EventoDominio {
@@ -25,6 +24,36 @@ public interface EventosReservas {
         @Override
         default UUID entidadId() {
             return reservaId();
+        }
+    }
+
+    /** Un cobro que falló antes de que existiera la reserva: se registra sobre la publicación, con la causa como resultado. */
+    interface FalloDeCobro extends EventoDominio {
+
+        UUID huespedId();
+
+        UUID publicacionId();
+
+        String causa();
+
+        @Override
+        default UUID actorId() {
+            return huespedId();
+        }
+
+        @Override
+        default String entidad() {
+            return "publicacion";
+        }
+
+        @Override
+        default UUID entidadId() {
+            return publicacionId();
+        }
+
+        @Override
+        default String resultado() {
+            return causa();
         }
     }
 
@@ -70,30 +99,10 @@ public interface EventosReservas {
     }
 
     /** SEC-02: el cobro no se aprobó y no se creó la reserva. */
-    record PagoFallido(UUID id, UUID huespedId, UUID publicacionId, String causa, BigDecimal total) implements EventoDominio {
+    record PagoFallido(UUID id, UUID huespedId, UUID publicacionId, String causa, BigDecimal total) implements FalloDeCobro {
 
         public PagoFallido(UUID huespedId, UUID publicacionId, String causa, BigDecimal total) {
             this(UUID.randomUUID(), huespedId, publicacionId, causa, total);
-        }
-
-        @Override
-        public UUID actorId() {
-            return huespedId;
-        }
-
-        @Override
-        public String entidad() {
-            return PUBLICACION;
-        }
-
-        @Override
-        public UUID entidadId() {
-            return publicacionId;
-        }
-
-        @Override
-        public String resultado() {
-            return causa;
         }
 
         @Override
@@ -127,30 +136,10 @@ public interface EventosReservas {
 
     /** SEC-03: otra reserva ganó el periodo y el cobro no se pudo devolver. La reconciliación lo reintenta. */
     record DevolucionFallida(UUID id, UUID huespedId, UUID publicacionId, String causa, String referencia, BigDecimal total)
-            implements EventoDominio {
+            implements FalloDeCobro {
 
         public DevolucionFallida(UUID huespedId, UUID publicacionId, String causa, String referencia, BigDecimal total) {
             this(UUID.randomUUID(), huespedId, publicacionId, causa, referencia, total);
-        }
-
-        @Override
-        public UUID actorId() {
-            return huespedId;
-        }
-
-        @Override
-        public String entidad() {
-            return PUBLICACION;
-        }
-
-        @Override
-        public UUID entidadId() {
-            return publicacionId;
-        }
-
-        @Override
-        public String resultado() {
-            return causa;
         }
 
         @Override
