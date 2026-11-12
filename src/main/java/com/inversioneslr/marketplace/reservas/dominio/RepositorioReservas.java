@@ -3,7 +3,9 @@ package com.inversioneslr.marketplace.reservas.dominio;
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,10 +38,16 @@ public interface RepositorioReservas {
      *
      * @param estado null para todas
      */
-    List<ReservaConAlojamiento> listarPorHuesped(UUID huespedId, EstadoReserva estado);
+    List<Reserva> listarPorHuesped(UUID huespedId, EstadoReserva estado);
 
-    /** Las reservas de los alojamientos del anfitrión, en el mismo orden. */
-    List<ReservaConAlojamiento> listarPorAnfitrion(UUID anfitrionId, EstadoReserva estado);
+    /** Las reservas de esas publicaciones, en el mismo orden. El título lo da la fachada de publicaciones (SCRUM-142). */
+    List<Reserva> listarPorPublicaciones(Collection<UUID> publicacionIds, EstadoReserva estado);
+
+    /** Las confirmadas de la publicación cuyas noches se cruzan con el rango semiabierto [desde, hasta). */
+    List<Reserva> listarConfirmadasQueSeCruzan(UUID publicacionId, LocalDate desde, LocalDate hasta);
+
+    /** Huésped de cada reserva de la publicación, en cualquier estado. */
+    Map<UUID, UUID> huespedPorReserva(UUID publicacionId);
 
     void actualizarEstado(UUID id, EstadoReserva estado);
 

@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.resenas.dominio;
 
-import com.inversioneslr.marketplace.resenas.FachadaResenas.ResenaVisible;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,7 +12,8 @@ public interface RepositorioResenas {
     Optional<Resena> buscarPorId(UUID id);
 
     /** @return vacío si no existe o está oculta */
-    Optional<ResenaVisible> buscarVisible(UUID id);
+    Optional<ResenaGuardada> buscarVisible(UUID id);
 
-    List<ResenaVisible> listarVisibles(UUID publicacionId);
+    /** Las visibles de esas reservas, de la más reciente a la más antigua. */
+    List<ResenaGuardada> listarVisibles(Collection<UUID> reservaIds);
 }
