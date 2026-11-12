@@ -5,6 +5,7 @@ import com.inversioneslr.marketplace.auditoria.dominio.RegistroAuditoria;
 import com.inversioneslr.marketplace.auditoria.dominio.RepositorioAuditoria;
 import com.inversioneslr.marketplace.compartido.EventoDominio;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios.Persona;
 import java.time.Clock;
@@ -45,8 +46,11 @@ public class ServicioAuditoria implements FachadaAuditoria {
                     Map.of("desde", "La fecha inicial es posterior a la final. Elige una fecha igual o anterior."));
         }
         List<EventoAuditoria> eventos = auditoria.consultar(filtros);
-        Map<UUID, Persona> actores = usuarios.personas(eventos.stream().map(EventoAuditoria::actorId).filter(Objects::nonNull).toList());
-        return eventos.stream().map(evento -> conActor(evento, actores.get(evento.actorId()))).toList();
+        Map<UsuarioId, Persona> actores = usuarios.personas(eventos.stream().map(EventoAuditoria::actorId).filter(Objects::nonNull)
+                .map(UsuarioId::new).toList());
+        return eventos.stream()
+                .map(evento -> conActor(evento, evento.actorId() == null ? null : actores.get(new UsuarioId(evento.actorId()))))
+                .toList();
     }
 
     /** Como el antiguo LEFT JOIN: nombre || ' ' || apellido, que queda vacío si falta alguno de los dos. */

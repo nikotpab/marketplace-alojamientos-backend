@@ -1,5 +1,6 @@
 package com.inversioneslr.marketplace.resenas.presentacion;
 
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.resenas.FachadaResenas.ResenaVisible;
 import com.inversioneslr.marketplace.resenas.aplicacion.ServicioResenias;
@@ -35,6 +36,6 @@ public class ControladorResenas {
 
     @GetMapping("/publicaciones/{publicacionId}/resenas")
     public List<ResenaVisible> consultar(@PathVariable UUID publicacionId) {
-        return servicio.listarVisibles(publicacionId);
+        return servicio.listarVisibles(new PublicacionId(publicacionId));
     }
 }

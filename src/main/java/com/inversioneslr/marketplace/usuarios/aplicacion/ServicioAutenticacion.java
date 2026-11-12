@@ -5,6 +5,7 @@ import com.inversioneslr.marketplace.compartido.PublicadorEventos;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.ContrasenaRestablecida;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CorreoVerificado;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaActivada;
@@ -229,20 +230,20 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     /** CU-25: queda en la auditoría con el motivo. */
     @Override
     @Transactional
-    public void restringir(UUID administradorId, UUID usuarioId, String motivo) {
-        Usuario restringido = usuarios.guardar(buscar(usuarioId).restringir(motivo));
-        eventos.publicar(new UsuarioRestringido(administradorId, usuarioId, restringido.motivoRestriccion()));
+    public void restringir(UsuarioId administradorId, UsuarioId usuarioId, String motivo) {
+        Usuario restringido = usuarios.guardar(buscar(usuarioId.valor()).restringir(motivo));
+        eventos.publicar(new UsuarioRestringido(administradorId.valor(), usuarioId.valor(), restringido.motivoRestriccion()));
     }
 
     @Override
-    public Map<UUID, Persona> personas(Collection<UUID> usuarioIds) {
-        return usuarios.buscarPorIds(Set.copyOf(usuarioIds)).stream()
-                .collect(Collectors.toMap(Usuario::id, usuario -> new Persona(usuario.nombre(), usuario.apellido(), usuario.rol())));
+    public Map<UsuarioId, Persona> personas(Collection<UsuarioId> usuarioIds) {
+        return usuarios.buscarPorIds(usuarioIds.stream().map(UsuarioId::valor).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(usuario -> new UsuarioId(usuario.id()), usuario -> new Persona(usuario.nombre(), usuario.apellido(), usuario.rol())));
     }
 
     @Override
-    public DatosContacto datosContacto(UUID usuarioId) {
-        Usuario usuario = buscar(usuarioId);
+    public DatosContacto datosContacto(UsuarioId usuarioId) {
+        Usuario usuario = buscar(usuarioId.valor());
         return new DatosContacto(usuario.telefono(), usuario.correo());
     }
 

@@ -1,7 +1,11 @@
 package com.inversioneslr.marketplace.resenas.aplicacion;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.ResenaId;
+import com.inversioneslr.marketplace.compartido.ReservaId;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.resenas.EventosResenas.ResenaOcultada;
 import com.inversioneslr.marketplace.resenas.EventosResenas.ResenaPublicada;
 import com.inversioneslr.marketplace.resenas.FachadaResenas;
@@ -49,7 +53,7 @@ public class ServicioResenias implements FachadaResenas {
      */
     @Transactional
     public ResenaVisible publicar(UUID huespedId, UUID reservaId, PublicarResenaComando comando) {
-        DatosReserva reserva = reservas.datosReserva(reservaId);
+        DatosReserva reserva = reservas.datosReserva(new ReservaId(reservaId));
         if (!reserva.huespedId().equals(huespedId)) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta reserva no es tuya.");
         }
@@ -60,19 +64,24 @@ public class ServicioResenias implements FachadaResenas {
                 false, null));
         eventos.publicar(new ResenaPublicada(huespedId, resena.id(), reservaId, reserva.publicacionId(), resena.calificacion()));
         ResenaGuardada guardada = resenas.buscarVisible(resena.id()).orElseThrow();
-        return visible(guardada, usuarios.personas(Set.of(huespedId)).get(huespedId));
+        UsuarioId autor = new UsuarioId(huespedId);
+        return visible(guardada, usuarios.personas(Set.of(autor)).get(autor));
     }
 
     /** SCRUM-142: el huésped de cada reserva y su nombre en una consulta a cada fachada, sin leer sus tablas. */
     @Override
-    public List<ResenaVisible> listarVisibles(UUID publicacionId) {
-        Map<UUID, UUID> huespedes = reservas.huespedPorReserva(publicacionId);
-        List<ResenaGuardada> guardadas = resenas.listarVisibles(huespedes.keySet());
-        Map<UUID, Persona> autores = usuarios.personas(guardadas.stream().map(guardada -> huespedes.get(guardada.reservaId())).toList());
+    public List<ResenaVisible> listarVisibles(PublicacionId publicacionId) {
+        Map<ReservaId, UsuarioId> huespedes = reservas.huespedPorReserva(publicacionId);
+        List<ResenaGuardada> guardadas = resenas.listarVisibles(huespedes.keySet().stream().map(ReservaId::valor).toList());
+        Map<UsuarioId, Persona> autores = usuarios.personas(guardadas.stream().map(guardada -> huesped(huespedes, guardada)).toList());
         return guardadas.stream()
-                .filter(guardada -> autores.containsKey(huespedes.get(guardada.reservaId())))
-                .map(guardada -> visible(guardada, autores.get(huespedes.get(guardada.reservaId()))))
+                .filter(guardada -> autores.containsKey(huesped(huespedes, guardada)))
+                .map(guardada -> visible(guardada, autores.get(huesped(huespedes, guardada))))
                 .toList();
+    }
+
+    private static UsuarioId huesped(Map<ReservaId, UsuarioId> huespedes, ResenaGuardada guardada) {
+        return huespedes.get(new ReservaId(guardada.reservaId()));
     }
 
     private static ResenaVisible visible(ResenaGuardada guardada, Persona huesped) {
@@ -92,11 +101,11 @@ public class ServicioResenias implements FachadaResenas {
     /** CU-26: queda en la auditoría quién la ocultó. */
     @Override
     @Transactional
-    public void ocultar(UUID administradorId, UUID resenaId) {
-        Resena resena = resenas.buscarPorId(resenaId)
+    public void ocultar(UsuarioId administradorId, ResenaId resenaId) {
+        Resena resena = resenas.buscarPorId(resenaId.valor())
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La reseña no existe."));
-        resenas.guardar(resena.ocultar(administradorId));
-        eventos.publicar(new ResenaOcultada(administradorId, resenaId));
+        resenas.guardar(resena.ocultar(administradorId.valor()));
+        eventos.publicar(new ResenaOcultada(administradorId.valor(), resenaId.valor()));
     }
 
     public record PublicarResenaComando(

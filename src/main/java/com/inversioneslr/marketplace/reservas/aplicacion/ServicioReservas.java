@@ -1,9 +1,12 @@
 package com.inversioneslr.marketplace.reservas.aplicacion;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
+import com.inversioneslr.marketplace.compartido.PublicacionId;
 import com.inversioneslr.marketplace.compartido.PublicadorEventos;
+import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.compartido.Rol;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
+import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.cotizacion.Cotizacion;
 import com.inversioneslr.marketplace.cotizacion.FachadaCotizacion;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
@@ -32,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -83,9 +87,9 @@ public class ServicioReservas implements FachadaReservas {
             return resultadoOriginal(solicitudPrevia.get(), huespedId);
         }
         validarFechas(comando);
-        DatosPublicacion publicacion = publicaciones.datosPublicacion(comando.publicacionId());
+        DatosPublicacion publicacion = publicaciones.datosPublicacion(new PublicacionId(comando.publicacionId()));
         validarPublicacion(publicacion, comando);
-        if (!publicaciones.periodoDisponible(publicacion.id(), comando.llegada(), comando.salida())) {
+        if (!publicaciones.periodoDisponible(new PublicacionId(publicacion.id()), comando.llegada(), comando.salida())) {
             // Puede estar ocupado por esta misma solicitud, si un reintento simultáneo terminó primero.
             return reservas.buscarSolicitud(claveSolicitud)
                     .map(solicitud -> resultadoOriginal(solicitud, huespedId))
@@ -93,7 +97,7 @@ public class ServicioReservas implements FachadaReservas {
         }
         List<UUID> seleccionados = comando.adicionales() == null ? List.of() : comando.adicionales();
         List<AdicionalReservado> adicionales = adicionalesSeleccionados(publicacion, seleccionados);
-        Cotizacion cotizacionFinal = cotizacion.cotizar(publicacion.id(), comando.llegada(), comando.salida(), seleccionados);
+        Cotizacion cotizacionFinal = cotizacion.cotizar(new PublicacionId(publicacion.id()), comando.llegada(), comando.salida(), seleccionados);
         String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud);
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
         try {
@@ -103,7 +107,7 @@ public class ServicioReservas implements FachadaReservas {
                     return resultadoOriginal(reservas.buscarSolicitud(claveSolicitud).orElseThrow(), huespedId);
                 }
                 Reserva guardada = reservas.guardar(reserva, adicionales);
-                pagos.registrarPago(guardada.id(), referencia, claveSolicitud, guardada.total());
+                pagos.registrarPago(new ReservaId(guardada.id()), referencia, claveSolicitud, guardada.total());
                 eventos.publicar(new ReservaConfirmada(huespedId, guardada.id(), guardada.total(), guardada.codigo(), publicacion.anfitrionId()));
                 reservas.completarSolicitud(claveSolicitud, guardada.id(), json.writeValueAsString(guardada));
                 return guardada;
@@ -200,13 +204,14 @@ public class ServicioReservas implements FachadaReservas {
     public List<ReservaVista> consultarHistorial(UsuarioAutenticado usuario, EstadoReserva estado) {
         boolean anfitrion = usuario.rol() == Rol.ANFITRION;
         List<Reserva> listadas = anfitrion
-                ? reservas.listarPorPublicaciones(publicaciones.publicacionesDelAnfitrion(usuario.id()), estado)
+                ? reservas.listarPorPublicaciones(publicaciones.publicacionesDelAnfitrion(new UsuarioId(usuario.id())).stream()
+                        .map(PublicacionId::valor).toList(), estado)
                 : reservas.listarPorHuesped(usuario.id(), estado);
         // SCRUM-142: los títulos en una sola consulta a la fachada de publicaciones, sin leer su tabla
-        Map<UUID, String> alojamientos = publicaciones.titulos(listadas.stream().map(Reserva::publicacionId).toList());
+        Map<PublicacionId, String> alojamientos = publicaciones.titulos(listadas.stream().map(reserva -> new PublicacionId(reserva.publicacionId())).toList());
         return listadas.stream()
-                .map(reserva -> ReservaVista.de(reserva, alojamientos.get(reserva.publicacionId()),
-                        anfitrion && reserva.estado() == EstadoReserva.CONFIRMADA ? usuarios.datosContacto(reserva.huespedId()) : null))
+                .map(reserva -> ReservaVista.de(reserva, alojamientos.get(new PublicacionId(reserva.publicacionId())),
+                        anfitrion && reserva.estado() == EstadoReserva.CONFIRMADA ? usuarios.datosContacto(new UsuarioId(reserva.huespedId())) : null))
                 .toList();
     }
 
@@ -229,8 +234,8 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     @Override
-    public DatosReserva datosReserva(UUID reservaId) {
-        Reserva reserva = buscar(reservaId);
+    public DatosReserva datosReserva(ReservaId reservaId) {
+        Reserva reserva = buscar(reservaId.valor());
         return new DatosReserva(reserva.id(), reserva.huespedId(), reserva.publicacionId(), reserva.fechaLlegada(),
                 reserva.estado(), reserva.total(), reserva.tarifaServicio());
     }
@@ -241,20 +246,21 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     @Override
-    public void marcarCancelada(UUID reservaId) {
-        reservas.actualizarEstado(reservaId, buscar(reservaId).cancelar().estado());
+    public void marcarCancelada(ReservaId reservaId) {
+        reservas.actualizarEstado(reservaId.valor(), buscar(reservaId.valor()).cancelar().estado());
     }
 
     /** CU-24: las que aún no empiezan se conservan para auditoría y pasan a revisión manual. Se avisa a cada huésped. */
     @Override
-    public void marcarFuturasEnRevision(UUID publicacionId) {
-        reservas.marcarFuturasEnRevision(publicacionId, LocalDate.now(reloj)).forEach(reserva ->
-                eventos.publicar(new ReservaEnRevision(reserva.id(), publicacionId, reserva.huespedId())));
+    public void marcarFuturasEnRevision(PublicacionId publicacionId) {
+        reservas.marcarFuturasEnRevision(publicacionId.valor(), LocalDate.now(reloj)).forEach(reserva ->
+                eventos.publicar(new ReservaEnRevision(reserva.id(), publicacionId.valor(), reserva.huespedId())));
     }
 
     @Override
-    public Map<UUID, UUID> huespedPorReserva(UUID publicacionId) {
-        return reservas.huespedPorReserva(publicacionId);
+    public Map<ReservaId, UsuarioId> huespedPorReserva(PublicacionId publicacionId) {
+        return reservas.huespedPorReserva(publicacionId.valor()).entrySet().stream()
+                .collect(Collectors.toMap(fila -> new ReservaId(fila.getKey()), fila -> new UsuarioId(fila.getValue())));
     }
 
     /** Con los nombres que envía el frontend. */
