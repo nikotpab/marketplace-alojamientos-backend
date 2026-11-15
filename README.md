@@ -17,7 +17,7 @@ mvn spring-boot:run
 curl localhost:8080/actuator/health
 ```
 
-Los correos de desarrollo (verificación y recuperación) llegan a Mailpit: http://localhost:8025.
+Los correos de desarrollo (código de registro y recuperación) llegan a Mailpit: http://localhost:8025.
 
 `mvn test` corre las pruebas unitarias y de arquitectura, y deja los diagramas de los módulos en `target/spring-modulith-docs`. `mvn verify` agrega las de integración, que usan Docker.
 
@@ -42,11 +42,13 @@ Luego vuelve a iniciar sesión, porque el rol va en el token.
 
 El frontend agrega la versión: sus servicios llaman a `/api/...` y su interceptor (`version-api.interceptor.ts`) las convierte en `/api/v1/...`. En desarrollo, el proxy de Angular reenvía `/api` a `http://localhost:8080` sin reescribir la ruta, y en el servidor Caddy reenvía `/api/*` tal cual (`deploy/Caddyfile`). No hay que agregar un `uri replace` en Caddy: las peticiones quedarían en `/api/v1/v1/...`.
 
-### Correos (SCRUM-109, SCRUM-110)
+### Correos (SCRUM-151, SCRUM-110)
 
-Al registrarse, el usuario recibe un enlace para verificar su correo y, hasta usarlo, no puede iniciar sesión. La recuperación de contraseña también envía un enlace. Los dos son de un solo uso: el token tiene 256 bits aleatorios y en la base (`token_correo`) solo se guarda su hash SHA-256. Pedir un enlace nuevo anula el anterior, y entre dos correos del mismo tipo a la misma cuenta pasa al menos 1 minuto.
+**Código de registro (SCRUM-151).** El correo se verifica antes de crear la cuenta: el frontend pide un código de 6 dígitos para el correo, la persona lo escribe en una ventana y el registro lo envía junto con los demás datos. La cuenta nace verificada. El código vence en 15 minutos y sirve una vez; en la base (`codigo_registro`) solo queda su hash BCrypt. Al quinto intento fallido se anula: cada intento se gasta antes de comparar, así que ni con solicitudes simultáneas se prueban más de cinco. Reemplaza el enlace de verificación de SCRUM-109.
 
-El correo se envía por SMTP después del commit y en otro hilo. Si el servidor de correo falla, el registro no se deshace (ASR-05) y el usuario puede pedir otro enlace.
+**Recuperación de contraseña (SCRUM-110).** Envía un enlace de un solo uso: el token tiene 256 bits aleatorios y en la base (`token_correo`) solo se guarda su hash SHA-256.
+
+En los dos casos, pedir uno nuevo anula el anterior, y entre dos correos del mismo tipo a la misma dirección pasa al menos 1 minuto. El correo se envía por SMTP después del commit y en otro hilo; si el servidor de correo falla, la solicitud no falla (ASR-05) y se puede pedir otro.
 
 | Variable | Desarrollo (Mailpit) | Gmail | Amazon SES |
 |---|---|---|---|
@@ -63,14 +65,13 @@ En el servidor, `deploy/compose.yaml` arma `URL_PUBLICA` con `DOMINIO`, y las de
 
 | Endpoint | Cuerpo | Respuesta |
 |---|---|---|
-| `POST /api/v1/auth/register` | igual que antes | 201; ahora incluye `correoVerificado: false` |
-| `POST /api/v1/auth/login` | igual | 403 con `codigo: CORREO_NO_VERIFICADO` si falta verificar, solo con la contraseña correcta |
-| `POST /api/v1/auth/email/verify` | `{"token"}` | 204, o 400 con `campos.token` si no sirve o venció |
-| `POST /api/v1/auth/email/resend` | `{"correo"}` | 202 siempre |
+| `POST /api/v1/auth/register/code` | `{"correo"}` | 202 con el código en camino (si ya se envió uno hace menos de 1 minuto, no envía otro); 409 con `campos.correo` si ya tiene cuenta |
+| `POST /api/v1/auth/register` | los datos de antes más `codigo` (6 dígitos) | 201 con `correoVerificado: true`; 400 con `campos.codigo` si no es correcto, venció o se anuló; 409 si el correo ya tiene cuenta |
+| `POST /api/v1/auth/login` | igual | 403 con `codigo: CORREO_NO_VERIFICADO` para una cuenta antigua sin verificar, solo con la contraseña correcta; se verifica recuperando la contraseña |
 | `POST /api/v1/auth/password/recover` | `{"correo"}` | 202 siempre, **sin token** (antes lo devolvía) |
 | `POST /api/v1/auth/password/reset` | `{"token", "contrasenaNueva"}` | 204; también deja verificado el correo |
 
-Los enlaces llevan a `URL_PUBLICA + /verificar-correo?token=…` (vence en 24 horas) y `URL_PUBLICA + /recuperar?token=…` (15 minutos). El frontend lee el token de la dirección y lo envía a la API.
+El enlace de recuperación lleva a `URL_PUBLICA + /recuperar?token=…` (15 minutos). El frontend lee el token de la dirección y lo envía a la API. `POST /auth/email/verify`, `POST /auth/email/resend` y la pantalla `/verificar-correo` se retiraron en SCRUM-151.
 
 ### Documentación de la API (Swagger)
 
@@ -270,7 +271,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 14. **Tabla de eventos.** El modelo de datos define `evento_pendiente` para el outbox. Con Spring Modulith, el outbox es su tabla `event_publication`, con el esquema oficial (`V8`, SCRUM-98). Además, `EventoDominio` lleva un `id`, que no está en los documentos, para que una entrega repetida no duplique la notificación.
 15. **Indicadores del dashboard.** RF-33 no define "ingresos estimados" ni el periodo. Los ingresos son la suma de las tarifas de servicio de las reservas confirmadas y completadas, que es lo que gana la plataforma. El periodo cuenta las reservas por la fecha en que se hicieron y, si no se elige, son los últimos 30 días. Usuarios y publicaciones activas son el total actual.
 16. **Confirmaciones simultáneas (ADR-03).** La restricción de exclusión sola no basta: con varios `INSERT` simultáneos por la misma publicación, PostgreSQL puede detectar un deadlock al verificarla y abortar solicitudes que debían rechazarse con "periodo no disponible". Antes del `INSERT`, cada confirmación toma un candado de transacción por publicación (`pg_advisory_xact_lock`), así que entran de a una. La restricción sigue siendo la garantía de no solape (SCRUM-102).
-17. **Verificación del correo (SCRUM-109).** Los documentos no la piden: CU-01 crea la cuenta lista para usarse. Se agregó para que nadie se registre con un correo ajeno, ahora que la recuperación de contraseña llega por correo. Hasta verificar, el inicio de sesión responde 403 `CORREO_NO_VERIFICADO`, pero solo con la contraseña correcta, para no revelar el estado de la cuenta. Las cuentas que ya existían, las de los datos de demostración y las creadas por SQL (como el primer administrador) quedan verificadas: la columna nace en `true` y el registro guarda `false`.
+17. **Verificación del correo (SCRUM-109, SCRUM-151).** Los documentos no la piden: CU-01 crea la cuenta lista para usarse. Se agregó para que nadie se registre con un correo ajeno, ahora que la recuperación de contraseña llega por correo. Desde SCRUM-151 el registro exige el código que llega al correo, así que la cuenta nace verificada; antes era un enlace que se usaba después de crearla. Las cuentas de esa época que no usaron el enlace siguen recibiendo 403 `CORREO_NO_VERIFICADO` (solo con la contraseña correcta, para no revelar el estado de la cuenta) y se verifican recuperando la contraseña. Las cuentas creadas por SQL (como el primer administrador) y las de los datos de demostración quedan verificadas: la columna nace en `true`.
 
 - **Lecturas entre módulos (SCRUM-142).** Cada módulo lee solo sus tablas; lo de otro módulo se pide a su fachada, en consultas por lote. Publicaciones no lee `reserva`: declara el puerto `OcupacionReservas`, que implementa reservas. La única excepción son `busqueda` y `administracion`, que son modelos de lectura: consultan tablas de otros módulos solo para leer, nunca escriben en ellas, y ningún otro módulo puede hacerlo.
 

@@ -25,6 +25,14 @@ public class ControladorUsuarios {
         this.servicio = servicio;
     }
 
+    /** SCRUM-151: 202 con el código en camino al correo, o 409 si ese correo ya tiene cuenta. */
+    @PostMapping("/auth/register/code")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void solicitarCodigoRegistro(@Valid @RequestBody ServicioAutenticacion.CorreoComando comando) {
+        servicio.solicitarCodigoRegistro(comando);
+    }
+
+    /** SCRUM-151: exige el código que llegó al correo; la cuenta nace verificada. */
     @PostMapping("/auth/register")
     @ResponseStatus(HttpStatus.CREATED)
     public UsuarioResumen registrar(@Valid @RequestBody ServicioAutenticacion.RegistroComando comando) {
@@ -47,20 +55,6 @@ public class ControladorUsuarios {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void restablecerContrasena(@Valid @RequestBody ServicioAutenticacion.RestablecerContrasenaComando comando) {
         servicio.restablecerContrasena(comando);
-    }
-
-    /** SCRUM-109: el token del enlace que llegó al registrarse. */
-    @PostMapping("/auth/email/verify")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void verificarCorreo(@Valid @RequestBody ServicioAutenticacion.VerificacionCorreoComando comando) {
-        servicio.verificarCorreo(comando);
-    }
-
-    /** SCRUM-109: 202 siempre, exista o no la cuenta, o si ya está verificada. */
-    @PostMapping("/auth/email/resend")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public void reenviarVerificacion(@Valid @RequestBody ServicioAutenticacion.CorreoComando comando) {
-        servicio.reenviarVerificacion(comando);
     }
 
     @GetMapping("/usuarios/me")

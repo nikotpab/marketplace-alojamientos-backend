@@ -2,6 +2,8 @@ package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.icegreen.greenmail.util.GreenMail;
 import com.icegreen.greenmail.util.ServerSetupTest;
@@ -23,6 +25,7 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -52,10 +55,17 @@ abstract class PruebaIntegracion {
         correo.start();
     }
 
+    /**
+     * Siempre GreenMail, sin autenticación ni TLS, aunque el .env local configure otro servidor (por ejemplo Gmail):
+     * application.yml lo importa y sus valores no deben llegar a las pruebas.
+     */
     @DynamicPropertySource
     static void servidorDeCorreo(DynamicPropertyRegistry propiedades) {
         propiedades.add("spring.mail.host", () -> correo.getSmtp().getBindTo());
         propiedades.add("spring.mail.port", () -> correo.getSmtp().getPort());
+        propiedades.add("CORREO_SEGURO", () -> "false");
+        propiedades.add("CORREO_USUARIO", () -> "");
+        propiedades.add("CORREO_CONTRASENA", () -> "");
     }
 
     @DynamicPropertySource
@@ -133,9 +143,15 @@ abstract class PruebaIntegracion {
         return enlace.group(1);
     }
 
-    /** Para las pruebas que no son de la verificación: deja la cuenta registrada por la API lista para entrar. */
-    void verificarCorreoDe(String direccion) {
-        comoAplicacion.update("UPDATE usuario SET correo_verificado = true WHERE correo = ?", direccion);
+    /** SCRUM-151: pide el código de registro por la API y lo lee del correo, como haría la persona. */
+    String codigoDeRegistro(String direccion) throws Exception {
+        int antes = correosPara(direccion).size();
+        mvc.perform(post("/api/v1/auth/register/code").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"correo\":\"%s\"}".formatted(direccion))).andExpect(status().isAccepted());
+        await().atMost(Duration.ofSeconds(10)).until(() -> correosPara(direccion).size() > antes);
+        Matcher codigo = Pattern.compile("(?<!\\d)(\\d{6})(?!\\d)").matcher(ultimoCorreoPara(direccion));
+        assertThat(codigo.find()).as("código de 6 dígitos en el correo").isTrue();
+        return codigo.group(1);
     }
 
     private static boolean esPara(MimeMessage mensaje, String direccion) {

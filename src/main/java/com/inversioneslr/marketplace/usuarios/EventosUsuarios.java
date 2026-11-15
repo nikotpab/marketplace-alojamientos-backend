@@ -92,13 +92,6 @@ public interface EventosUsuarios {
         }
     }
 
-    record CorreoVerificado(UUID id, UUID usuarioId) implements DeUsuario {
-
-        public CorreoVerificado(UUID usuarioId) {
-            this(UUID.randomUUID(), usuarioId);
-        }
-    }
-
     record PerfilActualizado(UUID id, UUID usuarioId) implements DeUsuario {
 
         public PerfilActualizado(UUID usuarioId) {

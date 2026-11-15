@@ -4,10 +4,10 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Tokens de un solo uso que viajan en los enlaces de los correos (SCRUM-109, SCRUM-110). */
+/** Tokens de un solo uso que viajan en los enlaces de los correos (SCRUM-110). */
 public interface TokensCorreo {
 
-    enum Proposito { VERIFICAR_CORREO, RESTABLECER_CONTRASENA }
+    enum Proposito { RESTABLECER_CONTRASENA }
 
     /** Invalida el token anterior del mismo propósito y devuelve el nuevo. Solo se guarda su hash. */
     String emitir(UUID usuarioId, Proposito proposito, Instant expira);

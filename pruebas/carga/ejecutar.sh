@@ -1,20 +1,39 @@
 #!/bin/bash
 # SCRUM-67 · ASR-01: prepara un huésped y un administrador, corre plan.jmx y resume p95 y p99 por escenario.
-# Requiere el backend con el perfil demo en http://localhost:8080, su base en Docker y JMeter 5.6.
+# Requiere el backend con el perfil demo en http://localhost:8080, su base en Docker, Mailpit en http://localhost:8025
+# (el registro pide el código que llega al correo, SCRUM-151) y JMeter 5.6.
 # Uso: pruebas/carga/ejecutar.sh [segundos, 120 por defecto]
 # Si la base corre con otro nombre de proyecto de Docker Compose, indícalo en PROYECTO_COMPOSE.
 set -euo pipefail
 cd "$(dirname "$0")"
 RAIZ=$(cd ../.. && pwd)
 BASE=${BASE:-http://localhost:8080}
+MAILPIT=${MAILPIT:-http://localhost:8025}
 DURACION=${1:-120}
 CONTRASENA="Carga-de-prueba-1"
 SALIDA="resultados/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$SALIDA"
 
+# El código de registro de esa dirección, leído de Mailpit. Espera hasta 10 segundos a que llegue el correo.
+codigo_de() {
+    for _ in $(seq 1 20); do
+        local codigo
+        codigo=$(curl -sfG "$MAILPIT/api/v1/search" --data-urlencode "query=to:$1" | python3 -c '
+import json, re, sys
+mensajes = json.load(sys.stdin)["messages"]
+codigo = re.search(r"(?<!\d)\d{6}(?!\d)", mensajes[0]["Snippet"]) if mensajes else None
+print(codigo.group(0) if codigo else "")')
+        if [ -n "$codigo" ]; then echo "$codigo"; return; fi
+        sleep 0.5
+    done
+    echo "No llegó el código de registro de $1 a Mailpit" >&2
+    exit 1
+}
+
 registrar() {
+    curl -sf -X POST "$BASE/api/v1/auth/register/code" -H 'Content-Type: application/json' -o /dev/null -d "{\"correo\":\"$1\"}"
     curl -sf -X POST "$BASE/api/v1/auth/register" -H 'Content-Type: application/json' -o /dev/null \
-        -d "{\"nombre\":\"Carga\",\"apellido\":\"Prueba\",\"correo\":\"$1\",\"telefono\":\"3000000000\",\"contrasena\":\"$CONTRASENA\",\"rol\":\"HUESPED\"}"
+        -d "{\"nombre\":\"Carga\",\"apellido\":\"Prueba\",\"correo\":\"$1\",\"telefono\":\"3000000000\",\"contrasena\":\"$CONTRASENA\",\"rol\":\"HUESPED\",\"codigo\":\"$(codigo_de "$1")\"}"
 }
 
 token() {
