@@ -15,6 +15,8 @@ import org.springframework.test.web.servlet.ResultActions;
 class RegistroUsuarioIT extends PruebaIntegracion {
 
     private static final String CONTRASENA = "Contrasena-de-prueba-1";
+    /** Para los casos que se rechazan antes de comprobar el código. */
+    private static final String CODIGO_CUALQUIERA = "000000";
 
     @Autowired
     PasswordEncoder cifrador;
@@ -28,6 +30,7 @@ class RegistroUsuarioIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.correo").value(correo))
                 .andExpect(jsonPath("$.rol").value("HUESPED"))
                 .andExpect(jsonPath("$.cuentaActiva").value(true))
+                .andExpect(jsonPath("$.correoVerificado").value(true))
                 .andExpect(jsonPath("$.hashContrasena").doesNotExist());
 
         String hash = comoAplicacion.queryForObject("SELECT hash_contrasena FROM usuario WHERE correo = ?", String.class, correo);
@@ -61,7 +64,8 @@ class RegistroUsuarioIT extends PruebaIntegracion {
         String correo = correoNuevo();
         registrar(correo, "HUESPED", CONTRASENA).andExpect(status().isCreated());
 
-        registrar(correo.toUpperCase(), "HUESPED", CONTRASENA)
+        // El correo repetido se rechaza antes de mirar el código.
+        registrar(correo.toUpperCase(), "HUESPED", CONTRASENA, CODIGO_CUALQUIERA)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.campos.correo").exists());
     }
@@ -70,7 +74,7 @@ class RegistroUsuarioIT extends PruebaIntegracion {
     void elRolAdministradorNoSePuedeElegir() throws Exception {
         String correo = correoNuevo();
 
-        registrar(correo, "ADMINISTRADOR", CONTRASENA)
+        registrar(correo, "ADMINISTRADOR", CONTRASENA, CODIGO_CUALQUIERA)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.rol").exists());
 
@@ -79,18 +83,23 @@ class RegistroUsuarioIT extends PruebaIntegracion {
 
     @Test
     void losDatosInvalidosSeRechazanIndicandoElCampo() throws Exception {
-        registrar("no-es-correo", "HUESPED", "corta")
+        registrar("no-es-correo", "HUESPED", "corta", CODIGO_CUALQUIERA)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.correo").exists())
                 .andExpect(jsonPath("$.campos.contrasena").exists());
     }
 
+    /** Con el código que llegó al correo, como en el registro real (SCRUM-151). */
     private ResultActions registrar(String correo, String rol, String contrasena) throws Exception {
+        return registrar(correo, rol, contrasena, codigoDeRegistro(correo));
+    }
+
+    private ResultActions registrar(String correo, String rol, String contrasena, String codigo) throws Exception {
         return mvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"%s"}"""
-                        .formatted(correo, contrasena, rol)));
+                        {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"%s","codigo":"%s"}"""
+                        .formatted(correo, contrasena, rol, codigo)));
     }
 
     private String hashDe(String correo) {

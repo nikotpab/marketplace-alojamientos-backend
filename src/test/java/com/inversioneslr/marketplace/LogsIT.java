@@ -24,13 +24,14 @@ class LogsIT extends PruebaIntegracion {
     @Test
     void cadaEventoQuedaEnLosLogsConCamposFiltrablesYCorrelationId(CapturedOutput salida) throws Exception {
         String correo = UUID.randomUUID() + "@prueba.co";
+        String codigo = codigoDeRegistro(correo);
 
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"Contrasena-de-prueba-1","rol":"HUESPED"}"""
-                .formatted(correo)));
+                {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"Contrasena-de-prueba-1","rol":"HUESPED","codigo":"%s"}"""
+                .formatted(correo, codigo)));
 
         assertThat(salida.getOut()).contains("\"tipoEvento\":\"UsuarioRegistrado\"", "\"usuario\":", "\"correlationId\":");
-        assertThat(salida.getOut()).doesNotContain("Contrasena-de-prueba-1", correo);
+        assertThat(salida.getOut()).doesNotContain("Contrasena-de-prueba-1", correo).doesNotContainPattern("(?<!\\d)" + codigo + "(?!\\d)");
     }
 
     @Test
@@ -43,7 +44,7 @@ class LogsIT extends PruebaIntegracion {
     @Test
     void unaSolicitudRechazadaQuedaEnLosLogsConSuCodigo(CapturedOutput salida) throws Exception {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                {"nombre":"Laura","apellido":"Gómez","correo":"%s@prueba.co","telefono":"3001234567","contrasena":"Contrasena-de-prueba-1","rol":"ADMINISTRADOR"}"""
+                {"nombre":"Laura","apellido":"Gómez","correo":"%s@prueba.co","telefono":"3001234567","contrasena":"Contrasena-de-prueba-1","rol":"ADMINISTRADOR","codigo":"000000"}"""
                 .formatted(UUID.randomUUID())));
 
         assertThat(salida.getOut()).contains("\"codigo\":\"DATOS_INVALIDOS\"", "/api/v1/auth/register");

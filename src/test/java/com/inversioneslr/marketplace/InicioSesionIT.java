@@ -107,9 +107,8 @@ class InicioSesionIT extends PruebaIntegracion {
     String registrar(String rol) throws Exception {
         String correo = UUID.randomUUID() + "@prueba.co";
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"%s"}"""
-                .formatted(correo, CONTRASENA, rol))).andExpect(status().isCreated());
-        verificarCorreoDe(correo);
+                {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"%s","codigo":"%s"}"""
+                .formatted(correo, CONTRASENA, rol, codigoDeRegistro(correo)))).andExpect(status().isCreated());
         return correo;
     }
 

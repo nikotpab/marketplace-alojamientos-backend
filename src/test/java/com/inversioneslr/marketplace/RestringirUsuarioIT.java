@@ -76,9 +76,8 @@ class RestringirUsuarioIT extends PruebaIntegracion {
     private String registrar() throws Exception {
         String correo = UUID.randomUUID() + "@prueba.co";
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"HUESPED"}"""
-                .formatted(correo, CONTRASENA))).andExpect(status().isCreated());
-        verificarCorreoDe(correo);
+                {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"HUESPED","codigo":"%s"}"""
+                .formatted(correo, CONTRASENA, codigoDeRegistro(correo)))).andExpect(status().isCreated());
         return correo;
     }
 }
