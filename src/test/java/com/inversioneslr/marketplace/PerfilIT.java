@@ -50,6 +50,15 @@ class PerfilIT extends PruebaIntegracion {
         assertThat(comoAplicacion.queryForObject("SELECT apellido FROM usuario WHERE id = ?", String.class, usuario)).isEqualTo("Martínez");
     }
 
+    /** SCRUM-154: el mismo formato que en el registro. */
+    @Test
+    void elTelefonoDebeTenerDiezDigitosYEmpezarPorTres() throws Exception {
+        mvc.perform(put("/api/v1/usuarios/me").header("Authorization", sesion).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"Ana\",\"apellido\":\"Martínez\",\"telefono\":\"1234567\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.telefono").value("El teléfono debe tener 10 dígitos y empezar por 3."));
+    }
+
     @Test
     void losDatosInvalidosSeRechazanIndicandoElCampo() throws Exception {
         mvc.perform(put("/api/v1/usuarios/me").header("Authorization", sesion).contentType(MediaType.APPLICATION_JSON)

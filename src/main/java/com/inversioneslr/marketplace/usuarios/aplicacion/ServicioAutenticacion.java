@@ -53,6 +53,13 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     /** SCRUM-151: al quinto intento fallido el código se anula y hay que pedir otro. */
     static final int INTENTOS_POR_CODIGO = 5;
 
+    /** SCRUM-154: celular de Colombia, 10 dígitos que empiezan por 3. */
+    static final String FORMATO_TELEFONO = "3\\d{9}";
+    static final String MENSAJE_TELEFONO = "El teléfono debe tener 10 dígitos y empezar por 3.";
+    /** SCRUM-154: @Email acepta "ana@gmail"; además se exige un dominio con punto y terminación de 2 letras o más. */
+    static final String FORMATO_CORREO = "[^@\\s]+@[^@\\s]+\\.[A-Za-z]{2,}";
+    static final String MENSAJE_CORREO = "Escribe un correo completo, por ejemplo nombre@gmail.com.";
+
     private final RepositorioUsuarios usuarios;
     private final PasswordEncoder cifrador;
     private final Tokens tokens;
@@ -283,8 +290,8 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     public record RegistroComando(@NotBlank @Size(max = 120) String nombre,
                                   @NotBlank @Size(max = 120) String apellido,
-                                  @NotBlank @Email @Size(max = 255) String correo,
-                                  @NotBlank @Size(max = 30) String telefono,
+                                  @NotBlank @Email(regexp = FORMATO_CORREO, message = MENSAJE_CORREO) @Size(max = 255) String correo,
+                                  @NotNull @Pattern(regexp = FORMATO_TELEFONO, message = MENSAJE_TELEFONO) String telefono,
                                   @NotBlank @Size(min = 8, max = 72) String contrasena,
                                   @NotNull Rol rol,
                                   @NotBlank @Pattern(regexp = "\\d{6}", message = "El código tiene 6 dígitos.") String codigo) {
@@ -301,7 +308,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         }
     }
 
-    public record CorreoComando(@NotBlank @Email String correo) {
+    public record CorreoComando(@NotBlank @Email(regexp = FORMATO_CORREO, message = MENSAJE_CORREO) String correo) {
     }
 
     public record RestablecerContrasenaComando(@NotBlank String token,
@@ -314,7 +321,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     public record PerfilComando(@NotBlank @Size(max = 120) String nombre,
                                 @NotBlank @Size(max = 120) String apellido,
-                                @NotBlank @Size(max = 30) String telefono) {
+                                @NotNull @Pattern(regexp = FORMATO_TELEFONO, message = MENSAJE_TELEFONO) String telefono) {
     }
 
     public record Perfil(String nombre, String apellido, String correo, String telefono, Rol rol, boolean activo) {

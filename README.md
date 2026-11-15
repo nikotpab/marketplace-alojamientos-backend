@@ -71,6 +71,8 @@ En el servidor, `deploy/compose.yaml` arma `URL_PUBLICA` con `DOMINIO`, y las de
 | `POST /api/v1/auth/password/recover` | `{"correo"}` | 202 siempre, **sin token** (antes lo devolvía) |
 | `POST /api/v1/auth/password/reset` | `{"token", "contrasenaNueva"}` | 204; también deja verificado el correo |
 
+Formatos (SCRUM-154): el `telefono` del registro y del perfil (`PUT /usuarios/me`) tiene 10 dígitos y empieza por 3; el `correo` del registro, del código y de la recuperación necesita un dominio con punto y terminación de al menos 2 letras (`luicuadros07@gmail` no sirve). Si no, 400 con `campos.telefono` o `campos.correo`. Las cuentas guardadas no se tocan: un teléfono antiguo fuera de formato se corrige al editar el perfil.
+
 El enlace de recuperación lleva a `URL_PUBLICA + /recuperar?token=…` (15 minutos). El frontend lee el token de la dirección y lo envía a la API. `POST /auth/email/verify`, `POST /auth/email/resend` y la pantalla `/verificar-correo` se retiraron en SCRUM-151.
 
 ### Documentación de la API (Swagger)

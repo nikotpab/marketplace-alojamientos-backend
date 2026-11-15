@@ -1,10 +1,12 @@
 package com.inversioneslr.marketplace;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,11 +97,35 @@ class RegistroUsuarioIT extends PruebaIntegracion {
     }
 
     private ResultActions registrar(String correo, String rol, String contrasena, String codigo) throws Exception {
+        return registrar(correo, "3001234567", rol, contrasena, codigo);
+    }
+
+    private ResultActions registrar(String correo, String telefono, String rol, String contrasena, String codigo) throws Exception {
         return mvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"3001234567","contrasena":"%s","rol":"%s","codigo":"%s"}"""
-                        .formatted(correo, contrasena, rol, codigo)));
+                        {"nombre":"Laura","apellido":"Gómez","correo":"%s","telefono":"%s","contrasena":"%s","rol":"%s","codigo":"%s"}"""
+                        .formatted(correo, telefono, contrasena, rol, codigo)));
+    }
+
+    /** SCRUM-154: celular de Colombia. Se rechaza antes de mirar el código. */
+    @Test
+    void elTelefonoDebeTenerDiezDigitosYEmpezarPorTres() throws Exception {
+        for (String telefono : List.of("2001234567", "300123456", "30012345678", "300123456a", "")) {
+            registrar(correoNuevo(), telefono, "HUESPED", CONTRASENA, CODIGO_CUALQUIERA)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.campos.telefono").value("El teléfono debe tener 10 dígitos y empezar por 3."));
+        }
+    }
+
+    /** SCRUM-154: @Email solo aceptaba "luicuadros07@gmail". */
+    @Test
+    void elCorreoNecesitaUnDominioCompleto() throws Exception {
+        for (String correo : List.of("luicuadros07@gmail", "ana@gmail.", "ana@gmail.c", "ana@.com", "ana gomez@gmail.com")) {
+            registrar(correo, "HUESPED", CONTRASENA, CODIGO_CUALQUIERA)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.campos.correo").value(containsString("nombre@gmail.com")));
+        }
     }
 
     private String hashDe(String correo) {

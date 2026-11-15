@@ -152,6 +152,17 @@ class CodigoRegistroIT extends PruebaIntegracion {
         await().during(Duration.ofMillis(500)).until(() -> correosPara(correo).isEmpty());
     }
 
+    /** SCRUM-154: no se envía un código a un correo incompleto. */
+    @Test
+    void aUnCorreoIncompletoNoSeLeEnviaCodigo() throws Exception {
+        String incompleto = "luicuadros07-" + UUID.randomUUID() + "@gmail";
+
+        solicitarCodigo(incompleto)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.correo").value(containsString("nombre@gmail.com")));
+        await().during(Duration.ofMillis(500)).until(() -> correosPara(incompleto).isEmpty());
+    }
+
     @Test
     void sinCodigoOConOtroFormatoNoSeRegistra() throws Exception {
         String correo = correoNuevo();
