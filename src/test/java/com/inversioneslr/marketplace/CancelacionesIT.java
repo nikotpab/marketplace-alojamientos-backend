@@ -104,7 +104,7 @@ class CancelacionesIT extends PruebaIntegracion {
         assertThat(texto("SELECT estado_final FROM cancelacion WHERE reserva_id = ?", reserva)).isEqualTo("DEVOLUCION_PROCESADA");
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'ReservaCancelada'", reserva)).isEqualTo(1);
         assertThat(publicaciones.periodoDisponible(new PublicacionId(publicacion), llegada, llegada.plusDays(3))).isTrue();
-        esperarEventosDe(reserva);
+
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaCancelada'", huesped)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaCancelada'", anfitrion)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'DevolucionProcesada'", huesped)).isEqualTo(1);
@@ -137,7 +137,7 @@ class CancelacionesIT extends PruebaIntegracion {
         assertThat(texto("SELECT estado FROM reserva WHERE id = ?", reserva)).isEqualTo("CANCELADA");
         assertThat(texto("SELECT estado FROM pago WHERE reserva_id = ?", reserva)).isEqualTo("APROBADO");
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'DevolucionFallida'", reserva)).isEqualTo(1);
-        esperarEventosDe(reserva);
+
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'DevolucionFallida'", huesped)).isEqualTo(1);
     }
 

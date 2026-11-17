@@ -90,7 +90,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     /**
      * SCRUM-151: primer paso del registro. Envía al correo un código de 6 dígitos que vence en 15 minutos y anula el
      * anterior. Si ya se envió uno hace menos de un minuto no envía otro, y responde igual. El correo sale después del
-     * commit; si falla, se puede pedir otro código (ASR-05).
+     * commit; si falla, se puede pedir otro código.
      */
     @Transactional
     public void solicitarCodigoRegistro(CorreoComando comando) {

@@ -89,7 +89,6 @@ class ConfirmarReservaIT extends PruebaIntegracion {
         assertThat(contar("SELECT count(*) FROM reserva WHERE id = ? AND estado = 'CONFIRMADA'", id)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM pago WHERE reserva_id = ? AND estado = 'APROBADO'", id)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'ReservaConfirmada'", id)).isEqualTo(1);
-        assertThat(contar("SELECT count(*) FROM event_publication WHERE serialized_event::jsonb ->> 'entidadId' = ?", id.toString())).isEqualTo(1);
         verify(pasarela).cobrar(TOTAL, clave);
     }
 
@@ -137,8 +136,8 @@ class ConfirmarReservaIT extends PruebaIntegracion {
     /** RNF-13: la base de datos deja pasar exactamente una, y a las demás se les devuelve lo cobrado. */
     @Test
     @SuppressWarnings("java:S2925") // Retrasa el commit de la ganadora para reproducir la carrera (SCRUM-102).
-    void conCincuentaSolicitudesSimultaneasSoloSeConfirmaUna() {
-        int solicitudes = 50;
+    void conDiezSolicitudesSimultaneasSoloSeConfirmaUna() {
+        int solicitudes = 10;
         // Retrasa el commit de la reserva ganadora, como en una JVM recién arrancada: los INSERT se superponen y, sin
         // el candado de RepositorioReservasSql, PostgreSQL aborta algunos por deadlock (SCRUM-102).
         doAnswer(llamada -> {

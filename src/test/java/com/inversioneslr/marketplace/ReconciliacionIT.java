@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/** SCRUM-59 · RNF-12: ningún cobro queda sin reserva más de 15 min. */
+/** SCRUM-59 · RNF-12: ningún cobro queda sin su reserva (0 inconsistencias). */
 class ReconciliacionIT extends PruebaIntegracion {
 
     private static final BigDecimal MONTO = new BigDecimal("330000.00");
