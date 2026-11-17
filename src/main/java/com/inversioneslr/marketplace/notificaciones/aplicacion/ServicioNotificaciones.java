@@ -7,7 +7,7 @@ import com.inversioneslr.marketplace.notificaciones.dominio.RepositorioNotificac
 import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.modulith.events.ApplicationModuleListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,11 +21,8 @@ public class ServicioNotificaciones {
         this.reloj = reloj;
     }
 
-    /**
-     * RF-24 · ADR-06: una notificación por destinatario. Se atiende después de confirmar el caso de uso, en otro hilo
-     * y en su propia transacción. Si falla, ProcesadorEventos la reintenta.
-     */
-    @ApplicationModuleListener
+    /** RF-24 · ADR-06: una notificación por destinatario, en la misma transacción del caso de uso. */
+    @EventListener
     public void atender(EventoDominio evento) {
         evento.destinatarios().forEach(usuarioId ->
                 notificaciones.guardar(Notificacion.nueva(evento.id(), usuarioId, evento.tipo(), reloj.instant())));

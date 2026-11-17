@@ -116,14 +116,6 @@ abstract class PruebaIntegracion {
         return publicacion;
     }
 
-    /** Espera a que se entreguen los eventos de esa entidad: las notificaciones se atienden en otro hilo. */
-    void esperarEventosDe(UUID entidadId) {
-        await().until(() -> comoAplicacion.queryForObject("""
-                SELECT count(*) = 0 FROM event_publication
-                WHERE serialized_event::jsonb ->> 'entidadId' = ? AND completion_date IS NULL""",
-                Boolean.class, entidadId.toString()));
-    }
-
     /** Los correos que recibió esa dirección, del más antiguo al más reciente. */
     List<MimeMessage> correosPara(String direccion) {
         return Arrays.stream(correo.getReceivedMessages()).filter(mensaje -> esPara(mensaje, direccion)).toList();

@@ -15,7 +15,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * SMTP con Spring Mail: sirve con Gmail, Amazon SES o Mailpit en desarrollo (README, "Correos"). Se envía después del
- * commit y en otro hilo, así que el servidor de correo no frena ni tumba el registro (ASR-05).
+ * commit y en otro hilo, así que el servidor de correo no frena ni tumba el registro.
  */
 @Component
 public class CorreosSmtp implements Correos {

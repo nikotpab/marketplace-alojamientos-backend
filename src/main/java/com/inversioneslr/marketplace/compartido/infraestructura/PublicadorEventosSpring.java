@@ -8,10 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * ADR-06 · SEC-05 con Spring Modulith. En la transacción del caso de uso, la auditoría atiende el evento y el
- * registro de eventos (outbox) lo guarda para las notificaciones, que se atienden después de confirmar.
- */
+/** ADR-06 · SEC-05: publica el evento con Spring; todos los @EventListener lo atienden en la misma transacción. */
 @Component
 public class PublicadorEventosSpring implements PublicadorEventos {
 

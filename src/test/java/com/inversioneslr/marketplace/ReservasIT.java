@@ -51,7 +51,7 @@ class ReservasIT extends PruebaIntegracion {
 
         assertThat(fachada.datosReserva(new ReservaId(terminada)).estado()).isEqualTo(EstadoReserva.COMPLETADA);
         assertThat(fachada.datosReserva(new ReservaId(enCurso)).estado()).isEqualTo(EstadoReserva.CONFIRMADA);
-        esperarEventosDe(terminada);
+
         assertThat(comoAplicacion.queryForObject(
                 "SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaCompletada'", Long.class, huesped)).isEqualTo(1);
     }

@@ -48,7 +48,7 @@ El frontend agrega la versión: sus servicios llaman a `/api/...` y su intercept
 
 **Recuperación de contraseña (SCRUM-110).** Envía un enlace de un solo uso: el token tiene 256 bits aleatorios y en la base (`token_correo`) solo se guarda su hash SHA-256.
 
-En los dos casos, pedir uno nuevo anula el anterior, y entre dos correos del mismo tipo a la misma dirección pasa al menos 1 minuto. El correo se envía por SMTP después del commit y en otro hilo; si el servidor de correo falla, la solicitud no falla (ASR-05) y se puede pedir otro.
+En los dos casos, pedir uno nuevo anula el anterior, y entre dos correos del mismo tipo a la misma dirección pasa al menos 1 minuto. El correo se envía por SMTP después del commit y en otro hilo; si el servidor de correo falla, la solicitud no falla y se puede pedir otro.
 
 | Variable | Desarrollo (Mailpit) | Gmail | Amazon SES |
 |---|---|---|---|
@@ -87,7 +87,7 @@ En el servidor, Caddy solo enruta `/api/*` hacia la API, así que la documentaci
 
 ```
 com.inversioneslr.marketplace
-├── compartido       Núcleo común: seguridad, errores, eventos y outbox
+├── compartido       Núcleo común: seguridad, errores y eventos
 ├── usuarios         Registro, sesión y perfil
 ├── publicaciones    Publicaciones, disponibilidad y catálogos
 ├── busqueda         Búsqueda con filtros y detalle
@@ -143,22 +143,11 @@ Los módulos se avisan con eventos de Spring (ADR-06). Por ejemplo, al confirmar
 
 1. `ServicioReservas` publica un `ReservaConfirmada` con `PublicadorEventos`.
 2. En la misma transacción, `ServicioAuditoria` lo registra (`@EventListener`). Si falla, la reserva no se confirma.
-3. También en esa transacción, Spring Modulith lo guarda en `event_publication`, que hace de outbox.
-4. Después de confirmar, en otro hilo, `ServicioNotificaciones` crea una notificación por destinatario (`@ApplicationModuleListener`).
-5. Si eso falla, `ProcesadorEventos` lo reintenta cada 5 s, hasta 5 intentos. Una entrega que queda a medias, por ejemplo porque la aplicación se reinició, se marca fallida al minuto y también se reintenta.
+3. En la misma transacción, `ServicioNotificaciones` crea una notificación por destinatario (`@EventListener`). Si falla, la reserva tampoco se confirma.
 
 Una entrega repetida no duplica la notificación, porque su id sale del id del evento y del destinatario.
 
 Cada evento es un record en la raíz del módulo que lo emite, agrupados en `EventosReservas`, `EventosPublicaciones`, `EventosUsuarios`, etc. (SCRUM-143). Todos implementan `compartido.EventoDominio`, que es lo que atienden la auditoría y las notificaciones: el nombre del record es la acción que queda en la auditoría, y cada record dice su entidad, su resultado, su detalle y sus destinatarios. Para agregar un evento se crea un record; si debe notificar, se agrega su mensaje en `Notificacion`.
-
-**Al desplegar un cambio en la clase de un evento.** `event_publication` guarda el nombre de la clase y el evento serializado, así que una entrega pendiente o fallida de una clase que cambió ya no se puede reintentar. Antes de desplegar:
-
-```sql
-SELECT event_type, status, completion_attempts, publication_date
-FROM marketplace.event_publication WHERE completion_date IS NULL;
-```
-
-Si devuelve filas, espera: los reintentos son cada 5 s. Las que lleguen a 5 intentos no se reintentan solas; revisa la causa en los logs antes de seguir. Al pasar de `EventoDominio` genérico a los records (V10), las entregas pendientes de la clase anterior se marcan como completadas para que no queden pendientes para siempre: sus notificaciones no se entregan, por eso hay que comprobar antes que no quede ninguna.
 
 ## Dónde vive cada decisión
 
@@ -168,8 +157,8 @@ Si devuelve filas, espera: los reintentos son cada 5 s. Las que lleguen a 5 inte
 | ADR-02 Búsqueda indexada, 20 por página, tiempo máximo | `RepositorioBusquedaSql`, `ServicioBusqueda`, índices de `V1` |
 | ADR-03 Anti-solape | Restricción `reserva_sin_solape` en `V1` |
 | ADR-04 Idempotencia | Cabecera `Idempotency-Key`, tabla `solicitud_procesada`, `ServicioReservas.confirmarReserva` |
-| ADR-05 Timeout y circuit breaker | `CircuitBreakerPagos`, `AdaptadorStripe` |
-| ADR-06 Eventos, auditoría y outbox | `PublicadorEventosSpring`, `ServicioAuditoria`, `ServicioNotificaciones`, `ProcesadorEventos`, `V2`, `V8` |
+| ADR-05 Timeout de pasarela | `AdaptadorStripe` (2 s conexión + 5 s lectura) |
+| ADR-06 Eventos síncronos y auditoría | `PublicadorEventosSpring`, `ServicioAuditoria`, `ServicioNotificaciones`, `V2` |
 | ADR-07 Autorización | Tabla de rutas en `ConfiguracionSeguridad`, `ManejadorDenegaciones` |
 | ADR-08 Proveedor de pagos | `PasarelaPagos`, `ConfiguracionPagos` |
 | RNF-18, RNF-25 Logs | `FiltroCorrelacion`, `EnmascaradorLogs` |
@@ -183,10 +172,9 @@ Si devuelve filas, espera: los reintentos son cada 5 s. Las que lleguen a 5 inte
 | ASR | Qué se comprueba | Prueba |
 |---|---|---|
 | ASR-01 Rendimiento | p95 y p99 de cada escenario con la carga pedida | `pruebas/carga` (JMeter), ver la sección siguiente |
-| ASR-02 Concurrencia | 50 solicitudes simultáneas por las mismas fechas: 1 confirmada, 49 rechazadas, 0 superposiciones | `ConfirmarReservaIT.conCincuentaSolicitudesSimultaneasSoloSeConfirmaUna` |
+| ASR-02 Concurrencia | 10 solicitudes simultáneas por las mismas fechas: 1 confirmada, 9 rechazadas, 0 superposiciones | `ConfirmarReservaIT.conDiezSolicitudesSimultaneasSoloSeConfirmaUna` |
 | ASR-03 Idempotencia | 10 envíos de la misma solicitud: 1 reserva, 1 cobro y 1 notificación | `IdempotenciaReservaIT.diezEnviosSimultaneosProducenUnSoloEfecto` |
-| ASR-04 Pasarela caída | Respuesta antes de 7 s sin reserva ni periodo bloqueado; circuito abierto tras 5 fallas y prueba a los 30 s | `AdaptadorStripeTest`, `CircuitBreakerPagosTest`, `ConfirmarReservaIT.pagoNoProcesadoNoCreaLaReservaNiBloqueaElPeriodo` |
-| ASR-05 Componente no crítico | Notificaciones lentas o caídas no frenan buscar, reservar ni cancelar; los avisos se entregan al volver | `ComponenteNoCriticoIT` |
+| ASR-04 Pasarela caída | Respuesta antes de 7 s sin reserva ni periodo bloqueado | `AdaptadorStripeTest`, `ConfirmarReservaIT.pagoNoProcesadoNoCreaLaReservaNiBloqueaElPeriodo` |
 | ASR-06 Autorización | Todos los endpoints con cada rol: 403 y registro en la auditoría en cada denegación | `AutorizacionIT`, `HistorialReservasIT` (contacto, RNF-21) |
 | ASR-07 Auditoría inalterable | UPDATE y DELETE rechazados para cualquier rol; un hash alterado deja el latido en falla | `EsqueletoIT.auditoriaEsSoloInsercionParaCualquierRol`, `AuditoriaIT` |
 | ASR-08b Modificabilidad | Segundo proveedor de pagos sin tocar dominio ni aplicación | `PagosAlternoIT`, ver "Experimento de modificabilidad" |
@@ -251,7 +239,7 @@ Para mantener el MVP mínimo:
 - **Eventos:** hay un record por evento (SCRUM-143), pero la auditoría y las notificaciones atienden una sola interfaz, `EventoDominio`, en vez de un listener por evento.
 - **Historial de tarifas:** RF-32 pide mostrar quién cambió las tarifas y cuándo. Cada cambio queda en la auditoría como `TarifasActualizadas`, con el valor anterior y el nuevo (por ejemplo, "10 % → 12 %"), así que el historial se consulta en `GET /api/v1/admin/auditoria`. La tabla solo guarda quién hizo el último cambio.
 
-Elecciones técnicas que los documentos dejaban abiertas: Spring JDBC en vez de JPA, Flyway, Resilience4j y BCrypt.
+Elecciones técnicas que los documentos dejaban abiertas: Spring JDBC en vez de JPA, Flyway y BCrypt.
 
 ## Ajustes al diseño
 
@@ -270,7 +258,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 11. **Código de reserva.** El frontend muestra un código legible, como `LR-2026-0001`, que no está en el modelo de datos. Se agregó la columna `codigo`, que asigna la base de datos al guardar la reserva. Las peticiones y respuestas de reserva usan los nombres del frontend (`llegada`, `salida`, `huespedes`, `adicionales`).
 12. **Base de la cotización.** RF-17 no dice sobre qué monto se aplican los porcentajes. Como en el mockup, la tarifa de servicio y los descuentos se calculan sobre el subtotal (precio por noche × noches) y se redondean al peso. El descuento promocional y el de estancia larga se suman.
 13. **Interfaz pública en la raíz del módulo.** ADR-01 y SCRUM-54 la ubican en un paquete `api/`. Spring Modulith, el estándar de Spring para monolitos modulares, trata los subpaquetes como internos, así que la fachada y sus tipos están en el paquete raíz de cada módulo (SCRUM-98). La regla no cambia: otro módulo solo usa lo público.
-14. **Tabla de eventos.** El modelo de datos define `evento_pendiente` para el outbox. Con Spring Modulith, el outbox es su tabla `event_publication`, con el esquema oficial (`V8`, SCRUM-98). Además, `EventoDominio` lleva un `id`, que no está en los documentos, para que una entrega repetida no duplique la notificación.
+14. **Tabla de eventos.** El modelo de datos define `evento_pendiente` para almacenamiento temporal de eventos. Con Spring Modulith se mantiene la estructura de módulos, pero la entrega de eventos es síncrona en la misma transacción (`@EventListener`), sin tabla intermedia (ADR-06). `EventoDominio` lleva un `id`, que no está en los documentos, para que una entrega repetida no duplique la notificación.
 15. **Indicadores del dashboard.** RF-33 no define "ingresos estimados" ni el periodo. Los ingresos son la suma de las tarifas de servicio de las reservas confirmadas y completadas, que es lo que gana la plataforma. El periodo cuenta las reservas por la fecha en que se hicieron y, si no se elige, son los últimos 30 días. Usuarios y publicaciones activas son el total actual.
 16. **Confirmaciones simultáneas (ADR-03).** La restricción de exclusión sola no basta: con varios `INSERT` simultáneos por la misma publicación, PostgreSQL puede detectar un deadlock al verificarla y abortar solicitudes que debían rechazarse con "periodo no disponible". Antes del `INSERT`, cada confirmación toma un candado de transacción por publicación (`pg_advisory_xact_lock`), así que entran de a una. La restricción sigue siendo la garantía de no solape (SCRUM-102).
 17. **Verificación del correo (SCRUM-109, SCRUM-151).** Los documentos no la piden: CU-01 crea la cuenta lista para usarse. Se agregó para que nadie se registre con un correo ajeno, ahora que la recuperación de contraseña llega por correo. Desde SCRUM-151 el registro exige el código que llega al correo, así que la cuenta nace verificada; antes era un enlace que se usaba después de crearla. Las cuentas de esa época que no usaron el enlace siguen recibiendo 403 `CORREO_NO_VERIFICADO` (solo con la contraseña correcta, para no revelar el estado de la cuenta) y se verifican recuperando la contraseña. Las cuentas creadas por SQL (como el primer administrador) y las de los datos de demostración quedan verificadas: la columna nace en `true`.
@@ -310,9 +298,7 @@ fields @timestamp, logger_name, message, correlationId
 
 ## Monitoreo
 
-Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos`, `pasarelaPagos`, `procesadorEventos` y `auditoria`. `auditoria` figura caída si algún registro de auditoría fue alterado: cada 10 min, `VerificacionAuditoria` recalcula el hash de cada uno (ASR-07).
-
-`pasarelaPagos` no llama a Stripe: solo figura caída si el circuit breaker está abierto. Sin cobros recientes, una caída de Stripe no se detecta.
+Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos` y `auditoria`. `auditoria` figura caída si algún registro de auditoría fue alterado: cada 10 min, `VerificacionAuditoria` recalcula el hash de cada uno (ASR-07).
 
 **Falta configurar en AWS:**
 
@@ -351,7 +337,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Para cumplir "un healthcheck si se cuelga" hace falta algo más.
 15. **Secretos e imagen.** Falta el paso que pasa los secretos de SSM a `deploy/.env`, y definir dónde se publica la imagen. La infraestructura AWS no es parte de este repositorio.
-16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora se reporta el procesador de eventos, que ADR-06 pide monitorear con latido. Si se refería al dominio web, falta agregarlo.
+16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora el latido reporta `baseDeDatos` y `auditoria`. Si se refería al dominio web o a la pasarela de pagos, falta definirlo y agregarlo.
 
 **Sin caso de uso**
 

@@ -38,7 +38,7 @@ class BloquearPublicacionIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.motivoRechazo").doesNotExist());
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'PublicacionBloqueada'",
                 publicacion)).isEqualTo(1);
-        esperarEventosDe(publicacion);
+
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'PublicacionBloqueada'", anfitrion)).isEqualTo(1);
     }
 
@@ -55,7 +55,7 @@ class BloquearPublicacionIT extends PruebaIntegracion {
         assertThat(estado(futura)).isEqualTo("EN_REVISION");
         assertThat(estado(enCurso)).isEqualTo("CONFIRMADA");
         assertThat(estado(cancelada)).isEqualTo("CANCELADA");
-        esperarEventosDe(futura);
+
         assertThat(contar("SELECT count(*) FROM notificacion WHERE usuario_id = ? AND tipo = 'ReservaEnRevision'", huesped)).isEqualTo(1);
     }
 

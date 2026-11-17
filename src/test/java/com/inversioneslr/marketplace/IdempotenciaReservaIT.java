@@ -108,7 +108,6 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
             resultados.add(envio.get().id());
         }
         UUID reserva = resultados.iterator().next();
-        esperarEventosDe(reserva);
 
         assertThat(resultados).hasSize(1);
         assertThat(contar("SELECT count(*) FROM reserva WHERE publicacion_id = ?", publicacion)).isEqualTo(1);
