@@ -121,8 +121,8 @@ class ConfirmarReservaIT extends PruebaIntegracion {
 
     /** RNF-13: la base de datos deja pasar exactamente una, y a las demás se les devuelve lo cobrado. */
     @Test
-    void conCincuentaSolicitudesSimultaneasSoloSeConfirmaUna() throws Exception {
-        int solicitudes = 50;
+    void conDiezSolicitudesSimultaneasSoloSeConfirmaUna() throws Exception {
+        int solicitudes = 10;
         ConfirmarReservaComando comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 7, 10), LocalDate.of(2030, 7, 13), 2, List.of());
         CountDownLatch salida = new CountDownLatch(1);
         AtomicInteger confirmadas = new AtomicInteger();

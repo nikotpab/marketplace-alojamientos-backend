@@ -37,7 +37,7 @@ El frontend llama a `/api/...` y el backend responde en `/api/v1/...`. En desarr
 
 ```
 com.inversioneslr.marketplace
-├── compartido       Núcleo común: seguridad, errores, eventos y outbox
+├── compartido       Núcleo común: seguridad, errores y eventos síncronos
 ├── usuarios         Registro, sesión y perfil
 ├── publicaciones    Publicaciones, disponibilidad y catálogos
 ├── busqueda         Búsqueda con filtros y detalle
@@ -71,8 +71,8 @@ Cada módulo se divide en las capas que necesita:
 | ADR-02 Búsqueda indexada, 20 por página, tiempo máximo | `RepositorioBusquedaSql`, `ServicioBusqueda`, índices de `V1` |
 | ADR-03 Anti-solape | Restricción `reserva_sin_solape` en `V1` |
 | ADR-04 Idempotencia | Cabecera `Idempotency-Key`, tabla `solicitud_procesada`, `ServicioReservas.confirmarReserva` |
-| ADR-05 Timeout y circuit breaker | `CircuitBreakerPagos`, `AdaptadorStripe` |
-| ADR-06 Eventos, auditoría y outbox | `PublicadorEventosOutbox`, `ProcesadorEventos`, `ServicioAuditoria`, `V2` |
+| ADR-05 Timeout de 7 s | `AdaptadorStripe` (2 s conexión + 5 s lectura, sin reintentos) |
+| ADR-06 Eventos síncronos y auditoría | `PublicadorEventosSpring`, `ServicioAuditoria`, `V2` |
 | ADR-07 Autorización | Tabla de rutas en `ConfiguracionSeguridad`, `ManejadorDenegaciones` |
 | ADR-08 Proveedor de pagos | `PasarelaPagos`, `ConfiguracionPagos` |
 | RNF-18, RNF-25 Logs | `FiltroCorrelacion`, `EnmascaradorLogs` |
@@ -87,9 +87,9 @@ Para mantener el MVP mínimo:
 - **Filtro de autorización:** el `FiltroAutorizacion` del Patrón 6 es el `AuthorizationFilter` de Spring Security con una sola tabla de rutas, no una clase propia.
 - **Fachadas:** solo tienen `api/` los módulos a los que otro módulo llama. `busqueda`, `cancelaciones`, `notificaciones` y `administracion` no la necesitan todavía.
 - **Casos de uso:** son métodos del `Servicio` de cada módulo. Por ejemplo, `ServicioReservas.confirmarReserva` es el `ConfirmarReserva` de SEC-01.
-- **Eventos:** hay un solo tipo, `EventoDominio`, con un campo `tipo` (por ejemplo, `"ReservaConfirmada"`), en vez de una clase por evento.
+- **Eventos:** hay un solo tipo, `EventoDominio`, con un campo `tipo` (por ejemplo, `"ReservaConfirmada"`), en vez de una clase por evento. Todos los suscriptores se atienden síncronamente en la misma transacción del caso de uso.
 
-Elecciones técnicas que los documentos dejaban abiertas: Spring JDBC en vez de JPA, Flyway, Resilience4j y BCrypt.
+Elecciones técnicas que los documentos dejaban abiertas: Spring JDBC en vez de JPA, Flyway y BCrypt.
 
 ## Ajustes al diseño
 
@@ -134,16 +134,14 @@ fields @timestamp, logger_name, message, correlationId
 
 ## Monitoreo
 
-Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos`, `pasarelaPagos` y `procesadorEventos`.
-
-`pasarelaPagos` no llama a Stripe: solo figura caída si el circuit breaker está abierto. Sin cobros recientes, una caída de Stripe no se detecta.
+Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos`.
 
 **Falta configurar en AWS:**
 
 1. Un filtro de métrica en `/marketplace/api`, con el patrón `{ $.latido = "OK" }` y valor 1.
 2. Una alarma sobre esa métrica: suma menor que 1 durante 2 periodos de 1 minuto, con los datos faltantes tratados como incumplidos, que avise al tema de SNS del equipo.
 
-Con un solo filtro se cubren los dos casos: si la aplicación se detiene, faltan los datos; si un componente falla, el latido deja de ser `OK`.
+Con un solo filtro se cubren los dos casos: si la aplicación se detiene, faltan los datos; si la base de datos falla, el latido deja de ser `OK`.
 
 ## Decisiones pendientes
 
@@ -151,7 +149,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Afectan el flujo crítico**
 
-1. **Reserva a medias (RNF-12).** SEC-01 solo escribe el pago en el paso 10. Si la aplicación cae después de cobrar, no queda rastro local y el reconciliador no tiene qué revisar. Hace falta registrar el intento antes de llamar a Stripe.
+1. **Reserva a medias (RNF-12).** SEC-01 solo escribe el pago en el paso 10. Si la aplicación cae después de cobrar, no queda rastro local. Hace falta registrar el intento antes de llamar a Stripe.
 2. **Método de pago de prueba.** CU-17 y CU-19 lo piden como entrada, pero `cobrar(monto, clave)` no lo recibe. Por ahora sale de la variable `STRIPE_METODO_PAGO`, así que no se puede elegir por petición.
 3. **Devolución fallida.** CU-20 E4 supone que la reserva no cambia de estado. El Proceso 4 la deja cancelada con "devolución no procesada".
 4. **Reintento tras un solape.** Resuelto en SCRUM-34: el rechazo se guarda con su clave en una transacción aparte, y un reintento recibe el mismo rechazo sin volver a cobrar.
@@ -173,6 +171,6 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Despliegue**
 
-14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Para cumplir "un healthcheck si se cuelga" hace falta algo más.
+14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Para detectarlo hace falta un healthcheck activo (por ejemplo, `HEALTHCHECK` en la imagen Docker) o un orquestador que reaccione al estado `unhealthy`.
 15. **Secretos e imagen.** Falta el paso que pasa los secretos de SSM a `deploy/.env`, y definir dónde se publica la imagen. La infraestructura AWS no es parte de este repositorio.
-16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora se reporta el procesador de eventos, que ADR-06 pide monitorear con latido. Si se refería al dominio web, falta agregarlo.
+16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora solo se reporta la base de datos. Si se refería a algún invariante del dominio (reservas pendientes, pagos sin confirmar, etc.), falta definirlo y agregarlo.
