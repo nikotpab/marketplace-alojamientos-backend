@@ -58,9 +58,7 @@ public class RepositorioBusquedaSql implements RepositorioBusqueda {
                 WHERE p.estado = 'ACTIVA'""".formatted(CALIFICACION, SERVICIOS));
         Map<String, Object> parametros = new HashMap<>();
         if (filtros.ciudad() != null && !filtros.ciudad().isBlank()) {
-            // También busca en la ubicación, porque el formulario del frontend no pide la ciudad aparte (ajuste 7 del README).
-            filtrar(sql, parametros, "(unaccent(lower(p.ciudad)) = unaccent(lower(:ciudad))"
-                    + " OR unaccent(lower(p.ubicacion_textual)) LIKE '%' || unaccent(lower(:ciudad)) || '%')", "ciudad", filtros.ciudad().trim());
+            filtrar(sql, parametros, "unaccent(lower(p.ciudad)) = unaccent(lower(:ciudad))", "ciudad", filtros.ciudad().trim());
         }
         filtrar(sql, parametros, "p.capacidad >= :huespedes", "huespedes", filtros.huespedes());
         filtrar(sql, parametros, "t.codigo = :tipo", "tipo", vacioComoNulo(filtros.tipo()));

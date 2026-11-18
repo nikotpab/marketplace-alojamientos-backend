@@ -19,7 +19,7 @@ class CrearPublicacionIT extends PruebaIntegracion {
 
     static final String COMPLETA = """
             {"titulo":"Casa con patio","descripcion":"Casa amplia","ubicacion":"Centro histórico, calle de la Factoría, Cartagena",
-             "tipo":"CASA","capacidad":4,"precioNoche":280000,"servicios":["WiFi","Cocina"],
+             "ciudad":"Cartagena","tipo":"CASA","capacidad":4,"precioNoche":280000,"servicios":["WiFi","Cocina"],
              "reglas":["Llegada desde las 3:00 p. m.","No se permiten fiestas"],"imagenes":["https://ejemplo.co/1.jpg"],
              "politicaCancelacion":"Flexible: 100 % hasta 5 días antes"}""";
 
@@ -38,6 +38,7 @@ class CrearPublicacionIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.estado").value("BORRADOR"))
                 .andExpect(jsonPath("$.actualizadaEn").exists())
                 .andExpect(jsonPath("$.titulo").value("Casa con patio"))
+                .andExpect(jsonPath("$.ciudad").value("Cartagena"))
                 .andExpect(jsonPath("$.ubicacion").value("Centro histórico, calle de la Factoría, Cartagena"))
                 .andExpect(jsonPath("$.tipo").value("CASA"))
                 .andExpect(jsonPath("$.capacidad").value(4))
@@ -50,10 +51,18 @@ class CrearPublicacionIT extends PruebaIntegracion {
     }
 
     @Test
-    void laCiudadSaleDeLoQueVaDespuesDeLaUltimaComaDeLaUbicacion() throws Exception {
-        UUID id = idDe(crear(COMPLETA));
+    void laCiudadVieneDeLCampoEnviado() throws Exception {
+        String cuerpo = COMPLETA.replace("\"ciudad\":\"Cartagena\"", "\"ciudad\":\"Bogotá\"");
+        UUID id = idDe(crear(cuerpo));
 
-        assertThat(comoAplicacion.queryForObject("SELECT ciudad FROM publicacion WHERE id = ?", String.class, id)).isEqualTo("Cartagena");
+        assertThat(comoAplicacion.queryForObject("SELECT ciudad FROM publicacion WHERE id = ?", String.class, id)).isEqualTo("Bogotá");
+    }
+
+    @Test
+    void unaCiudadVaciaSeRechaza() throws Exception {
+        crear(COMPLETA.replace("\"ciudad\":\"Cartagena\"", "\"ciudad\":\"\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.ciudad").exists());
     }
 
     @Test

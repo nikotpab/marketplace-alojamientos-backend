@@ -104,7 +104,7 @@ class EditarPublicacionIT extends PruebaIntegracion {
     /** Con el formato que envía el formulario del frontend. */
     private static String cuerpo(int capacidad, String precio) {
         return """
-                {"titulo":"Título nuevo","descripcion":"Descripción","ubicacion":"El Poblado, Medellín","tipo":"CASA",
+                {"titulo":"Título nuevo","descripcion":"Descripción","ubicacion":"El Poblado, Medellín","ciudad":"Medellín","tipo":"CASA",
                  "capacidad":%d,"precioNoche":%s,"servicios":["WiFi"],"reglas":["No se permiten fiestas"],
                  "imagenes":["a.jpg"],"politicaCancelacion":"Flexible"}""".formatted(capacidad, precio);
     }
