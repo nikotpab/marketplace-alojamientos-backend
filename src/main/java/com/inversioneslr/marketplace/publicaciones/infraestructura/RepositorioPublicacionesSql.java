@@ -34,7 +34,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
     /** Consulta base de la vista para el frontend; se completa con el filtro y el orden. */
     private static final String VISTA = """
             SELECT p.id, p.estado, p.actualizado_en, p.motivo_estado, p.anfitrion_id,
-                   p.titulo, p.descripcion, p.ubicacion_textual, t.codigo AS tipo, p.capacidad, p.precio_noche,
+                   p.titulo, p.descripcion, p.ciudad, p.ubicacion_textual, t.codigo AS tipo, p.capacidad, p.precio_noche,
                    ARRAY(SELECT s.nombre FROM publicacion_servicio ps JOIN servicio s ON s.id = ps.servicio_id
                          WHERE ps.publicacion_id = p.id ORDER BY s.nombre) AS servicios,
                    ARRAY(SELECT r.descripcion FROM regla_alojamiento r WHERE r.publicacion_id = p.id ORDER BY r.orden, r.creado_en) AS reglas,
@@ -357,6 +357,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                 fila.getString("titulo"),
                 fila.getString("descripcion"),
                 fila.getString("ubicacion_textual"),
+                fila.getString("ciudad"),
                 fila.getString("tipo"),
                 fila.getObject("capacidad", Integer.class),
                 fila.getBigDecimal("precio_noche"),
