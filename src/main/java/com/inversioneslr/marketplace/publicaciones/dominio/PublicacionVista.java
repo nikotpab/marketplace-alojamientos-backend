@@ -14,12 +14,12 @@ import java.util.UUID;
  */
 public record PublicacionVista(UUID id, EstadoPublicacion estado, Instant actualizadaEn, String motivoRechazo, String motivoBloqueo,
                                String anfitrion,
-                               String titulo, String descripcion, String ubicacion, String tipo, Integer capacidad,
+                               String titulo, String descripcion, String ubicacion, String ciudad, String tipo, Integer capacidad,
                                BigDecimal precioNoche, List<String> servicios, List<String> reglas, List<String> imagenes,
                                String politicaCancelacion) {
 
     public PublicacionVista conAnfitrion(String nombre) {
         return new PublicacionVista(id, estado, actualizadaEn, motivoRechazo, motivoBloqueo, nombre, titulo, descripcion, ubicacion,
-                tipo, capacidad, precioNoche, servicios, reglas, imagenes, politicaCancelacion);
+                ciudad, tipo, capacidad, precioNoche, servicios, reglas, imagenes, politicaCancelacion);
     }
 }
