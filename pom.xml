@@ -18,6 +18,9 @@
     <properties>
         <java.version>21</java.version>
         <spring-modulith.version>2.1.2</spring-modulith.version>
+        <!-- Groovy 5.0.8 (gestionado por el BOM de Spring Boot) tiene un NPE en ClosureMetaClass
+             que afecta las peticiones GET de RestAssured. Se fuerza 4.0.x para evitarlo. -->
+        <groovy.version>4.0.21</groovy.version>
         <!-- SCRUM-104: análisis en SonarQube Cloud. La cobertura sale del reporte de JaCoCo. -->
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.organization>nikotpab</sonar.organization>
@@ -159,6 +162,13 @@
             <groupId>com.icegreen</groupId>
             <artifactId>greenmail</artifactId>
             <version>2.1.15</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- SCRUM-130: HTTP real para las pruebas de sistema. -->
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>5.3.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
