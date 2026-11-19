@@ -34,6 +34,11 @@ jobs:
         with:
           name: cobertura-jacoco
           path: target/site/jacoco
+      # SCRUM-129: contrato OpenAPI versionado, descargable para comparar entre builds.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: openapi-contrato
+          path: docs/openapi.json
       # SCRUM-102: si una prueba falla, sus reportes quedan descargables para revisar la causa.
       - uses: actions/upload-artifact@v7
         if: failure()

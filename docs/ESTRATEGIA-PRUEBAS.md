@@ -42,7 +42,7 @@ lentas, frágiles y difíciles de depurar. Lo evitamos de dos formas:
 | 6 | Componente — pantallas del frontend | Componentes Angular aislados | Angular Testing Library | repo frontend | por confirmar | por confirmar | planeado | SCRUM-127 | por confirmar |
 | 5 | Integración — backend completo | Controladores + base de datos real (Flyway incluido) vía MockMvc + Testcontainers | Spring Boot Test + Testcontainers (Postgres 17) | `src/test/**/*IT.java` (43 archivos, 237 pruebas) | 237 | `mvn verify` (requiere Docker) | parcial | SCRUM-128 | CU-01–31, ASR-02 (concurrencia), ASR-03 (idempotencia), ASR-06 (autorización), ASR-07 (auditoría), ASR-08b (modificabilidad), RNF-12 (reserva a medias), RNF-19/22/23 (seguridad) |
 | 5 | Integración — servicios del frontend | Llamadas HTTP reales desde los servicios Angular | por definir | repo frontend | por confirmar | por confirmar | planeado | SCRUM-128 | por confirmar |
-| 4 | Contrato front/back con OpenAPI | El spec OpenAPI se publica y coincide con el código | springdoc-openapi + `DocumentacionApiIT.java` | `src/test/.../DocumentacionApiIT.java` (2 pruebas) | 2 | `mvn verify` | parcial | SCRUM-129 | RNF (API documentada y accesible sin sesión) |
+| 4 | Contrato con OpenAPI | El spec se publica, coincide con el archivo versionado en `docs/openapi.json` y las respuestas reales lo cumplen | springdoc-openapi + `swagger-request-validator-core` | `DocumentacionApiIT.java` (2), `ContratoApiIT.java` (1), `ContratoRespuestasIT.java` (11) | 14 | `mvn verify` | hecho | SCRUM-129 | RNF (API documentada y accesible sin sesión); regresión de contrato detectada en CI |
 | 3 | Sistema — flujo completo por la API | Arranque, restricciones de BD, seguridad base | Spring Boot Test | `src/test/.../EsqueletoIT.java` (5 pruebas) | 5 | `mvn verify` | parcial | SCRUM-130 | ASR-06 (denegación por defecto), ASR-07 (auditoría solo inserción) |
 | 2 | E2E — flujos críticos | Registro, búsqueda, reserva, pago, cancelación end-to-end en navegador real | Playwright | por definir | — | por definir | planeado | SCRUM-131 | CU-01, CU-06, CU-14, CU-19, CU-20 (flujos críticos del usuario) |
 | 1 | Exploratorias | Sesiones manuales con checklists sobre el entorno de staging | — | por definir | — | — | planeado | SCRUM-132 | UX, flujos no automatizados, regresiones visuales |
@@ -85,6 +85,9 @@ mvn test jacoco:report
 # Integración + análisis Sonar (requiere SONAR_TOKEN)
 mvn verify sonar:sonar
 
+# Regenerar docs/openapi.json cuando el spec cambie (SCRUM-129)
+mvn verify -Dopenapi.actualizar=true
+
 # Pruebas de carga (requiere backend en :8080, Docker, Mailpit en :8025 y JMeter 5.6)
 pruebas/carga/ejecutar.sh 120
 # Resumen de p95/p99 en pruebas/carga/resultados/<timestamp>/resumen.md
@@ -95,8 +98,6 @@ pruebas/carga/ejecutar.sh 120
 - **Cobertura mínima**: no hay umbral configurado en JaCoCo; definir un porcentaje mínimo antes de que el
   pipeline falle.
 - **Capas 7 y 6 del frontend**: se confirmarán con el equipo del repo `nikotpab/marketplace-alojamientos-frontend`.
-- **Contrato real (capa 4)**: `DocumentacionApiIT` solo verifica que el spec se publique; falta una prueba
-  que consuma el spec y valide que las respuestas reales lo cumplen (Pact u OpenAPI diff).
 - **E2E (capa 2)**: pendiente definir qué flujos cubre Playwright, el entorno donde corre y cómo se integra
   al pipeline de CI.
 - **Transversales OWASP, accesibilidad y humo**: pendiente definir herramientas, entorno y criterios de
