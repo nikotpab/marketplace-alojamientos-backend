@@ -1,0 +1,2441 @@
+{
+  "components" : {
+    "schemas" : {
+      "AdicionalDisponible" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "precio" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "AlojamientoResumen" : {
+        "properties" : {
+          "calificacion" : {
+            "type" : "number"
+          },
+          "capacidad" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ciudad" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "imagen" : {
+            "type" : "string"
+          },
+          "precioNoche" : {
+            "type" : "number"
+          },
+          "servicios" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "titulo" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Bandeja" : {
+        "properties" : {
+          "noLeidas" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "notificaciones" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Notificacion"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "CambioDisponibilidad" : {
+        "properties" : {
+          "desde" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "estado" : {
+            "enum" : [ "BLOQUEADO", "DISPONIBLE" ],
+            "type" : "string"
+          },
+          "hasta" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "desde", "estado", "hasta" ],
+        "type" : "object"
+      },
+      "Cancelacion" : {
+        "properties" : {
+          "estadoFinal" : {
+            "enum" : [ "DEVOLUCION_NO_PROCESADA", "DEVOLUCION_PROCESADA", "SIN_DEVOLUCION" ],
+            "type" : "string"
+          },
+          "fecha" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "reservaId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "usuarioId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "valorDevolucion" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "CancelarReservaComando" : {
+        "properties" : {
+          "motivo" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "motivo" ],
+        "type" : "object"
+      },
+      "Catalogos" : {
+        "properties" : {
+          "politicas" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PoliticaOfrecida"
+            },
+            "type" : "array"
+          },
+          "servicios" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Servicio"
+            },
+            "type" : "array"
+          },
+          "tipos" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TipoAlojamiento"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ConfiguracionTarifas" : {
+        "properties" : {
+          "nochesEstanciaLarga" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "porcentajeDescuento" : {
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "number"
+          },
+          "porcentajeDescuentoEstanciaLarga" : {
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "number"
+          },
+          "porcentajeLimpieza" : {
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "number"
+          },
+          "porcentajeServicio" : {
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "number"
+          }
+        },
+        "required" : [ "nochesEstanciaLarga", "porcentajeDescuento", "porcentajeDescuentoEstanciaLarga", "porcentajeLimpieza", "porcentajeServicio" ],
+        "type" : "object"
+      },
+      "ConfirmarReservaComando" : {
+        "properties" : {
+          "adicionales" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "huespedes" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "llegada" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "publicacionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "salida" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "huespedes", "llegada", "publicacionId", "salida" ],
+        "type" : "object"
+      },
+      "CorreoComando" : {
+        "properties" : {
+          "correo" : {
+            "format" : "email",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "correo" ],
+        "type" : "object"
+      },
+      "CredencialesComando" : {
+        "properties" : {
+          "contrasena" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "correo" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "contrasena", "correo" ],
+        "type" : "object"
+      },
+      "DatosContacto" : {
+        "properties" : {
+          "correo" : {
+            "type" : "string"
+          },
+          "telefono" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DatosPublicacionComando" : {
+        "properties" : {
+          "capacidad" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ciudad" : {
+            "maxLength" : 120,
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "descripcion" : {
+            "type" : "string"
+          },
+          "imagenes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "politicaCancelacion" : {
+            "type" : "string"
+          },
+          "precioNoche" : {
+            "exclusiveMinimum" : 0,
+            "type" : "number"
+          },
+          "reglas" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "servicios" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "titulo" : {
+            "maxLength" : 180,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ubicacion" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Desglose" : {
+        "properties" : {
+          "adicionales" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Linea"
+            },
+            "type" : "array"
+          },
+          "adicionalesDisponibles" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AdicionalDisponible"
+            },
+            "type" : "array"
+          },
+          "descuentos" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Linea"
+            },
+            "type" : "array"
+          },
+          "moneda" : {
+            "type" : "string"
+          },
+          "noches" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "porcentajeServicio" : {
+            "type" : "number"
+          },
+          "precioNoche" : {
+            "type" : "number"
+          },
+          "subtotal" : {
+            "type" : "number"
+          },
+          "tarifaLimpieza" : {
+            "type" : "number"
+          },
+          "tarifaServicio" : {
+            "type" : "number"
+          },
+          "total" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "Detalle" : {
+        "properties" : {
+          "calificacionPromedio" : {
+            "type" : "number"
+          },
+          "capacidad" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ciudad" : {
+            "type" : "string"
+          },
+          "descripcion" : {
+            "type" : "string"
+          },
+          "direccion" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "type" : "string"
+          },
+          "fechasNoDisponibles" : {
+            "items" : {
+              "format" : "date",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "imagenes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "politicaCancelacion" : {
+            "type" : "string"
+          },
+          "precioNoche" : {
+            "type" : "number"
+          },
+          "reglas" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "resenas" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResenaVisible"
+            },
+            "type" : "array"
+          },
+          "servicios" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "titulo" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Disponibilidad" : {
+        "properties" : {
+          "bloqueados" : {
+            "items" : {
+              "format" : "date",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "reservados" : {
+            "items" : {
+              "format" : "date",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "EstadoCuentaComando" : {
+        "properties" : {
+          "activo" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "activo" ],
+        "type" : "object"
+      },
+      "EstimacionDevolucion" : {
+        "properties" : {
+          "politica" : {
+            "type" : "string"
+          },
+          "valorDevolucion" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "EventoAuditoria" : {
+        "properties" : {
+          "accion" : {
+            "type" : "string"
+          },
+          "actor" : {
+            "type" : "string"
+          },
+          "actorId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "detalle" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "entidad" : {
+            "type" : "string"
+          },
+          "entidadId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fecha" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "hashRegistro" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "resultado" : {
+            "type" : "string"
+          },
+          "rol" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FiltrosAuditoria" : {
+        "properties" : {
+          "accion" : {
+            "type" : "string"
+          },
+          "actorId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "desde" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "entidad" : {
+            "type" : "string"
+          },
+          "hasta" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "resultado" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FiltrosBusqueda" : {
+        "properties" : {
+          "ciudad" : {
+            "type" : "string"
+          },
+          "huespedes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "llegada" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "precioMax" : {
+            "type" : "number"
+          },
+          "precioMin" : {
+            "type" : "number"
+          },
+          "salida" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "servicios" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "tipo" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Indicadores" : {
+        "properties" : {
+          "ciudadesConMayorDemanda" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "desde" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "hasta" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "ingresosEstimados" : {
+            "type" : "number"
+          },
+          "publicacionesActivas" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "reservasPorEstado" : {
+            "additionalProperties" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "object"
+          },
+          "usuarios" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Linea" : {
+        "properties" : {
+          "concepto" : {
+            "type" : "string"
+          },
+          "monto" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "MotivoComando" : {
+        "properties" : {
+          "motivo" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "motivo" ],
+        "type" : "object"
+      },
+      "Notificacion" : {
+        "properties" : {
+          "creadoEn" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "leida" : {
+            "type" : "boolean"
+          },
+          "mensaje" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "usuarioId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PaginaAlojamientos" : {
+        "properties" : {
+          "contenido" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AlojamientoResumen"
+            },
+            "type" : "array"
+          },
+          "pagina" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPaginas" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Perfil" : {
+        "properties" : {
+          "activo" : {
+            "type" : "boolean"
+          },
+          "apellido" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "rol" : {
+            "enum" : [ "ADMINISTRADOR", "ANFITRION", "HUESPED" ],
+            "type" : "string"
+          },
+          "telefono" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PerfilComando" : {
+        "properties" : {
+          "apellido" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "nombre" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "telefono" : {
+            "pattern" : "3\\d{9}",
+            "type" : "string"
+          }
+        },
+        "required" : [ "apellido", "nombre", "telefono" ],
+        "type" : "object"
+      },
+      "PoliticaOfrecida" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PublicacionVista" : {
+        "properties" : {
+          "actualizadaEn" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "anfitrion" : {
+            "type" : "string"
+          },
+          "capacidad" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ciudad" : {
+            "type" : "string"
+          },
+          "descripcion" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "enum" : [ "ACTIVA", "BLOQUEADA", "BORRADOR", "PAUSADA", "PENDIENTE_REVISION" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "imagenes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "motivoBloqueo" : {
+            "type" : "string"
+          },
+          "motivoRechazo" : {
+            "type" : "string"
+          },
+          "politicaCancelacion" : {
+            "type" : "string"
+          },
+          "precioNoche" : {
+            "type" : "number"
+          },
+          "reglas" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "servicios" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "titulo" : {
+            "type" : "string"
+          },
+          "ubicacion" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PublicarResenaComando" : {
+        "properties" : {
+          "calificacion" : {
+            "format" : "int32",
+            "maximum" : 5,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "contenido" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "calificacion", "contenido" ],
+        "type" : "object"
+      },
+      "RechazoComando" : {
+        "properties" : {
+          "motivo" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RegistroComando" : {
+        "properties" : {
+          "apellido" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "codigo" : {
+            "minLength" : 1,
+            "pattern" : "\\d{6}",
+            "type" : "string"
+          },
+          "contrasena" : {
+            "maxLength" : 72,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "correo" : {
+            "format" : "email",
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "nombre" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "rol" : {
+            "enum" : [ "ADMINISTRADOR", "ANFITRION", "HUESPED" ],
+            "type" : "string"
+          },
+          "telefono" : {
+            "pattern" : "3\\d{9}",
+            "type" : "string"
+          }
+        },
+        "required" : [ "apellido", "codigo", "contrasena", "correo", "nombre", "rol", "telefono" ],
+        "type" : "object"
+      },
+      "ResenaVisible" : {
+        "properties" : {
+          "autor" : {
+            "type" : "string"
+          },
+          "calificacion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "comentario" : {
+            "type" : "string"
+          },
+          "fecha" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ReservaConfirmada" : {
+        "properties" : {
+          "codigo" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "enum" : [ "CANCELADA", "COMPLETADA", "CONFIRMADA", "EN_REVISION" ],
+            "type" : "string"
+          },
+          "huespedes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "llegada" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "noches" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "publicacionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "salida" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "total" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "ReservaVista" : {
+        "properties" : {
+          "alojamiento" : {
+            "type" : "string"
+          },
+          "codigo" : {
+            "type" : "string"
+          },
+          "contactoHuesped" : {
+            "$ref" : "#/components/schemas/DatosContacto"
+          },
+          "estado" : {
+            "enum" : [ "CANCELADA", "COMPLETADA", "CONFIRMADA", "EN_REVISION" ],
+            "type" : "string"
+          },
+          "huespedes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "llegada" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "noches" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "publicacionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "salida" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "total" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "RestablecerContrasenaComando" : {
+        "properties" : {
+          "contrasenaNueva" : {
+            "maxLength" : 72,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "token" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "contrasenaNueva", "token" ],
+        "type" : "object"
+      },
+      "Servicio" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Sesion" : {
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "usuario" : {
+            "$ref" : "#/components/schemas/UsuarioSesion"
+          }
+        },
+        "type" : "object"
+      },
+      "SolicitudCotizacion" : {
+        "properties" : {
+          "adicionales" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "huespedes" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "llegada" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "publicacionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "salida" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "huespedes", "llegada", "publicacionId", "salida" ],
+        "type" : "object"
+      },
+      "TipoAlojamiento" : {
+        "properties" : {
+          "activo" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TipoAlojamientoComando" : {
+        "properties" : {
+          "activo" : {
+            "type" : "boolean"
+          },
+          "nombre" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "nombre" ],
+        "type" : "object"
+      },
+      "TipoConfigurado" : {
+        "properties" : {
+          "codigo" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UsuarioResumen" : {
+        "properties" : {
+          "apellido" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "correoVerificado" : {
+            "type" : "boolean"
+          },
+          "cuentaActiva" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "restringido" : {
+            "type" : "boolean"
+          },
+          "rol" : {
+            "enum" : [ "ADMINISTRADOR", "ANFITRION", "HUESPED" ],
+            "type" : "string"
+          },
+          "telefono" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UsuarioSesion" : {
+        "properties" : {
+          "correo" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "rol" : {
+            "enum" : [ "ADMINISTRADOR", "ANFITRION", "HUESPED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      }
+    },
+    "securitySchemes" : {
+      "jwt" : {
+        "bearerFormat" : "JWT",
+        "scheme" : "bearer",
+        "type" : "http"
+      }
+    }
+  },
+  "info" : {
+    "description" : "API de Inversiones LR. Los endpoints con candado exigen un token JWT.",
+    "title" : "Marketplace de alojamientos - API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/v1/admin/auditoria" : {
+      "get" : {
+        "operationId" : "consultarAuditoria",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "filtros",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/FiltrosAuditoria"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/EventoAuditoria"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/dashboard" : {
+      "get" : {
+        "operationId" : "consultarDashboard",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "desde",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "hasta",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Indicadores"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/publicaciones" : {
+      "get" : {
+        "operationId" : "todas",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "estado",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "ACTIVA", "BLOQUEADA", "BORRADOR", "PAUSADA", "PENDIENTE_REVISION" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PublicacionVista"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/admin/publicaciones/{id}/aprobar" : {
+      "post" : {
+        "operationId" : "aprobar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/admin/publicaciones/{id}/bloqueo" : {
+      "post" : {
+        "operationId" : "bloquearPublicacion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MotivoComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/publicaciones/{id}/rechazar" : {
+      "post" : {
+        "operationId" : "rechazar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RechazoComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/admin/reportes" : {
+      "get" : {
+        "operationId" : "exportarReporte",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "ciudad",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "desde",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "formato",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "EXCEL", "PDF" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "hasta",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "tipo",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "INGRESOS_DEMANDA", "PUBLICACIONES", "RESERVAS", "USUARIOS" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/resenas/{id}/ocultamiento" : {
+      "post" : {
+        "operationId" : "ocultarResena",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/tarifas" : {
+      "get" : {
+        "operationId" : "consultarTarifas",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfiguracionTarifas"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      },
+      "put" : {
+        "operationId" : "actualizarTarifas",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfiguracionTarifas"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/tipos-alojamiento" : {
+      "get" : {
+        "operationId" : "listarTipos",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TipoAlojamiento"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      },
+      "post" : {
+        "operationId" : "agregarTipo",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TipoAlojamientoComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TipoAlojamiento"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/tipos-alojamiento/{id}" : {
+      "put" : {
+        "operationId" : "editarTipo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TipoAlojamientoComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TipoAlojamiento"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/usuarios" : {
+      "get" : {
+        "operationId" : "listarUsuarios",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/UsuarioResumen"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/usuarios/{id}/restriccion" : {
+      "post" : {
+        "operationId" : "restringirUsuario",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MotivoComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/alojamientos" : {
+      "get" : {
+        "operationId" : "buscar",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "filtros",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/FiltrosBusqueda"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pagina",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "tamano",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaginaAlojamientos"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-busqueda" ]
+      }
+    },
+    "/api/v1/alojamientos/{id}" : {
+      "get" : {
+        "operationId" : "consultarDetalle",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Detalle"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-busqueda" ]
+      }
+    },
+    "/api/v1/auth/login" : {
+      "post" : {
+        "operationId" : "iniciarSesion",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CredencialesComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Sesion"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      }
+    },
+    "/api/v1/auth/password/recover" : {
+      "post" : {
+        "operationId" : "solicitarRecuperacion",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CorreoComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      }
+    },
+    "/api/v1/auth/password/reset" : {
+      "post" : {
+        "operationId" : "restablecerContrasena",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RestablecerContrasenaComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      }
+    },
+    "/api/v1/auth/register" : {
+      "post" : {
+        "operationId" : "registrar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegistroComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UsuarioResumen"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      }
+    },
+    "/api/v1/auth/register/code" : {
+      "post" : {
+        "operationId" : "solicitarCodigoRegistro",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CorreoComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      }
+    },
+    "/api/v1/catalogos" : {
+      "get" : {
+        "operationId" : "consultarCatalogos",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Catalogos"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/configuracion/tipos-alojamiento" : {
+      "get" : {
+        "operationId" : "listarTiposActivos",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TipoConfigurado"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-configuracion" ]
+      }
+    },
+    "/api/v1/cotizaciones" : {
+      "post" : {
+        "operationId" : "cotizar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SolicitudCotizacion"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Desglose"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-cotizacion" ]
+      }
+    },
+    "/api/v1/notificaciones" : {
+      "get" : {
+        "operationId" : "consultar_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Bandeja"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-notificaciones" ]
+      }
+    },
+    "/api/v1/notificaciones/lectura" : {
+      "post" : {
+        "operationId" : "marcarTodasLeidas",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-notificaciones" ]
+      }
+    },
+    "/api/v1/notificaciones/{id}/lectura" : {
+      "post" : {
+        "operationId" : "marcarLeida",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-notificaciones" ]
+      }
+    },
+    "/api/v1/publicaciones" : {
+      "post" : {
+        "operationId" : "crear",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DatosPublicacionComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/publicaciones/mias" : {
+      "get" : {
+        "operationId" : "mias",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PublicacionVista"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/publicaciones/{id}" : {
+      "get" : {
+        "operationId" : "consultar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      },
+      "put" : {
+        "operationId" : "editar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DatosPublicacionComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/publicaciones/{id}/disponibilidad" : {
+      "get" : {
+        "operationId" : "disponibilidad",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "desde",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "hasta",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Disponibilidad"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      },
+      "put" : {
+        "operationId" : "cambiarDisponibilidad",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CambioDisponibilidad"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Disponibilidad"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/publicaciones/{id}/pausar" : {
+      "post" : {
+        "operationId" : "pausar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/publicaciones/{id}/reactivar" : {
+      "post" : {
+        "operationId" : "reactivar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/publicaciones/{id}/solicitar-activacion" : {
+      "post" : {
+        "operationId" : "solicitarActivacion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicacionVista"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-publicaciones" ]
+      }
+    },
+    "/api/v1/publicaciones/{publicacionId}/resenas" : {
+      "get" : {
+        "operationId" : "consultar_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "publicacionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ResenaVisible"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-resenas" ]
+      }
+    },
+    "/api/v1/reservas" : {
+      "get" : {
+        "operationId" : "consultarHistorial",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "estado",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "CANCELADA", "COMPLETADA", "CONFIRMADA", "EN_REVISION" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ReservaVista"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-reservas" ]
+      },
+      "post" : {
+        "operationId" : "confirmar",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmarReservaComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReservaConfirmada"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "controlador-reservas" ]
+      }
+    },
+    "/api/v1/reservas/{reservaId}/cancelacion" : {
+      "post" : {
+        "operationId" : "cancelar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "reservaId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CancelarReservaComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Cancelacion"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-cancelaciones" ]
+      }
+    },
+    "/api/v1/reservas/{reservaId}/cancelacion/estimacion" : {
+      "get" : {
+        "operationId" : "estimarDevolucion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "reservaId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EstimacionDevolucion"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-cancelaciones" ]
+      }
+    },
+    "/api/v1/reservas/{reservaId}/resena" : {
+      "post" : {
+        "operationId" : "publicar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "reservaId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PublicarResenaComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResenaVisible"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "controlador-resenas" ]
+      }
+    },
+    "/api/v1/usuarios/me" : {
+      "get" : {
+        "operationId" : "consultarPerfil",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Perfil"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      },
+      "put" : {
+        "operationId" : "actualizarPerfil",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PerfilComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Perfil"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      }
+    },
+    "/api/v1/usuarios/me/estado" : {
+      "patch" : {
+        "operationId" : "cambiarEstadoCuenta",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EstadoCuentaComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Perfil"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-usuarios" ]
+      }
+    }
+  },
+  "security" : [ {
+    "jwt" : [ ]
+  } ],
+  "servers" : [ {
+    "description" : "Generated server url",
+    "url" : "http://localhost"
+  } ]
+}
