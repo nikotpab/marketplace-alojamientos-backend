@@ -283,9 +283,9 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     @Override
-    public DatosContacto datosContacto(UsuarioId usuarioId) {
-        Usuario usuario = buscar(usuarioId.valor());
-        return new DatosContacto(usuario.telefono(), usuario.correo());
+    public Map<UsuarioId, DatosContacto> datosContacto(Collection<UsuarioId> usuarioIds) {
+        return usuarios.buscarPorIds(usuarioIds.stream().map(UsuarioId::valor).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(usuario -> new UsuarioId(usuario.id()), usuario -> new DatosContacto(usuario.telefono(), usuario.correo())));
     }
 
     public record RegistroComando(@NotBlank @Size(max = 120) String nombre,

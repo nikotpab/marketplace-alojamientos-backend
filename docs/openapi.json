@@ -117,6 +117,24 @@
         },
         "type" : "object"
       },
+      "CancelacionResumen" : {
+        "properties" : {
+          "estadoFinal" : {
+            "type" : "string"
+          },
+          "fecha" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "valorDevolucion" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "CancelarReservaComando" : {
         "properties" : {
           "motivo" : {
@@ -931,6 +949,9 @@
           "alojamiento" : {
             "type" : "string"
           },
+          "cancelacion" : {
+            "$ref" : "#/components/schemas/CancelacionResumen"
+          },
           "codigo" : {
             "type" : "string"
           },
@@ -957,9 +978,15 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "nombreHuesped" : {
+            "type" : "string"
+          },
           "publicacionId" : {
             "format" : "uuid",
             "type" : "string"
+          },
+          "resenada" : {
+            "type" : "boolean"
           },
           "salida" : {
             "format" : "date",
