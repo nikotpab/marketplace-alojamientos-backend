@@ -117,4 +117,19 @@ public class RepositorioUsuariosSql implements RepositorioUsuarios {
                 bloqueadoHasta == null ? null : bloqueadoHasta.toInstant(),
                 fila.getBoolean("correo_verificado"));
     }
+
+    @Override
+    public Optional<Integer> versionSesionVigente(UUID id) {
+        return jdbc.sql("SELECT version_sesion FROM usuario WHERE id = :id AND cuenta_activa AND NOT restringido")
+                .param("id", id)
+                .query(Integer.class)
+                .optional();
+    }
+
+    @Override
+    public void invalidarSesiones(UUID id) {
+        jdbc.sql("UPDATE usuario SET version_sesion = version_sesion + 1 WHERE id = :id")
+                .param("id", id)
+                .update();
+    }
 }
