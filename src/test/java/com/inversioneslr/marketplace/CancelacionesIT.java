@@ -68,6 +68,25 @@ class CancelacionesIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.valorDevolucion").value(150000));
     }
 
+    /** SCRUM-118 · pendiente 11: su alojamiento fue bloqueado, así que se devuelve todo, también la tarifa de servicio. */
+    @Test
+    void unaReservaEnRevisionSeCancelaConDevolucionTotal() throws Exception {
+        UUID reserva = reservar(1, "EN_REVISION");
+        String referencia = pagar(reserva);
+
+        mvc.perform(get("/api/v1/reservas/{id}/cancelacion/estimacion", reserva).header("Authorization", sesionDe(huesped, Rol.HUESPED)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valorDevolucion").value(330000))
+                .andExpect(jsonPath("$.politica").value("Devolución total: el alojamiento está en revisión"));
+        cancelar(reserva, "No quiero esperar la revisión")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valorDevolucion").value(330000))
+                .andExpect(jsonPath("$.estadoFinal").value("DEVOLUCION_PROCESADA"));
+
+        verify(pasarela).devolver(referencia, new BigDecimal("330000"));
+        assertThat(texto("SELECT estado FROM reserva WHERE id = ?", reserva)).isEqualTo("CANCELADA");
+    }
+
     @Test
     void otroHuespedNoPuedeConsultarLaEstimacion() throws Exception {
         UUID reserva = reservar(10, "CONFIRMADA");

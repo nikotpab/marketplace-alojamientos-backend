@@ -171,9 +171,9 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     /**
-     * CU-07: solo el anfitrión propietario o un administrador. Conserva el estado: si editar una publicación
-     * activa debe devolverla a revisión sigue sin definirse (pendiente 12 del README). Solo un borrador
-     * puede quedar incompleto.
+     * CU-07: solo el anfitrión propietario o un administrador. Si el anfitrión edita una publicación activa o pausada,
+     * vuelve a revisión (SCRUM-118, pendiente 12 del README); lo que edita un administrador conserva el estado. Solo un
+     * borrador puede quedar incompleto.
      */
     @Transactional
     public PublicacionVista editar(UsuarioAutenticado usuario, UUID publicacionId, DatosPublicacionComando datos) {
@@ -182,8 +182,14 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         if (editada.estado() != EstadoPublicacion.BORRADOR) {
             editada.exigirInformacionMinima();
         }
+        if (usuario.rol() != Rol.ADMINISTRADOR) {
+            editada = editada.revisarTrasEdicion();
+        }
         publicaciones.guardar(editada);
         eventos.publicar(new PublicacionEditada(usuario.id(), publicacionId));
+        if (editada.estado() != actual.estado()) {
+            eventos.publicar(new PublicacionEnviadaARevision(usuario.id(), publicacionId));
+        }
         return vista(publicacionId);
     }
 

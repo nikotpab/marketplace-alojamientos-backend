@@ -20,6 +20,7 @@ import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.FachadaReservas.DatosReserva;
 import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -37,6 +38,9 @@ public class ServicioCancelaciones {
     private final FachadaReservas reservas;
     private final FachadaPublicaciones publicaciones;
     private final FachadaPagos pagos;
+    /** La que se informa en la estimación de una reserva en revisión, en lugar de la política de la publicación. */
+    static final String DEVOLUCION_TOTAL = "Devolución total: el alojamiento está en revisión";
+
     private final PublicadorEventos eventos;
     private final TransactionTemplate transaccion;
     private final Clock reloj;
@@ -57,7 +61,8 @@ public class ServicioCancelaciones {
     public EstimacionDevolucion estimarDevolucion(UUID huespedId, UUID reservaId) {
         DatosReserva reserva = reservaCancelable(huespedId, reservaId);
         String politica = publicaciones.datosPublicacion(new PublicacionId(reserva.publicacionId())).politicaCancelacion();
-        return new EstimacionDevolucion(devolucion(reserva, politica), politica);
+        String aplicada = reserva.estado() == EstadoReserva.EN_REVISION ? DEVOLUCION_TOTAL : politica;
+        return new EstimacionDevolucion(devolucion(reserva, politica), aplicada);
     }
 
     private DatosReserva reservaCancelable(UUID huespedId, UUID reservaId) {
@@ -65,14 +70,20 @@ public class ServicioCancelaciones {
         if (!reserva.huespedId().equals(huespedId)) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.ACCESO_DENEGADO, "Esta reserva no es tuya.");
         }
-        if (reserva.estado() != EstadoReserva.CONFIRMADA) {
-            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo se puede cancelar una reserva confirmada.");
+        if (reserva.estado() != EstadoReserva.CONFIRMADA && reserva.estado() != EstadoReserva.EN_REVISION) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo se puede cancelar una reserva confirmada o en revisión.");
         }
         return reserva;
     }
 
-    /** RF-23: según la política de la publicación y la fecha de hoy. */
+    /**
+     * RF-23: según la política de la publicación y la fecha de hoy. Una reserva en revisión se devuelve completa, con la
+     * tarifa de servicio, porque su alojamiento fue bloqueado y el huésped no tiene la culpa (SCRUM-118, pendiente 11).
+     */
     private BigDecimal devolucion(DatosReserva reserva, String politica) {
+        if (reserva.estado() == EstadoReserva.EN_REVISION) {
+            return reserva.total().setScale(0, RoundingMode.HALF_UP);
+        }
         ReservaCancelable cancelable = new ReservaCancelable(reserva.fechaLlegada(), reserva.total(), reserva.tarifaServicio());
         return PoliticaCancelacion.porNombre(politica).calcularDevolucion(cancelable, LocalDate.now(reloj));
     }
@@ -80,8 +91,8 @@ public class ServicioCancelaciones {
     /**
      * CU-20 · SEC-04.
      * <ol>
-     * <li>Validar que la reserva sea del huésped y esté CONFIRMADA.</li>
-     * <li>Calcular la devolución con la política de la publicación.</li>
+     * <li>Validar que la reserva sea del huésped y esté CONFIRMADA o EN_REVISION.</li>
+     * <li>Calcular la devolución con la política de la publicación, o completa si está en revisión.</li>
      * <li>Solicitar la devolución fuera de la transacción.</li>
      * <li>En una sola transacción: reserva CANCELADA, cancelación, auditoría y eventos. Al dejar de estar CONFIRMADA,
      * la reserva libera el periodo (RF-13).</li>

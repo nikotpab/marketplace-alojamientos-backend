@@ -323,14 +323,16 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`, y la cotización la cobra en 0 hasta que el administrador le asigne un porcentaje en `PUT /api/v1/admin/tarifas`.
 6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase. Decisión tomada en SCRUM-38: mientras no se definan, una política sin clase responde 409 con un mensaje claro, en vez de inventar reglas.
 7. **Código de recuperación (CU-03).** Resuelto en SCRUM-110: el enlace llega por correo y la API ya no devuelve el código. Los tokens se guardan en `token_correo`, solo con su hash. Ver "Correos".
-8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
+8. **Retención de claves de idempotencia (ADR-04).** Decisión tomada en SCRUM-118: 24 horas, lo mínimo que Stripe conserva las suyas (propuesta de SCRUM-34). Cada hora, `ServicioReservas.eliminarSolicitudesVencidas` borra las solicitudes vencidas y `ServicioPagos.liberarClavesVencidas` quita la clave de los pagos ya resueltos. Así, un reintento con la misma clave después de 24 h es un intento nuevo y no sobrescribe el pago anterior. Los pagos `PENDIENTE` conservan la clave, porque la reconciliación la usa.
 9. **Duración del JWT y revocación.** Por ahora los tokens duran 8 horas. Un usuario restringido o desactivado conserva su token hasta que venza, salvo que se verifique en cada petición.
 
 **Transiciones sin caso de uso**
 
 10. Reactivar una cuenta desactivada (CU-05) y desbloquear una publicación. Por ahora una publicación pausada (CU-10) vuelve a ACTIVA sin pasar por revisión, y una bloqueada no se puede reactivar.
-11. Resolver una reserva `EN_REVISION`. Además, la restricción anti-solape solo cubre `CONFIRMADA`, como pide ADR-03.
-12. Si editar una publicación activa la devuelve a revisión (CU-07).
+11. Resolver una reserva `EN_REVISION`. Además, la restricción anti-solape solo cubre `CONFIRMADA`, como pide ADR-03. Decisión tomada en SCRUM-112 y SCRUM-118:
+    - al desbloquear la publicación, sus reservas en revisión vuelven a `CONFIRMADA` y se avisa a cada huésped. Mientras estuvo bloqueada nadie pudo reservar, así que no chocan con la restricción anti-solape;
+    - mientras tanto, el huésped puede cancelarla con devolución total, incluida la tarifa de servicio, porque el bloqueo no es culpa suya.
+12. Si editar una publicación activa la devuelve a revisión (CU-07). Decisión tomada en SCRUM-118: si el anfitrión edita una publicación `ACTIVA` o `PAUSADA`, vuelve a `PENDIENTE_REVISION` y sale de la búsqueda hasta que se apruebe. Una pausada también, porque se reactiva sin revisión y sería un atajo. Las reservas que ya tiene no cambian, y lo que edita un administrador conserva el estado.
 13. Pasar una reserva a `COMPLETADA`: ningún caso de uso lo define y RF-25 lo necesita. Decisión tomada en SCRUM-40: cada noche a la 1:00, hora de Bogotá, `ServicioReservas.completarReservasFinalizadas` pasa a `COMPLETADA` las confirmadas cuya fecha de salida ya pasó y avisa al huésped de que ya puede reseñar.
 
 **Despliegue**
