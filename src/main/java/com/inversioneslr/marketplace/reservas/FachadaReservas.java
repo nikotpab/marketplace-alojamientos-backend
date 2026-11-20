@@ -18,6 +18,9 @@ public interface FachadaReservas {
     /** CU-24: las reservas futuras se conservan y pasan a revisión manual. */
     void marcarFuturasEnRevision(PublicacionId publicacionId);
 
+    /** SCRUM-112: al desbloquear la publicación, sus reservas en revisión vuelven a CONFIRMADA. Se avisa a cada huésped. */
+    void restablecerEnRevision(PublicacionId publicacionId);
+
     /** SCRUM-142: huésped de cada reserva de la publicación, para que reseñas no lea la tabla reserva. */
     Map<ReservaId, UsuarioId> huespedPorReserva(PublicacionId publicacionId);
 

@@ -1299,6 +1299,26 @@
         "tags" : [ "controlador-administracion" ]
       }
     },
+    "/api/v1/admin/publicaciones/{id}/desbloqueo" : {
+      "post" : {
+        "operationId" : "desbloquearPublicacion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
     "/api/v1/admin/publicaciones/{id}/rechazar" : {
       "post" : {
         "operationId" : "rechazar",
@@ -1557,7 +1577,45 @@
         "tags" : [ "controlador-administracion" ]
       }
     },
+    "/api/v1/admin/usuarios/{id}/reactivacion" : {
+      "post" : {
+        "operationId" : "reactivarCuenta",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
     "/api/v1/admin/usuarios/{id}/restriccion" : {
+      "delete" : {
+        "operationId" : "levantarRestriccion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      },
       "post" : {
         "operationId" : "restringirUsuario",
         "parameters" : [ {

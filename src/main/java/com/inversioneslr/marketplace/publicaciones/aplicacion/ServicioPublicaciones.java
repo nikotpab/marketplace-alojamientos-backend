@@ -10,6 +10,7 @@ import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.Disponib
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionAprobada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionBloqueada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionCreada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionDesbloqueada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionEditada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionEnviadaARevision;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionPausada;
@@ -376,6 +377,13 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         Publicacion bloqueada = publicaciones.guardar(existente(publicacionId.valor()).bloquear(motivo));
         eventos.publicar(new PublicacionBloqueada(administradorId.valor(), publicacionId.valor(), bloqueada.motivoEstado(),
                 bloqueada.anfitrionId()));
+    }
+
+    @Override
+    @Transactional
+    public void desbloquear(UsuarioId administradorId, PublicacionId publicacionId) {
+        Publicacion desbloqueada = publicaciones.guardar(existente(publicacionId.valor()).desbloquear());
+        eventos.publicar(new PublicacionDesbloqueada(administradorId.valor(), publicacionId.valor(), desbloqueada.anfitrionId()));
     }
 
     /** CU-31: todos, también los inactivos, para la pantalla de configuración. */

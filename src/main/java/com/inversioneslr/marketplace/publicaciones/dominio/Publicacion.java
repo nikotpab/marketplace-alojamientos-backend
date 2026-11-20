@@ -108,6 +108,14 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.BLOQUEADA, motivo.trim());
     }
 
+    /** SCRUM-112: el administrador revierte el bloqueo y la publicación vuelve a ACTIVA, sin pasar por revisión. */
+    public Publicacion desbloquear() {
+        if (estado != EstadoPublicacion.BLOQUEADA) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo una publicación bloqueada puede desbloquearse.");
+        }
+        return conEstado(EstadoPublicacion.ACTIVA, null);
+    }
+
     private Publicacion conEstado(EstadoPublicacion nuevo, String motivo) {
         return new Publicacion(id, anfitrionId, tipoAlojamientoId, politicaCancelacionId, titulo, descripcion, ciudad,
                 ubicacionTextual, capacidad, precioNoche, servicios, reglas, imagenes, nuevo, motivo);

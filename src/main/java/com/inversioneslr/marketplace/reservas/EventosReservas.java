@@ -147,4 +147,27 @@ public interface EventosReservas {
             return Map.of("referencia", referencia, TOTAL, total);
         }
     }
+
+    /** SCRUM-112: su alojamiento fue desbloqueado y la reserva vuelve de EN_REVISION a CONFIRMADA. */
+    record ReservaRestablecida(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements DeReserva {
+
+        public ReservaRestablecida(UUID reservaId, UUID publicacionId, UUID huespedId) {
+            this(UUID.randomUUID(), reservaId, publicacionId, huespedId);
+        }
+
+        @Override
+        public UUID actorId() {
+            return null;
+        }
+
+        @Override
+        public Map<String, Object> detalle() {
+            return Map.of("publicacionId", publicacionId);
+        }
+
+        @Override
+        public List<UUID> destinatarios() {
+            return List.of(huespedId);
+        }
+    }
 }

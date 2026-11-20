@@ -18,6 +18,7 @@ import com.inversioneslr.marketplace.reservas.EventosReservas.PagoFallido;
 import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaCompletada;
 import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaConfirmada;
 import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaEnRevision;
+import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaRestablecida;
 import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
@@ -255,6 +256,12 @@ public class ServicioReservas implements FachadaReservas {
     public void marcarFuturasEnRevision(PublicacionId publicacionId) {
         reservas.marcarFuturasEnRevision(publicacionId.valor(), LocalDate.now(reloj)).forEach(reserva ->
                 eventos.publicar(new ReservaEnRevision(reserva.id(), publicacionId.valor(), reserva.huespedId())));
+    }
+
+    @Override
+    public void restablecerEnRevision(PublicacionId publicacionId) {
+        reservas.restablecerEnRevision(publicacionId.valor()).forEach(reserva ->
+                eventos.publicar(new ReservaRestablecida(reserva.id(), publicacionId.valor(), reserva.huespedId())));
     }
 
     @Override

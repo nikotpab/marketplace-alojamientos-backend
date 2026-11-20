@@ -7,11 +7,13 @@ import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.ContrasenaRestablecida;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaReactivada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaActivada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaDesactivada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.InicioSesionExitoso;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.InicioSesionFallido;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.PerfilActualizado;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.RestriccionLevantada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.RecuperacionSolicitada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.UsuarioRegistrado;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.UsuarioRestringido;
@@ -274,6 +276,20 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     public void restringir(UsuarioId administradorId, UsuarioId usuarioId, String motivo) {
         Usuario restringido = usuarios.guardar(buscar(usuarioId.valor()).restringir(motivo));
         eventos.publicar(new UsuarioRestringido(administradorId.valor(), usuarioId.valor(), restringido.motivoRestriccion()));
+    }
+
+    @Override
+    @Transactional
+    public void levantarRestriccion(UsuarioId administradorId, UsuarioId usuarioId) {
+        usuarios.guardar(buscar(usuarioId.valor()).levantarRestriccion());
+        eventos.publicar(new RestriccionLevantada(administradorId.valor(), usuarioId.valor()));
+    }
+
+    @Override
+    @Transactional
+    public void reactivar(UsuarioId administradorId, UsuarioId usuarioId) {
+        usuarios.guardar(buscar(usuarioId.valor()).reactivar());
+        eventos.publicar(new CuentaReactivada(administradorId.valor(), usuarioId.valor()));
     }
 
     @Override

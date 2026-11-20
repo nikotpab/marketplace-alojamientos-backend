@@ -54,6 +54,23 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
         return conEstado(true);
     }
 
+    /** SCRUM-112: el administrador levanta la restricción, y el motivo deja de aplicar. */
+    public Usuario levantarRestriccion() {
+        if (!restringido) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "El usuario no está restringido.");
+        }
+        return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, cuentaActiva, false, null,
+                intentosFallidos, bloqueadoHasta, correoVerificado);
+    }
+
+    /** SCRUM-112 · CU-05: la reactivación que hace el administrador; el usuario no puede, porque ya no inicia sesión. */
+    public Usuario reactivar() {
+        if (cuentaActiva) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La cuenta ya está activa.");
+        }
+        return conEstado(true);
+    }
+
     private Usuario conEstado(boolean activa) {
         return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, activa, restringido,
                 motivoRestriccion, intentosFallidos, bloqueadoHasta, correoVerificado);
