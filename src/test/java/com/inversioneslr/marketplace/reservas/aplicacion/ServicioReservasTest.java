@@ -26,6 +26,8 @@ import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleExcepti
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
+import com.inversioneslr.marketplace.reservas.CancelacionesDeReservas;
+import com.inversioneslr.marketplace.reservas.ResenasDeReservas;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -61,7 +63,7 @@ class ServicioReservasTest {
     private static final LocalDate LLEGADA = LocalDate.of(2026, 12, 1);
     private static final LocalDate SALIDA = LocalDate.of(2026, 12, 4);
     private static final BigDecimal TOTAL = new BigDecimal("315000");
-    private static final ConfirmarReservaComando COMANDO = new ConfirmarReservaComando(PUBLICACION, LLEGADA, SALIDA, 2, List.of());
+    private static final ConfirmarReservaComando COMANDO = new ConfirmarReservaComando(PUBLICACION, LLEGADA, SALIDA, 2, List.of(), null);
 
     @Mock
     private RepositorioReservas reservas;
@@ -74,6 +76,10 @@ class ServicioReservasTest {
     @Mock
     private FachadaUsuarios usuarios;
     @Mock
+    private CancelacionesDeReservas cancelaciones;
+    @Mock
+    private ResenasDeReservas resenas;
+    @Mock
     private PublicadorEventos eventos;
     @Mock
     private PlatformTransactionManager transacciones;
@@ -83,7 +89,7 @@ class ServicioReservasTest {
 
     @BeforeEach
     void preparar() {
-        servicio = new ServicioReservas(reservas, publicaciones, cotizacion, pagos, usuarios, eventos,
+        servicio = new ServicioReservas(reservas, publicaciones, cotizacion, pagos, usuarios, cancelaciones, resenas, eventos,
                 new TransactionTemplate(transacciones), RELOJ, json);
     }
 
@@ -124,7 +130,7 @@ class ServicioReservasTest {
     @Test
     void unPagoRechazadoNoCreaLaReservaYPublicaPagoFallido() {
         prepararPeriodoDisponible();
-        when(pagos.cobrar(TOTAL, CLAVE)).thenThrow(new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_RECHAZADO, "Pago rechazado."));
+        when(pagos.cobrar(TOTAL, CLAVE, null)).thenThrow(new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_RECHAZADO, "Pago rechazado."));
 
         assertThatThrownBy(() -> servicio.confirmarReserva(HUESPED, COMANDO, CLAVE))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
@@ -142,7 +148,7 @@ class ServicioReservasTest {
     @Test
     void siOtraReservaGanaElPeriodoDevuelveElCobroYRecuerdaElRechazo() {
         prepararPeriodoDisponible();
-        when(pagos.cobrar(TOTAL, CLAVE)).thenReturn(REFERENCIA);
+        when(pagos.cobrar(TOTAL, CLAVE, null)).thenReturn(REFERENCIA);
         when(reservas.registrarSolicitud(eq(CLAVE), eq(HUESPED), any())).thenReturn(true);
         when(reservas.guardar(any(), anyList())).thenThrow(new PeriodoNoDisponibleException());
 
@@ -158,7 +164,7 @@ class ServicioReservasTest {
     @Test
     void conElPagoAprobadoGuardaLaReservaElPagoLaClaveYPublicaReservaConfirmada() {
         prepararPeriodoDisponible();
-        when(pagos.cobrar(TOTAL, CLAVE)).thenReturn(REFERENCIA);
+        when(pagos.cobrar(TOTAL, CLAVE, null)).thenReturn(REFERENCIA);
         when(reservas.registrarSolicitud(eq(CLAVE), eq(HUESPED), any())).thenReturn(true);
         when(reservas.guardar(any(), anyList())).thenAnswer(llamada -> llamada.<Reserva>getArgument(0).conCodigo("LR-2026-00042"));
 

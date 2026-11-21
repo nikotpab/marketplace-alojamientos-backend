@@ -16,8 +16,9 @@ public record Reserva(UUID id, String codigo, UUID huespedId, UUID publicacionId
                       BigDecimal tarifaLimpieza, BigDecimal tarifaServicio, BigDecimal descuento, BigDecimal total) {
 
     /** Solo se cancela una reserva confirmada. Al salir de CONFIRMADA, la restricción anti-solape libera el periodo. */
+    /** También una en revisión: su alojamiento fue bloqueado y el huésped puede no esperar (SCRUM-118). */
     public Reserva cancelar() {
-        if (estado != EstadoReserva.CONFIRMADA) {
+        if (estado != EstadoReserva.CONFIRMADA && estado != EstadoReserva.EN_REVISION) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La reserva está en estado " + estado + " y no se puede cancelar.");
         }
         return new Reserva(id, codigo, huespedId, publicacionId, fechaLlegada, fechaSalida, numeroHuespedes, EstadoReserva.CANCELADA,

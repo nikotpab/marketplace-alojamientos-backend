@@ -116,6 +116,14 @@ public class RepositorioResenasSql implements RepositorioResenas {
                 .list();
     }
 
+    @Override
+    public List<UUID> reservasConResena(Collection<UUID> reservaIds) {
+        return jdbc.sql("SELECT reserva_id FROM resena WHERE reserva_id IN (:reservas)")
+                .param("reservas", reservaIds)
+                .query(UUID.class)
+                .list();
+    }
+
     private static ResenaGuardada aGuardada(ResultSet fila, int numero) throws SQLException {
         return new ResenaGuardada(
                 fila.getObject("id", UUID.class),

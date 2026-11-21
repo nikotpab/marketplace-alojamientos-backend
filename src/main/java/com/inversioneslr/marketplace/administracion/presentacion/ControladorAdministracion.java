@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,6 +53,12 @@ public class ControladorAdministracion {
         administracion.bloquearPublicacion(administrador.id(), id, comando);
     }
 
+    @PostMapping("/publicaciones/{id}/desbloqueo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void desbloquearPublicacion(@AuthenticationPrincipal UsuarioAutenticado administrador, @PathVariable UUID id) {
+        administracion.desbloquearPublicacion(administrador.id(), id);
+    }
+
     @GetMapping("/usuarios")
     public List<UsuarioResumen> listarUsuarios() {
         return administracion.listarUsuarios();
@@ -67,6 +74,18 @@ public class ControladorAdministracion {
     @GetMapping("/resenas/reportadas")
     public List<FachadaResenas.ResenaConReportes> listarResenasReportadas() {
         return administracion.listarResenasReportadas();
+    }
+
+    @DeleteMapping("/usuarios/{id}/restriccion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void levantarRestriccion(@AuthenticationPrincipal UsuarioAutenticado administrador, @PathVariable UUID id) {
+        administracion.levantarRestriccion(administrador.id(), id);
+    }
+
+    @PostMapping("/usuarios/{id}/reactivacion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reactivarCuenta(@AuthenticationPrincipal UsuarioAutenticado administrador, @PathVariable UUID id) {
+        administracion.reactivarCuenta(administrador.id(), id);
     }
 
     @PostMapping("/resenas/{id}/ocultamiento")

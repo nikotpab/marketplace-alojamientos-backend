@@ -233,4 +233,12 @@ public class RepositorioReservasSql implements RepositorioReservas {
                 .query(RepositorioReservasSql::aReserva)
                 .list();
     }
+
+    @Override
+    public List<Reserva> restablecerEnRevision(UUID publicacionId) {
+        return jdbc.sql("UPDATE reserva SET estado = 'CONFIRMADA' WHERE publicacion_id = :publicacion AND estado = 'EN_REVISION' RETURNING *")
+                .param("publicacion", publicacionId)
+                .query(RepositorioReservasSql::aReserva)
+                .list();
+    }
 }

@@ -62,4 +62,12 @@ public interface RepositorioReservas {
      * @return las reservas que cambiaron
      */
     List<Reserva> marcarFuturasEnRevision(UUID publicacionId, LocalDate desde);
+
+    /**
+     * SCRUM-112: devuelve a CONFIRMADA las reservas EN_REVISION de la publicación. Mientras estuvo bloqueada no se pudo
+     * reservar, así que no chocan con la restricción anti-solape.
+     *
+     * @return las reservas que cambiaron
+     */
+    List<Reserva> restablecerEnRevision(UUID publicacionId);
 }
