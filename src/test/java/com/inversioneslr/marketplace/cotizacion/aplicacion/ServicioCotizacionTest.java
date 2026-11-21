@@ -42,7 +42,7 @@ class ServicioCotizacionTest {
     private static final UUID PUBLICACION = UUID.randomUUID();
     private static final UUID ADMINISTRADOR = UUID.randomUUID();
     private static final ServicioAdicional SALIDA_TARDIA = new ServicioAdicional(UUID.randomUUID(), "Salida tardía", new BigDecimal("50000"));
-    /** Una LIMPIEZA sin definir en la base llega aquí en 0 (RepositorioTarifasSql, pendiente 5 del README). */
+    /** Con la limpieza en 0, como si el administrador la quitara; sin definir en la base, RepositorioTarifasSql la lee en 0. */
     private static final ConfiguracionTarifas TARIFAS = new ConfiguracionTarifas(BigDecimal.ZERO, new BigDecimal("10"),
             new BigDecimal("5"), new BigDecimal("10"), 7);
 

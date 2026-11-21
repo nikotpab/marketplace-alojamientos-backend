@@ -7,11 +7,13 @@ import com.inversioneslr.marketplace.compartido.Tokens;
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.ContrasenaRestablecida;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaReactivada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaActivada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.CuentaDesactivada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.InicioSesionExitoso;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.InicioSesionFallido;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.PerfilActualizado;
+import com.inversioneslr.marketplace.usuarios.EventosUsuarios.RestriccionLevantada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.RecuperacionSolicitada;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.UsuarioRegistrado;
 import com.inversioneslr.marketplace.usuarios.EventosUsuarios.UsuarioRestringido;
@@ -230,6 +232,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 .flatMap(usuarios::buscarPorId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(TOKEN, mensaje)));
         usuarios.guardar(usuario.cambiarContrasena(cifrador.encode(comando.contrasenaNueva())).verificarCorreo());
+        usuarios.invalidarSesiones(usuario.id());
         eventos.publicar(new ContrasenaRestablecida(usuario.id()));
     }
 
@@ -254,10 +257,17 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         return new Perfil(usuario.nombre(), usuario.apellido(), usuario.correo(), usuario.telefono(), usuario.rol(), usuario.cuentaActiva());
     }
 
-    /** CU-05: cada cambio de estado queda en la auditoría. Una cuenta desactivada no puede iniciar sesión. */
+    /**
+     * CU-05: cada cambio de estado queda en la auditoría. Una cuenta desactivada no puede iniciar sesión, y sus tokens
+     * dejan de servir en la siguiente petición (SCRUM-117).
+     */
+    @Transactional
     public Perfil cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
         Usuario actual = buscar(usuarioId);
         Usuario usuario = usuarios.guardar(comando.activo() ? actual.activar() : actual.desactivar());
+        if (!comando.activo()) {
+            usuarios.invalidarSesiones(usuarioId);
+        }
         eventos.publicar(comando.activo() ? new CuentaActivada(usuario.id()) : new CuentaDesactivada(usuario.id()));
         return perfil(usuario);
     }
@@ -268,12 +278,27 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         return usuarios.listar().stream().map(ServicioAutenticacion::resumen).toList();
     }
 
-    /** CU-25: queda en la auditoría con el motivo. */
+    /** CU-25: queda en la auditoría con el motivo. Los tokens del usuario dejan de servir de inmediato (SCRUM-117). */
     @Override
     @Transactional
     public void restringir(UsuarioId administradorId, UsuarioId usuarioId, String motivo) {
         Usuario restringido = usuarios.guardar(buscar(usuarioId.valor()).restringir(motivo));
+        usuarios.invalidarSesiones(usuarioId.valor());
         eventos.publicar(new UsuarioRestringido(administradorId.valor(), usuarioId.valor(), restringido.motivoRestriccion()));
+    }
+
+    @Override
+    @Transactional
+    public void levantarRestriccion(UsuarioId administradorId, UsuarioId usuarioId) {
+        usuarios.guardar(buscar(usuarioId.valor()).levantarRestriccion());
+        eventos.publicar(new RestriccionLevantada(administradorId.valor(), usuarioId.valor()));
+    }
+
+    @Override
+    @Transactional
+    public void reactivar(UsuarioId administradorId, UsuarioId usuarioId) {
+        usuarios.guardar(buscar(usuarioId.valor()).reactivar());
+        eventos.publicar(new CuentaReactivada(administradorId.valor(), usuarioId.valor()));
     }
 
     @Override
@@ -283,9 +308,9 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     @Override
-    public DatosContacto datosContacto(UsuarioId usuarioId) {
-        Usuario usuario = buscar(usuarioId.valor());
-        return new DatosContacto(usuario.telefono(), usuario.correo());
+    public Map<UsuarioId, DatosContacto> datosContacto(Collection<UsuarioId> usuarioIds) {
+        return usuarios.buscarPorIds(usuarioIds.stream().map(UsuarioId::valor).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(usuario -> new UsuarioId(usuario.id()), usuario -> new DatosContacto(usuario.telefono(), usuario.correo())));
     }
 
     public record RegistroComando(@NotBlank @Size(max = 120) String nombre,

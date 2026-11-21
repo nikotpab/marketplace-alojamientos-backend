@@ -1,13 +1,17 @@
-# Nodo de aplicación en EC2: Caddy y la API. La base de datos es RDS y no se expone.
-# Las variables de .env provienen de SSM Parameter Store.
+# Nodo de aplicación en la EC2: Caddy y la API. La base de datos es RDS y no se expone.
+# deploy/desplegar.sh escribe .env con los parámetros de SSM y elige la imagen de la API (SCRUM-121).
+name: marketplace
+
 services:
   marketplace-api:
-    image: ${IMAGEN_API}
+    image: ${IMAGEN_API:-marketplace-api:sin-desplegar}
     restart: always
     env_file: .env
     environment:
       # Los enlaces de los correos llevan al frontend publicado (SCRUM-109, SCRUM-110).
       URL_PUBLICA: https://${DOMINIO}
+    # La t4g.small tiene 2 GB: con este límite, la JVM (MaxRAMPercentage=75) deja memoria a Caddy y al sistema.
+    mem_limit: 1400m
     logging:
       driver: awslogs
       options:
@@ -23,9 +27,15 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./marketplace-web:/srv/marketplace-web:ro
+      # Directorios y no archivos sueltos: al reemplazar un archivo montado solo, el contenedor seguiría viendo el viejo.
+      - ./caddy:/etc/caddy:ro
+      - ./web:/srv/web:ro
       - caddy_datos:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 
 volumes:
   caddy_datos:

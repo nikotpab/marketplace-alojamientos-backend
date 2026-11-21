@@ -76,6 +76,9 @@ class ReservasModuleIT {
     @MockitoBean FachadaPagos pagos;
     @MockitoBean FachadaPublicaciones publicaciones;
     @MockitoBean FachadaUsuarios usuarios;
+    // SCRUM-113: los implementan cancelaciones y reseñas, que en STANDALONE no se cargan.
+    @MockitoBean CancelacionesDeReservas cancelaciones;
+    @MockitoBean ResenasDeReservas resenas;
     // Tokens está en el módulo usuarios (excluido en STANDALONE); necesario para ConfiguracionSeguridad.
     @MockitoBean Tokens tokens;
 

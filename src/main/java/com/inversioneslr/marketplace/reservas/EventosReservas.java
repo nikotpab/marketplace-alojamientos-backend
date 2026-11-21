@@ -27,6 +27,32 @@ public interface EventosReservas {
         }
     }
 
+    /**
+     * Un cambio de la reserva por la moderación de su publicación (bloquearla o desbloquearla). Lo provoca el sistema y
+     * se avisa al huésped.
+     */
+    interface PorModeracion extends DeReserva {
+
+        UUID publicacionId();
+
+        UUID huespedId();
+
+        @Override
+        default UUID actorId() {
+            return null;
+        }
+
+        @Override
+        default Map<String, Object> detalle() {
+            return Map.of("publicacionId", publicacionId());
+        }
+
+        @Override
+        default List<UUID> destinatarios() {
+            return List.of(huespedId());
+        }
+    }
+
     /** Un cobro que falló antes de que existiera la reserva: se registra sobre la publicación, con la causa como resultado. */
     interface FalloDeCobro extends EventoDominio {
 
@@ -112,25 +138,10 @@ public interface EventosReservas {
     }
 
     /** CU-24: la publicación fue bloqueada con esta reserva pendiente. */
-    record ReservaEnRevision(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements DeReserva {
+    record ReservaEnRevision(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements PorModeracion {
 
         public ReservaEnRevision(UUID reservaId, UUID publicacionId, UUID huespedId) {
             this(UUID.randomUUID(), reservaId, publicacionId, huespedId);
-        }
-
-        @Override
-        public UUID actorId() {
-            return null;
-        }
-
-        @Override
-        public Map<String, Object> detalle() {
-            return Map.of("publicacionId", publicacionId);
-        }
-
-        @Override
-        public List<UUID> destinatarios() {
-            return List.of(huespedId);
         }
     }
 
@@ -145,6 +156,14 @@ public interface EventosReservas {
         @Override
         public Map<String, Object> detalle() {
             return Map.of("referencia", referencia, TOTAL, total);
+        }
+    }
+
+    /** SCRUM-112: su alojamiento fue desbloqueado y la reserva vuelve de EN_REVISION a CONFIRMADA. */
+    record ReservaRestablecida(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements PorModeracion {
+
+        public ReservaRestablecida(UUID reservaId, UUID publicacionId, UUID huespedId) {
+            this(UUID.randomUUID(), reservaId, publicacionId, huespedId);
         }
     }
 }

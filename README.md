@@ -40,7 +40,7 @@ docker compose exec db psql -U marketplace_owner -d marketplace \
 
 Luego vuelve a iniciar sesión, porque el rol va en el token.
 
-El frontend agrega la versión: sus servicios llaman a `/api/...` y su interceptor (`version-api.interceptor.ts`) las convierte en `/api/v1/...`. En desarrollo, el proxy de Angular reenvía `/api` a `http://localhost:8080` sin reescribir la ruta, y en el servidor Caddy reenvía `/api/*` tal cual (`deploy/Caddyfile`). No hay que agregar un `uri replace` en Caddy: las peticiones quedarían en `/api/v1/v1/...`.
+El frontend agrega la versión: sus servicios llaman a `/api/...` y su interceptor (`version-api.interceptor.ts`) las convierte en `/api/v1/...`. En desarrollo, el proxy de Angular reenvía `/api` a `http://localhost:8080` sin reescribir la ruta, y en el servidor Caddy reenvía `/api/*` tal cual (`deploy/caddy/Caddyfile`). No hay que agregar un `uri replace` en Caddy: las peticiones quedarían en `/api/v1/v1/...`.
 
 ### Correos (SCRUM-151, SCRUM-110)
 
@@ -162,7 +162,7 @@ Cada evento es un record en la raíz del módulo que lo emite, agrupados en `Eve
 | ADR-07 Autorización | Tabla de rutas en `ConfiguracionSeguridad`, `ManejadorDenegaciones` |
 | ADR-08 Proveedor de pagos | `PasarelaPagos`, `ConfiguracionPagos` |
 | RNF-18, RNF-25 Logs | `FiltroCorrelacion`, `EnmascaradorLogs` |
-| RNF-26 HTTPS | `deploy/Caddyfile` |
+| RNF-26 HTTPS | `deploy/caddy/Caddyfile` |
 | RNF-27 Credenciales | `.env`, gitleaks en `.github/workflows/ci.yml` |
 | RNF-12 Reservas a medias | `ServicioPagos.revertirCobrosSinReserva` |
 | RNF-31 Nueva política | `PoliticaCancelacion` |
@@ -263,7 +263,7 @@ Contradicciones que hubo que resolver para poder escribir el esqueleto. Conviene
 16. **Confirmaciones simultáneas (ADR-03).** La restricción de exclusión sola no basta: con varios `INSERT` simultáneos por la misma publicación, PostgreSQL puede detectar un deadlock al verificarla y abortar solicitudes que debían rechazarse con "periodo no disponible". Antes del `INSERT`, cada confirmación toma un candado de transacción por publicación (`pg_advisory_xact_lock`), así que entran de a una. La restricción sigue siendo la garantía de no solape (SCRUM-102).
 17. **Verificación del correo (SCRUM-109, SCRUM-151).** Los documentos no la piden: CU-01 crea la cuenta lista para usarse. Se agregó para que nadie se registre con un correo ajeno, ahora que la recuperación de contraseña llega por correo. Desde SCRUM-151 el registro exige el código que llega al correo, así que la cuenta nace verificada; antes era un enlace que se usaba después de crearla. Las cuentas de esa época que no usaron el enlace siguen recibiendo 403 `CORREO_NO_VERIFICADO` (solo con la contraseña correcta, para no revelar el estado de la cuenta) y se verifican recuperando la contraseña. Las cuentas creadas por SQL (como el primer administrador) y las de los datos de demostración quedan verificadas: la columna nace en `true`.
 
-- **Lecturas entre módulos (SCRUM-142).** Cada módulo lee solo sus tablas; lo de otro módulo se pide a su fachada, en consultas por lote. Publicaciones no lee `reserva`: declara el puerto `OcupacionReservas`, que implementa reservas. La única excepción son `busqueda` y `administracion`, que son modelos de lectura: consultan tablas de otros módulos solo para leer, nunca escriben en ellas, y ningún otro módulo puede hacerlo.
+- **Lecturas entre módulos (SCRUM-142).** Cada módulo lee solo sus tablas; lo de otro módulo se pide a su fachada, en consultas por lote. Publicaciones no lee `reserva`: declara el puerto `OcupacionReservas`, que implementa reservas. Igual, el historial de reservas declara `CancelacionesDeReservas` y `ResenasDeReservas`, que implementan cancelaciones y reseñas (SCRUM-113). La única excepción son `busqueda` y `administracion`, que son modelos de lectura: consultan tablas de otros módulos solo para leer, nunca escriben en ellas, y ningún otro módulo puede hacerlo.
 
 ## Consultar los logs
 
@@ -295,6 +295,91 @@ fields @timestamp, logger_name, message, correlationId
 | sort @timestamp desc
 | limit 50
 ```
+
+## Despliegue en AWS
+
+La API y el frontend corren en una EC2 (t4g.small, Amazon Linux 2023) con Docker Compose: Caddy sirve el frontend y reenvía `/api/*` a la API, que usa RDS (`deploy/compose.yaml`). Cada push a `main` que pasa el CI se despliega solo (SCRUM-121):
+
+1. El job `desplegar` de `.github/workflows/ci.yml` entra a AWS por OIDC, sin llaves guardadas, construye la imagen para ARM y la publica en ECR como `marketplace-api:<commit>`.
+2. Envía a la EC2 el documento de SSM del stack, que solo acepta un commit como parámetro. El documento copia a `/opt/marketplace` los archivos de despliegue que trae la misma imagen y corre `deploy/desplegar.sh api <commit>`.
+3. `desplegar.sh`:
+   - escribe `.env` con los parámetros de `/marketplace/prod`; solo root lo lee y falla si falta alguno obligatorio;
+   - crea o actualiza en RDS el usuario de la aplicación;
+   - levanta la imagen nueva y espera a que su healthcheck quede sano;
+   - si no queda sana en 5 minutos, vuelve a la imagen anterior y el job falla.
+
+El frontend hace lo mismo con su propio workflow: publica `marketplace-web:<commit>`, y `desplegar.sh web <commit>` copia sus archivos a `web/versiones/<commit>`. Luego cambia de una vez el enlace `web/actual`, que es lo que sirve Caddy.
+
+Lo que imprime el despliegue queda en el log público de GitHub Actions: no muestra valores de parámetros ni logs de la API. Esos se ven en CloudWatch (ver "Consultar los logs").
+
+### Preparación (una sola vez)
+
+Requiere una identidad de AWS con permisos de CloudFormation, IAM, EC2 y SSM. `REGION=us-east-1` e `INSTANCIA=i-...`, el id de la EC2.
+
+1. **Stack de despliegue.** Crea el rol y el perfil de la instancia, el grupo de seguridad web, los repositorios ECR, el grupo de logs `/marketplace/api`, el proveedor OIDC de GitHub, un rol por repositorio y los dos documentos de SSM:
+
+   ```bash
+   aws cloudformation deploy --region $REGION --stack-name marketplace-despliegue \
+     --template-file deploy/aws/despliegue.yaml --capabilities CAPABILITY_IAM \
+     --parameter-overrides InstanciaId=$INSTANCIA VpcId=<vpc de la instancia>
+   aws cloudformation describe-stacks --region $REGION --stack-name marketplace-despliegue --query 'Stacks[0].Outputs'
+   ```
+
+   Si la cuenta ya tiene el proveedor OIDC de GitHub, se pasa su ARN en `ProveedorOidcExistente`.
+
+2. **Perfil y grupo de seguridad de la EC2.** Con la instancia detenida o encendida:
+
+   ```bash
+   aws ec2 associate-iam-instance-profile --region $REGION --instance-id $INSTANCIA \
+     --iam-instance-profile Name=<salida PerfilInstancia>
+   aws ec2 modify-instance-attribute --region $REGION --instance-id $INSTANCIA \
+     --groups <grupos actuales> <salida GrupoSeguridadWeb>
+   ```
+
+   El grupo nuevo abre 80 y 443. El despliegue y la consola usan SSM, así que el puerto 22 abierto a internet ya no hace falta: conviene quitarlo y entrar con `aws ssm start-session --target $INSTANCIA`.
+
+3. **Docker en la instancia.** Con la instancia encendida, el agente de SSM ya registrado y el script en `main`:
+
+   ```bash
+   aws ssm send-command --region $REGION --instance-ids $INSTANCIA --document-name AWS-RunShellScript \
+     --parameters 'commands=["curl -fsSL https://raw.githubusercontent.com/nikotpab/marketplace-alojamientos-backend/main/deploy/preparar-instancia.sh | bash"]'
+   ```
+
+   `deploy/preparar-instancia.sh` instala Docker y Docker Compose (verifica el hash del binario) y crea `/opt/marketplace`.
+
+4. **Parámetros de SSM.** `desplegar.sh` exige estos en `/marketplace/prod`:
+   - `DB_URL`, `DB_USUARIO_APP`, `DB_CONTRASENA_APP`, `DB_USUARIO_MIGRACION`, `DB_CONTRASENA_MIGRACION`;
+   - `JWT_SECRETO`, `PAGOS_PROVEEDOR`, `DOMINIO`;
+   - `CORREO_SERVIDOR`, `CORREO_PUERTO`, `CORREO_USUARIO`, `CORREO_CONTRASENA`, `CORREO_SEGURO`, `CORREO_REMITENTE` (ver "Correos").
+
+   Los secretos van como SecureString, creados desde la consola. `STRIPE_CLAVE_SECRETA` y `STRIPE_METODO_PAGO` son opcionales. `IMAGEN_API` ya no se usa: la imagen la elige el despliegue.
+
+5. **Variables de GitHub.** En cada repositorio, con las salidas del stack:
+
+   ```bash
+   gh variable set AWS_ROL_DESPLIEGUE --body <salida RolDespliegueApi>
+   gh variable set AWS_DOCUMENTO_DESPLIEGUE --body <salida DocumentoDesplegarApi>
+   gh variable set AWS_INSTANCIA --body $INSTANCIA
+   ```
+
+   En el frontend van `RolDespliegueWeb` y `DocumentoDesplegarWeb` (`-R nikotpab/marketplace-alojamientos-frontend`).
+
+6. **Primer despliegue.** Se corre el workflow CI en `main` de cada repositorio, primero el backend: `gh workflow run CI --ref main`.
+
+### Operación
+
+- **Volver a una versión anterior:** se busca el commit en ECR y se corre el documento con esa etiqueta:
+
+  ```bash
+  aws ecr describe-images --region $REGION --repository-name marketplace-api \
+    --query 'reverse(sort_by(imageDetails,&imagePushedAt))[].[imageTags[0],imagePushedAt]' --output text
+  aws ssm send-command --region $REGION --instance-ids $INSTANCIA \
+    --document-name <salida DocumentoDesplegarApi> --parameters etiqueta=<commit>
+  ```
+
+  Lo mismo con `marketplace-web` y `DocumentoDesplegarWeb`. ECR conserva las 10 imágenes más recientes de cada repositorio.
+- **Cambiar un secreto:** se actualiza el parámetro en SSM y se vuelve a desplegar. `desplegar.sh` reescribe `.env` y, si cambió `DB_CONTRASENA_APP`, también la contraseña del usuario en RDS.
+- **Entrar a la instancia:** `aws ssm start-session --target $INSTANCIA`; el despliegue vive en `/opt/marketplace`.
 
 ## Monitoreo
 
@@ -335,31 +420,47 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 **Afectan el flujo crítico**
 
 1. **Reserva a medias (RNF-12).** SEC-01 solo escribe el pago en el paso 10. Si la aplicación cae después de cobrar, no queda rastro local y el reconciliador no tiene qué revisar. Hace falta registrar el intento antes de llamar a Stripe. Resuelto en SCRUM-59: el cobro se registra como `PENDIENTE` antes de llamar a la pasarela y pasa a `APROBADO` en la transacción de la reserva. Cada 5 min, `ServicioPagos.revertirCobrosSinReserva` devuelve los que llevan 10 min pendientes, así que quedan resueltos en máximo 15 min. Pide el cobro con la misma clave: si ya se hizo, la pasarela devuelve el mismo pago sin cobrar otra vez (ADR-04); si nunca se hizo, se cobra y se devuelve en el acto. Un periodo bloqueado sin pago no puede darse, porque la reserva y el pago se guardan en la misma transacción.
-2. **Método de pago de prueba.** CU-17 y CU-19 lo piden como entrada, pero `cobrar(monto, clave)` no lo recibe. Por ahora sale de la variable `STRIPE_METODO_PAGO`, así que no se puede elegir por petición.
+2. **Método de pago de prueba.** Resuelto en SCRUM-116: `POST /api/v1/reservas` recibe `metodoPagoId`, el identificador de un método de prueba de Stripe (`pm_card_...`); otro valor responde 400. Sin él se usa `STRIPE_METODO_PAGO`. El método queda en `pago.metodo_pago`, porque la reconciliación repite el cobro con la misma clave y Stripe exige los mismos parámetros. La pasarela simulada rechaza, como Stripe, los que empiezan por `pm_card_charge` (por ejemplo `pm_card_chargeDeclined`).
 3. **Devolución fallida.** CU-20 E4 supone que la reserva no cambia de estado. El Proceso 4 la deja cancelada con "devolución no procesada". Decisión tomada en SCRUM-37: se sigue el Proceso 4. La reserva queda cancelada con `DEVOLUCION_NO_PROCESADA`, la falla queda en la auditoría como `DevolucionFallida` y se notifica al huésped. El pago sigue `APROBADO`, para poder devolverlo después.
 4. **Reintento tras un solape.** Resuelto en SCRUM-34: el rechazo se guarda con su clave en una transacción aparte, y un reintento recibe el mismo rechazo sin volver a cobrar.
 
 **Faltan reglas o datos**
 
-5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`, y la cotización la cobra en 0 hasta que el administrador le asigne un porcentaje en `PUT /api/v1/admin/tarifas`.
-6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase. Decisión tomada en SCRUM-38: mientras no se definan, una política sin clase responde 409 con un mensaje claro, en vez de inventar reglas.
+5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Decisión tomada en SCRUM-115: es un porcentaje del subtotal, como dicen los documentos, y arranca en 5 % (`V13`); en 3 noches de COP 300.000 son COP 45.000, cerca del mockup. El administrador lo cambia en `PUT /api/v1/admin/tarifas`.
+6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tenían reglas definidas. Decisión tomada en SCRUM-114, con la tarifa de servicio no reembolsable en las tres:
+
+   | Días antes de la llegada | Flexible | Moderada | Estricta |
+   |---|---|---|---|
+   | 14 o más | 100 % | 100 % | 50 % |
+   | 7 a 13 | 100 % | 50 % | 0 % |
+   | 5 a 6 | 100 % | 0 % | 0 % |
+   | 2 a 4 | 50 % | 0 % | 0 % |
+   | Menos de 2 | 0 % | 0 % | 0 % |
+
+   `politica_cancelacion` guarda un solo tramo y las políticas tienen hasta dos, así que los tramos viven en una clase por política (`PoliticaFlexible`, `PoliticaModerada`, `PoliticaEstricta`) y la tabla solo da el nombre y la descripción (`V14`). Una política sin clase sigue respondiendo 409 con un mensaje claro (SCRUM-38).
 7. **Código de recuperación (CU-03).** Resuelto en SCRUM-110: el enlace llega por correo y la API ya no devuelve el código. Los tokens se guardan en `token_correo`, solo con su hash. Ver "Correos".
-8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
-9. **Duración del JWT y revocación.** Por ahora los tokens duran 8 horas. Un usuario restringido o desactivado conserva su token hasta que venza, salvo que se verifique en cada petición.
+8. **Retención de claves de idempotencia (ADR-04).** Decisión tomada en SCRUM-118: 24 horas, lo mínimo que Stripe conserva las suyas (propuesta de SCRUM-34). Cada hora, `ServicioReservas.eliminarSolicitudesVencidas` borra las solicitudes vencidas y `ServicioPagos.liberarClavesVencidas` quita la clave de los pagos ya resueltos. Así, un reintento con la misma clave después de 24 h es un intento nuevo y no sobrescribe el pago anterior. Los pagos `PENDIENTE` conservan la clave, porque la reconciliación la usa.
+9. **Duración del JWT y revocación.** Los tokens duran 8 horas. Resuelto en SCRUM-117: cada token lleva la versión de sesión del usuario (`usuario.version_sesion`, `V15`), y `TokensJwt` la compara en cada petición con una consulta por llave primaria, sin caché, así que el efecto es inmediato. Restringir, desactivar la cuenta o restablecer la contraseña sube la versión, y la siguiente petición con un token anterior responde 401. Un token de una cuenta desactivada o restringida tampoco sirve. Se eligió una versión y no la fecha de emisión porque el `iat` del JWT va en segundos: un token anterior y un inicio de sesión del mismo segundo no se distinguirían.
 
 **Transiciones sin caso de uso**
 
-10. Reactivar una cuenta desactivada (CU-05) y desbloquear una publicación. Por ahora una publicación pausada (CU-10) vuelve a ACTIVA sin pasar por revisión, y una bloqueada no se puede reactivar.
-11. Resolver una reserva `EN_REVISION`. Además, la restricción anti-solape solo cubre `CONFIRMADA`, como pide ADR-03.
-12. Si editar una publicación activa la devuelve a revisión (CU-07).
+10. Reactivar una cuenta desactivada (CU-05) y desbloquear una publicación. Resuelto en SCRUM-112: el administrador desbloquea una publicación (`POST /api/v1/admin/publicaciones/{id}/desbloqueo`), que vuelve a ACTIVA sin pasar por revisión, como una pausada (CU-10). También levanta una restricción (`DELETE /api/v1/admin/usuarios/{id}/restriccion`) y reactiva una cuenta desactivada (`POST /api/v1/admin/usuarios/{id}/reactivacion`); el usuario no puede reactivarla solo, porque una cuenta desactivada no inicia sesión. Cada acción queda en la auditoría y avisa al afectado.
+11. Resolver una reserva `EN_REVISION`. Además, la restricción anti-solape solo cubre `CONFIRMADA`, como pide ADR-03. Decisión tomada en SCRUM-112 y SCRUM-118:
+    - al desbloquear la publicación, sus reservas en revisión vuelven a `CONFIRMADA` y se avisa a cada huésped. Mientras estuvo bloqueada nadie pudo reservar, así que no chocan con la restricción anti-solape;
+    - mientras tanto, el huésped puede cancelarla con devolución total, incluida la tarifa de servicio, porque el bloqueo no es culpa suya.
+12. Si editar una publicación activa la devuelve a revisión (CU-07). Decisión tomada en SCRUM-118: si el anfitrión edita una publicación `ACTIVA` o `PAUSADA`, vuelve a `PENDIENTE_REVISION` y sale de la búsqueda hasta que se apruebe. Una pausada también, porque se reactiva sin revisión y sería un atajo. Las reservas que ya tiene no cambian, y lo que edita un administrador conserva el estado.
 13. Pasar una reserva a `COMPLETADA`: ningún caso de uso lo define y RF-25 lo necesita. Decisión tomada en SCRUM-40: cada noche a la 1:00, hora de Bogotá, `ServicioReservas.completarReservasFinalizadas` pasa a `COMPLETADA` las confirmadas cuya fecha de salida ya pasó y avisa al huésped de que ya puede reseñar.
 
 **Despliegue**
 
-14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Para cumplir "un healthcheck si se cuelga" hace falta algo más.
-15. **Secretos e imagen.** Falta el paso que pasa los secretos de SSM a `deploy/.env`, y definir dónde se publica la imagen. La infraestructura AWS no es parte de este repositorio.
+14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Resuelto en SCRUM-122: el timer de systemd `marketplace-autorreparacion` corre cada minuto `deploy/autorreparacion/reiniciar-colgados.sh`, que reinicia los contenedores del proyecto `marketplace` que su healthcheck marcó `unhealthy`, sin darle el socket de Docker a otro contenedor. Con el healthcheck de la imagen (cada 30 s, 3 fallos), una API colgada vuelve en menos de 3 minutos, dentro del MTTR de 15 de SCRUM-57. Cada reinicio queda en el journal (`journalctl -t marketplace-autorreparacion`), y mientras la API está caída falta el latido, así que salta la alarma del monitoreo. Se instala en la EC2 con `sudo sh /opt/marketplace/autorreparacion/instalar.sh`, que se puede repetir.
+15. **Secretos e imagen.** Resuelto en SCRUM-121: la imagen se publica en ECR (`marketplace-api`, con el commit como etiqueta) y `deploy/desplegar.sh` escribe en la EC2 el `.env` con los parámetros de SSM. La infraestructura nueva está en `deploy/aws/despliegue.yaml`; la EC2 y RDS, que ya existían, siguen fuera de este repositorio. Ver "Despliegue en AWS".
 16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora el latido reporta `baseDeDatos` y `auditoria`. Si se refería al dominio web o a la pasarela de pagos, falta definirlo y agregarlo.
 
 **Sin caso de uso**
 
-17. **Reportar una reseña (RF-29).** RF-29 pide que las reseñas reportadas aparezcan en Moderación con su número de reportes, pero ningún caso de uso permite reportarlas y el modelo de datos no tiene dónde guardar los reportes. Por ahora el administrador oculta una reseña desde la lista de la publicación (`POST /api/v1/admin/resenas/{id}/ocultamiento`).
+17. **Reportar una reseña (RF-29).** RF-29 pide que las reseñas reportadas aparezcan en Moderación con su número de reportes, pero ningún caso de uso permitía reportarlas y el modelo de datos no tenía dónde guardar los reportes. Decisión tomada en SCRUM-111:
+    - cualquier usuario con sesión, salvo el autor, reporta una reseña visible una sola vez (`POST /api/v1/resenas/{id}/reportes`), con un motivo de la lista (`OFENSIVA`, `SPAM`, `INFORMACION_FALSA` u `OTRO`) y un comentario opcional de hasta 500 caracteres. Repetir o reportar la propia responde 409;
+    - los reportes viven en `reporte_resena` (`V16`) y quedan en la auditoría como `ResenaReportada`;
+    - `GET /api/v1/admin/resenas/reportadas` lista las reportadas que siguen visibles, de la más reportada a la menos, con su número de reportes y sus motivos;
+    - el administrador las oculta con `POST /api/v1/admin/resenas/{id}/ocultamiento`.

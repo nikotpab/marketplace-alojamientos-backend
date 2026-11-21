@@ -9,7 +9,7 @@ import java.util.UUID;
 public interface RepositorioPagos {
 
     /** Registra el cobro como PENDIENTE antes de llamar a la pasarela. Un reintento con la misma clave no lo duplica. */
-    void registrarIntento(String clave, BigDecimal monto);
+    void registrarIntento(String clave, BigDecimal monto, String metodoPago);
 
     /** Guarda el pago aprobado; si ya estaba el intento con esa clave, lo completa. */
     void guardar(Pago pago);
@@ -27,6 +27,12 @@ public interface RepositorioPagos {
      * @return la referencia del pago, o vacío si no había un pago aprobado
      */
     Optional<String> marcarDevuelto(UUID reservaId);
+
+    /**
+     * SCRUM-118 · ADR-04: quita la clave de los pagos ya resueltos que se crearon antes de ese momento. Un reintento con
+     * la misma clave se trata como un intento nuevo, como hace Stripe, en vez de sobrescribir el pago anterior.
+     */
+    void liberarClavesCreadasAntesDe(Instant momento);
 
     /** Deshace {@link #marcarDevuelto} cuando la pasarela no procesó la devolución. */
     void marcarAprobado(UUID reservaId);

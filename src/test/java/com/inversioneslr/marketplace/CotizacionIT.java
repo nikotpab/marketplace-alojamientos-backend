@@ -15,7 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** Publicación de 100.000 por noche, con capacidad 4 y disponible en 2030. Servicio 10 %, promoción 5 % y 10 % desde 7 noches. */
+/**
+ * Publicación de 100.000 por noche, con capacidad 4 y disponible en 2030. Limpieza 5 % (V13), servicio 10 %, promoción 5 %
+ * y 10 % desde 7 noches.
+ */
 class CotizacionIT extends PruebaIntegracion {
 
     private UUID publicacion;
@@ -46,11 +49,11 @@ class CotizacionIT extends PruebaIntegracion {
 
         assertThat(monto(respuesta, "$.precioNoche")).isEqualByComparingTo("100000");
         assertThat(monto(respuesta, "$.subtotal")).isEqualByComparingTo("300000");
-        assertThat(monto(respuesta, "$.tarifaLimpieza")).isEqualByComparingTo("0");
+        assertThat(monto(respuesta, "$.tarifaLimpieza")).isEqualByComparingTo("15000");
         assertThat(monto(respuesta, "$.tarifaServicio")).isEqualByComparingTo("30000");
         assertThat(monto(respuesta, "$.descuentos[0].monto")).isEqualByComparingTo("15000");
         assertThat(monto(respuesta, "$.adicionales[0].monto")).isEqualByComparingTo("120000");
-        assertThat(monto(respuesta, "$.total")).isEqualByComparingTo("435000");
+        assertThat(monto(respuesta, "$.total")).isEqualByComparingTo("450000");
         assertThat(comoAplicacion.queryForObject("SELECT count(*) FROM reserva WHERE publicacion_id = ?", Long.class, publicacion)).isZero();
     }
 
@@ -60,7 +63,7 @@ class CotizacionIT extends PruebaIntegracion {
 
         assertThat(JsonPath.<String>read(respuesta, "$.descuentos[1].concepto")).isEqualTo("Descuento por estancia larga (10 %)");
         assertThat(monto(respuesta, "$.descuentos[1].monto")).isEqualByComparingTo("70000");
-        assertThat(monto(respuesta, "$.total")).isEqualByComparingTo("665000");
+        assertThat(monto(respuesta, "$.total")).isEqualByComparingTo("700000");
     }
 
     @Test

@@ -117,6 +117,24 @@
         },
         "type" : "object"
       },
+      "CancelacionResumen" : {
+        "properties" : {
+          "estadoFinal" : {
+            "type" : "string"
+          },
+          "fecha" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "valorDevolucion" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "CancelarReservaComando" : {
         "properties" : {
           "motivo" : {
@@ -197,6 +215,10 @@
           },
           "llegada" : {
             "format" : "date",
+            "type" : "string"
+          },
+          "metodoPagoId" : {
+            "pattern" : "pm_card_[A-Za-z0-9_]+",
             "type" : "string"
           },
           "publicacionId" : {
@@ -864,6 +886,62 @@
         "required" : [ "apellido", "codigo", "contrasena", "correo", "nombre", "rol", "telefono" ],
         "type" : "object"
       },
+      "ReportarResenaComando" : {
+        "properties" : {
+          "comentario" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "motivo" : {
+            "enum" : [ "INFORMACION_FALSA", "OFENSIVA", "OTRO", "SPAM" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "motivo" ],
+        "type" : "object"
+      },
+      "ResenaConReportes" : {
+        "properties" : {
+          "autor" : {
+            "type" : "string"
+          },
+          "calificacion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "comentario" : {
+            "type" : "string"
+          },
+          "fecha" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "motivos" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "publicacionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reportes" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "ultimoReporte" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ResenaVisible" : {
         "properties" : {
           "autor" : {
@@ -931,6 +1009,9 @@
           "alojamiento" : {
             "type" : "string"
           },
+          "cancelacion" : {
+            "$ref" : "#/components/schemas/CancelacionResumen"
+          },
           "codigo" : {
             "type" : "string"
           },
@@ -957,9 +1038,15 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "nombreHuesped" : {
+            "type" : "string"
+          },
           "publicacionId" : {
             "format" : "uuid",
             "type" : "string"
+          },
+          "resenada" : {
+            "type" : "boolean"
           },
           "salida" : {
             "format" : "date",
@@ -1299,6 +1386,26 @@
         "tags" : [ "controlador-administracion" ]
       }
     },
+    "/api/v1/admin/publicaciones/{id}/desbloqueo" : {
+      "post" : {
+        "operationId" : "desbloquearPublicacion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
     "/api/v1/admin/publicaciones/{id}/rechazar" : {
       "post" : {
         "operationId" : "rechazar",
@@ -1386,6 +1493,27 @@
                 "schema" : {
                   "format" : "byte",
                   "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
+    "/api/v1/admin/resenas/reportadas" : {
+      "get" : {
+        "operationId" : "listarResenasReportadas",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ResenaConReportes"
+                  },
+                  "type" : "array"
                 }
               }
             },
@@ -1557,7 +1685,45 @@
         "tags" : [ "controlador-administracion" ]
       }
     },
+    "/api/v1/admin/usuarios/{id}/reactivacion" : {
+      "post" : {
+        "operationId" : "reactivarCuenta",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      }
+    },
     "/api/v1/admin/usuarios/{id}/restriccion" : {
+      "delete" : {
+        "operationId" : "levantarRestriccion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "controlador-administracion" ]
+      },
       "post" : {
         "operationId" : "restringirUsuario",
         "parameters" : [ {
@@ -2188,6 +2354,36 @@
               }
             },
             "description" : "OK"
+          }
+        },
+        "tags" : [ "controlador-resenas" ]
+      }
+    },
+    "/api/v1/resenas/{id}/reportes" : {
+      "post" : {
+        "operationId" : "reportar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReportarResenaComando"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
           }
         },
         "tags" : [ "controlador-resenas" ]

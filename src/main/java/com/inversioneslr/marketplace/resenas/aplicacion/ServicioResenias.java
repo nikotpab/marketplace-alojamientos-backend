@@ -8,10 +8,13 @@ import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.compartido.UsuarioId;
 import com.inversioneslr.marketplace.resenas.EventosResenas.ResenaOcultada;
 import com.inversioneslr.marketplace.resenas.EventosResenas.ResenaPublicada;
+import com.inversioneslr.marketplace.resenas.EventosResenas.ResenaReportada;
 import com.inversioneslr.marketplace.resenas.FachadaResenas;
+import com.inversioneslr.marketplace.resenas.MotivoReporte;
 import com.inversioneslr.marketplace.resenas.dominio.RepositorioResenas;
 import com.inversioneslr.marketplace.resenas.dominio.Resena;
 import com.inversioneslr.marketplace.resenas.dominio.ResenaGuardada;
+import com.inversioneslr.marketplace.resenas.dominio.ResenaReportadaGuardada;
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import com.inversioneslr.marketplace.reservas.FachadaReservas;
 import com.inversioneslr.marketplace.reservas.FachadaReservas.DatosReserva;
@@ -106,6 +109,47 @@ public class ServicioResenias implements FachadaResenas {
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La reseña no existe."));
         resenas.guardar(resena.ocultar(administradorId.valor()));
         eventos.publicar(new ResenaOcultada(administradorId.valor(), resenaId.valor()));
+    }
+
+    /**
+     * SCRUM-111 · RF-29: cualquier usuario con sesión reporta una reseña visible, una sola vez y nunca la propia. Queda
+     * en la auditoría con el motivo.
+     */
+    @Transactional
+    public void reportar(UUID usuarioId, UUID resenaId, ReportarResenaComando comando) {
+        ResenaGuardada resena = resenas.buscarVisible(resenaId)
+                .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "La reseña no existe."));
+        if (reservas.datosReserva(new ReservaId(resena.reservaId())).huespedId().equals(usuarioId)) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "No puedes reportar tu propia reseña.");
+        }
+        String comentario = comando.comentario() == null || comando.comentario().isBlank() ? null : comando.comentario().strip();
+        resenas.reportar(resenaId, usuarioId, comando.motivo().name(), comentario);
+        eventos.publicar(new ResenaReportada(usuarioId, resenaId, comando.motivo().name()));
+    }
+
+    /** SCRUM-111: la publicación y el autor de cada una en una consulta a cada fachada, sin leer sus tablas. */
+    @Override
+    public List<ResenaConReportes> listarReportadas() {
+        List<ResenaReportadaGuardada> reportadas = resenas.listarReportadas();
+        Map<ReservaId, DatosReserva> reservasDeLasResenas = reservas.datosReservas(
+                reportadas.stream().map(resena -> new ReservaId(resena.reservaId())).toList());
+        Map<UsuarioId, Persona> autores = usuarios.personas(reservasDeLasResenas.values().stream()
+                .map(reserva -> new UsuarioId(reserva.huespedId())).collect(Collectors.toSet()));
+        return reportadas.stream()
+                .filter(resena -> reservasDeLasResenas.containsKey(new ReservaId(resena.reservaId())))
+                .map(resena -> {
+                    DatosReserva reserva = reservasDeLasResenas.get(new ReservaId(resena.reservaId()));
+                    Persona autor = autores.get(new UsuarioId(reserva.huespedId()));
+                    return new ResenaConReportes(resena.id(), reserva.publicacionId(), autor == null ? null : autor(autor),
+                            resena.calificacion(), resena.contenido(), resena.creadoEn(), resena.reportes(), resena.motivos(),
+                            resena.ultimoReporte());
+                })
+                .toList();
+    }
+
+    public record ReportarResenaComando(
+            @NotNull(message = "Elige el motivo del reporte.") MotivoReporte motivo,
+            @Size(max = 500, message = "El comentario admite hasta 500 caracteres.") String comentario) {
     }
 
     public record PublicarResenaComando(

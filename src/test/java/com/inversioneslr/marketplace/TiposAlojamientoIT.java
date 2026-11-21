@@ -1,6 +1,7 @@
 package com.inversioneslr.marketplace;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -98,7 +99,7 @@ class TiposAlojamientoIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.tipos[*].nombre").value(hasItem("Cabaña")))
                 .andExpect(jsonPath("$.tipos[*].nombre").value(not(hasItem("Glamping"))))
                 .andExpect(jsonPath("$.servicios[*].nombre").value(hasItem("WiFi")))
-                .andExpect(jsonPath("$.politicas[*].nombre").value(hasItem("Flexible")));
+                .andExpect(jsonPath("$.politicas[*].nombre").value(hasItems("Flexible", "Moderada", "Estricta")));
     }
 
     private ResultActions guardar(MockHttpServletRequestBuilder solicitud, String nombre, boolean activo) throws Exception {

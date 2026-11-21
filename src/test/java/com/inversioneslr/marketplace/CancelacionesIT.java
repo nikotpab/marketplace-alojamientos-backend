@@ -68,6 +68,54 @@ class CancelacionesIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.valorDevolucion").value(150000));
     }
 
+    /** SCRUM-118 · pendiente 11: su alojamiento fue bloqueado, así que se devuelve todo, también la tarifa de servicio. */
+    @Test
+    void unaReservaEnRevisionSeCancelaConDevolucionTotal() throws Exception {
+        UUID reserva = reservar(1, "EN_REVISION");
+        String referencia = pagar(reserva);
+
+        mvc.perform(get("/api/v1/reservas/{id}/cancelacion/estimacion", reserva).header("Authorization", sesionDe(huesped, Rol.HUESPED)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valorDevolucion").value(330000))
+                .andExpect(jsonPath("$.politica").value("Devolución total: el alojamiento está en revisión"));
+        cancelar(reserva, "No quiero esperar la revisión")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valorDevolucion").value(330000))
+                .andExpect(jsonPath("$.estadoFinal").value("DEVOLUCION_PROCESADA"));
+
+        verify(pasarela).devolver(referencia, new BigDecimal("330000"));
+        assertThat(texto("SELECT estado FROM reserva WHERE id = ?", reserva)).isEqualTo("CANCELADA");
+    }
+
+    /** SCRUM-114: 100 % hasta 14 días antes y 50 % entre 13 y 7. */
+    @Test
+    void conLaPoliticaModeradaEntreTreceYSieteDiasAntesSeDevuelveLaMitad() throws Exception {
+        usarPolitica("Moderada");
+        UUID reserva = reservar(10, "CONFIRMADA");
+
+        mvc.perform(get("/api/v1/reservas/{id}/cancelacion/estimacion", reserva).header("Authorization", sesionDe(huesped, Rol.HUESPED)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valorDevolucion").value(150000))
+                .andExpect(jsonPath("$.politica").value("Moderada"));
+    }
+
+    /** SCRUM-114: 50 % hasta 14 días antes y nada después. */
+    @Test
+    void conLaPoliticaEstrictaACuarentaDiasSeDevuelveLaMitadYADiezNada() throws Exception {
+        usarPolitica("Estricta");
+        UUID lejana = reservar(40, "CONFIRMADA");
+        UUID cercana = reservar(10, "CONFIRMADA");
+        pagar(cercana);
+
+        mvc.perform(get("/api/v1/reservas/{id}/cancelacion/estimacion", lejana).header("Authorization", sesionDe(huesped, Rol.HUESPED)))
+                .andExpect(jsonPath("$.valorDevolucion").value(150000));
+        cancelar(cercana, "Ya no viajo")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valorDevolucion").value(0))
+                .andExpect(jsonPath("$.estadoFinal").value("SIN_DEVOLUCION"));
+        verify(pasarela, never()).devolver(any(), any());
+    }
+
     @Test
     void otroHuespedNoPuedeConsultarLaEstimacion() throws Exception {
         UUID reserva = reservar(10, "CONFIRMADA");
@@ -175,6 +223,11 @@ class CancelacionesIT extends PruebaIntegracion {
         return mvc.perform(post("/api/v1/reservas/{id}/cancelacion", reserva)
                 .header("Authorization", sesionDe(huesped, Rol.HUESPED))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"" + motivo + "\"}"));
+    }
+
+    private void usarPolitica(String nombre) {
+        comoAplicacion.update("UPDATE publicacion SET politica_cancelacion_id = (SELECT id FROM politica_cancelacion WHERE nombre = ?) WHERE id = ?",
+                nombre, publicacion);
     }
 
     private String pagar(UUID reserva) {

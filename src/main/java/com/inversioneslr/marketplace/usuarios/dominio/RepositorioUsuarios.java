@@ -16,4 +16,10 @@ public interface RepositorioUsuarios {
     List<Usuario> listar();
 
     Usuario guardar(Usuario usuario);
+
+    /** SCRUM-117: la versión de sesión de una cuenta activa y sin restricción; vacío si no existe o no puede operar. */
+    Optional<Integer> versionSesionVigente(UUID id);
+
+    /** SCRUM-117: sube la versión de sesión, así que los tokens emitidos antes dejan de servir. */
+    void invalidarSesiones(UUID id);
 }
