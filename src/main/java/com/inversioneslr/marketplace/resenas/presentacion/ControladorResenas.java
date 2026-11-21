@@ -34,6 +34,14 @@ public class ControladorResenas {
         return servicio.publicar(huesped.id(), reservaId, comando);
     }
 
+    /** SCRUM-111 · RF-29. */
+    @PostMapping("/resenas/{id}/reportes")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reportar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable UUID id,
+                         @Valid @RequestBody ServicioResenias.ReportarResenaComando comando) {
+        servicio.reportar(usuario.id(), id, comando);
+    }
+
     @GetMapping("/publicaciones/{publicacionId}/resenas")
     public List<ResenaVisible> consultar(@PathVariable UUID publicacionId) {
         return servicio.listarVisibles(new PublicacionId(publicacionId));

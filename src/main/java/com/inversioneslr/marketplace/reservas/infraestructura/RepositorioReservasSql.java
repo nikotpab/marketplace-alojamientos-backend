@@ -132,6 +132,17 @@ public class RepositorioReservasSql implements RepositorioReservas {
     }
 
     @Override
+    public List<Reserva> buscarPorIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql("SELECT * FROM reserva WHERE id IN (:ids)")
+                .param("ids", ids)
+                .query(RepositorioReservasSql::aReserva)
+                .list();
+    }
+
+    @Override
     public List<Reserva> listarPorHuesped(UUID huespedId, EstadoReserva estado) {
         return jdbc.sql(POR_ESTADO + " AND huesped_id = :huesped ORDER BY fecha_llegada DESC")
                 .param("huesped", huespedId)

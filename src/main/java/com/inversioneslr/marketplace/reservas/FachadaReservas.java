@@ -5,12 +5,16 @@ import com.inversioneslr.marketplace.compartido.ReservaId;
 import com.inversioneslr.marketplace.compartido.UsuarioId;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 
 public interface FachadaReservas {
 
     DatosReserva datosReserva(ReservaId reservaId);
+
+    /** SCRUM-111: una sola consulta para todas; las que no existen no aparecen. */
+    Map<ReservaId, DatosReserva> datosReservas(Collection<ReservaId> reservaIds);
 
     /** Al salir de CONFIRMADA, la restricción anti-solape deja de aplicar y el periodo queda libre (RF-13). */
     void marcarCancelada(ReservaId reservaId);

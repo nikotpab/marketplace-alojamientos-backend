@@ -31,6 +31,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -235,7 +236,16 @@ public class ServicioReservas implements FachadaReservas {
 
     @Override
     public DatosReserva datosReserva(ReservaId reservaId) {
-        Reserva reserva = buscar(reservaId.valor());
+        return datos(buscar(reservaId.valor()));
+    }
+
+    @Override
+    public Map<ReservaId, DatosReserva> datosReservas(Collection<ReservaId> reservaIds) {
+        return reservas.buscarPorIds(reservaIds.stream().map(ReservaId::valor).toList()).stream()
+                .collect(Collectors.toMap(reserva -> new ReservaId(reserva.id()), ServicioReservas::datos));
+    }
+
+    private static DatosReserva datos(Reserva reserva) {
         return new DatosReserva(reserva.id(), reserva.huespedId(), reserva.publicacionId(), reserva.fechaLlegada(),
                 reserva.estado(), reserva.total(), reserva.tarifaServicio());
     }

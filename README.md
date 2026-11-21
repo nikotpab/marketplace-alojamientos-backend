@@ -341,4 +341,8 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Sin caso de uso**
 
-17. **Reportar una reseña (RF-29).** RF-29 pide que las reseñas reportadas aparezcan en Moderación con su número de reportes, pero ningún caso de uso permite reportarlas y el modelo de datos no tiene dónde guardar los reportes. Por ahora el administrador oculta una reseña desde la lista de la publicación (`POST /api/v1/admin/resenas/{id}/ocultamiento`).
+17. **Reportar una reseña (RF-29).** RF-29 pide que las reseñas reportadas aparezcan en Moderación con su número de reportes, pero ningún caso de uso permitía reportarlas y el modelo de datos no tenía dónde guardar los reportes. Decisión tomada en SCRUM-111:
+    - cualquier usuario con sesión, salvo el autor, reporta una reseña visible una sola vez (`POST /api/v1/resenas/{id}/reportes`), con un motivo de la lista (`OFENSIVA`, `SPAM`, `INFORMACION_FALSA` u `OTRO`) y un comentario opcional de hasta 500 caracteres. Repetir o reportar la propia responde 409;
+    - los reportes viven en `reporte_resena` (`V16`) y quedan en la auditoría como `ResenaReportada`;
+    - `GET /api/v1/admin/resenas/reportadas` lista las reportadas que siguen visibles, de la más reportada a la menos, con su número de reportes y sus motivos;
+    - el administrador las oculta con `POST /api/v1/admin/resenas/{id}/ocultamiento`.

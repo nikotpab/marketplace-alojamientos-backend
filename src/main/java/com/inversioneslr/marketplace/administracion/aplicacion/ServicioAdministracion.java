@@ -57,6 +57,11 @@ public class ServicioAdministracion {
         usuarios.restringir(new UsuarioId(administradorId), new UsuarioId(usuarioId), comando.motivo());
     }
 
+    /** SCRUM-111 · RF-29: Moderación las muestra con su número de reportes; se ocultan con {@link #ocultarResena}. */
+    public List<FachadaResenas.ResenaConReportes> listarResenasReportadas() {
+        return resenas.listarReportadas();
+    }
+
     public void ocultarResena(UUID administradorId, UUID resenaId) {
         resenas.ocultar(new UsuarioId(administradorId), new ResenaId(resenaId));
     }
