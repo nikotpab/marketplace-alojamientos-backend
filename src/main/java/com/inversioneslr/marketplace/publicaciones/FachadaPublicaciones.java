@@ -24,6 +24,9 @@ public interface FachadaPublicaciones {
     /** CU-24. */
     void bloquear(UsuarioId administradorId, PublicacionId publicacionId, String motivo);
 
+    /** SCRUM-112: de BLOQUEADA a ACTIVA, y se avisa al anfitrión. */
+    void desbloquear(UsuarioId administradorId, PublicacionId publicacionId);
+
     List<TipoAlojamiento> listarTipos();
 
     /** CU-31: agrega un tipo, o lo edita o desactiva si ya tiene id. */

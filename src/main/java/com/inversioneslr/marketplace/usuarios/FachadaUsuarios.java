@@ -14,6 +14,12 @@ public interface FachadaUsuarios {
     /** CU-25: un usuario restringido no puede iniciar sesión. */
     void restringir(UsuarioId administradorId, UsuarioId usuarioId, String motivo);
 
+    /** SCRUM-112: el usuario puede volver a iniciar sesión. */
+    void levantarRestriccion(UsuarioId administradorId, UsuarioId usuarioId);
+
+    /** SCRUM-112 · CU-05: reactiva una cuenta desactivada. */
+    void reactivar(UsuarioId administradorId, UsuarioId usuarioId);
+
     /**
      * RNF-21: solo se muestran al anfitrión de una reserva confirmada con ese huésped. Una sola consulta para todos los
      * ids (SCRUM-113); los que no existen no aparecen.

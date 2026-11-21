@@ -338,8 +338,8 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Transiciones sin caso de uso**
 
-10. Reactivar una cuenta desactivada (CU-05) y desbloquear una publicación. Por ahora una publicación pausada (CU-10) vuelve a ACTIVA sin pasar por revisión, y una bloqueada no se puede reactivar.
-11. Resolver una reserva `EN_REVISION`. Además, la restricción anti-solape solo cubre `CONFIRMADA`, como pide ADR-03.
+10. Reactivar una cuenta desactivada (CU-05) y desbloquear una publicación. Resuelto en SCRUM-112: el administrador desbloquea una publicación (`POST /api/v1/admin/publicaciones/{id}/desbloqueo`), que vuelve a ACTIVA sin pasar por revisión, como una pausada (CU-10). También levanta una restricción (`DELETE /api/v1/admin/usuarios/{id}/restriccion`) y reactiva una cuenta desactivada (`POST /api/v1/admin/usuarios/{id}/reactivacion`); el usuario no puede reactivarla solo, porque una cuenta desactivada no inicia sesión. Cada acción queda en la auditoría y avisa al afectado.
+11. Resolver una reserva `EN_REVISION`. Además, la restricción anti-solape solo cubre `CONFIRMADA`, como pide ADR-03. En SCRUM-112, al desbloquear la publicación sus reservas en revisión vuelven a `CONFIRMADA` y se avisa a cada huésped. Mientras estuvo bloqueada nadie pudo reservar, así que no chocan con la restricción anti-solape.
 12. Si editar una publicación activa la devuelve a revisión (CU-07).
 13. Pasar una reserva a `COMPLETADA`: ningún caso de uso lo define y RF-25 lo necesita. Decisión tomada en SCRUM-40: cada noche a la 1:00, hora de Bogotá, `ServicioReservas.completarReservasFinalizadas` pasa a `COMPLETADA` las confirmadas cuya fecha de salida ya pasó y avisa al huésped de que ya puede reseñar.
 
