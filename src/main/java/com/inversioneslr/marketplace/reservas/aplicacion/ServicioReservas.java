@@ -26,6 +26,7 @@ import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -47,6 +48,9 @@ import tools.jackson.databind.json.JsonMapper;
 public class ServicioReservas implements FachadaReservas {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
+
+    static final String METODO_PAGO_PRUEBA = "pm_card_[A-Za-z0-9_]+";
+    static final String MENSAJE_METODO_PAGO = "Usa un método de pago de prueba de Stripe, por ejemplo pm_card_visa";
 
     /** Coincide con el mínimo que Stripe conserva sus claves de idempotencia. */
     private static final Duration RETENCION_CLAVE = Duration.ofHours(24);
@@ -98,7 +102,7 @@ public class ServicioReservas implements FachadaReservas {
         List<UUID> seleccionados = comando.adicionales() == null ? List.of() : comando.adicionales();
         List<AdicionalReservado> adicionales = adicionalesSeleccionados(publicacion, seleccionados);
         Cotizacion cotizacionFinal = cotizacion.cotizar(new PublicacionId(publicacion.id()), comando.llegada(), comando.salida(), seleccionados);
-        String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud);
+        String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud, comando.metodoPagoId());
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
         try {
             return transaccion.execute(estado -> {
@@ -178,9 +182,10 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     /** SEC-02: un pago rechazado o no procesado no crea nada, pero la falla queda en auditoría. */
-    private String cobrar(UUID huespedId, DatosPublicacion publicacion, Cotizacion cotizacionFinal, String claveSolicitud) {
+    private String cobrar(UUID huespedId, DatosPublicacion publicacion, Cotizacion cotizacionFinal, String claveSolicitud,
+                          String metodoPago) {
         try {
-            return pagos.cobrar(cotizacionFinal.total(), claveSolicitud);
+            return pagos.cobrar(cotizacionFinal.total(), claveSolicitud, metodoPago);
         } catch (ExcepcionNegocio error) {
             eventos.publicar(new PagoFallido(huespedId, publicacion.id(), error.tipo().name(), cotizacionFinal.total()));
             throw error;
@@ -263,12 +268,16 @@ public class ServicioReservas implements FachadaReservas {
                 .collect(Collectors.toMap(fila -> new ReservaId(fila.getKey()), fila -> new UsuarioId(fila.getValue())));
     }
 
-    /** Con los nombres que envía el frontend. */
+    /**
+     * Con los nombres que envía el frontend. {@code metodoPagoId} es opcional: sin él se usa STRIPE_METODO_PAGO. Solo
+     * se aceptan métodos de prueba de Stripe ({@code pm_card_...}), nunca números de tarjeta (RNF-25).
+     */
     public record ConfirmarReservaComando(@NotNull UUID publicacionId,
                                           @NotNull LocalDate llegada,
                                           @NotNull LocalDate salida,
                                           @NotNull @Positive Integer huespedes,
-                                          List<UUID> adicionales) {
+                                          List<UUID> adicionales,
+                                          @Pattern(regexp = METODO_PAGO_PRUEBA, message = MENSAJE_METODO_PAGO) String metodoPagoId) {
     }
 
     /** Con los nombres del frontend. El frontend agrupa por estado: próximas, completadas y canceladas. */
