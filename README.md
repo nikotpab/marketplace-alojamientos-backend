@@ -391,9 +391,9 @@ En AWS, `deploy/aws/monitoreo.yaml` (SCRUM-57) crea:
 2. **Alarma de latido:** se dispara si la suma es menor que 1 durante 2 periodos de 1 minuto, con los datos faltantes tratados como incumplidos. Avisa por correo al tema de SNS del equipo, también cuando se recupera, y su historial registra cada falla.
    - Un solo filtro cubre los dos casos: si la aplicación se detiene, faltan los datos; si un componente falla, el latido deja de ser `OK`.
 3. **Recuperación de la EC2:**
-   - si falla el host (`StatusCheckFailed_System`), AWS la recupera en otro, con la misma IP y el mismo disco;
-   - si deja de responder su sistema (`StatusCheckFailed_Instance`), se reinicia;
-   - en los dos casos se avisa al equipo.
+   - si falla el host (`StatusCheckFailed_System`), la recuperación automática simplificada de EC2, activa por defecto en la t4g (`MaintenanceOptions.AutoRecovery = default`), la mueve a otro host con la misma IP y el mismo disco;
+   - si deja de responder su sistema (`StatusCheckFailed_Instance`), hay que reiniciarla: `aws ec2 reboot-instances`;
+   - en los dos casos, una alarma avisa al equipo. CloudWatch no aceptó una acción `Recover` en esta instancia, así que las alarmas solo avisan.
 
 Si la API se cuelga sin caerse, la reinicia el timer de SCRUM-122 (decisión pendiente 14). La disponibilidad mensual de RNF-09 se mide con la misma métrica: son los minutos con `LatidoOk` mayor o igual a 1 sobre los minutos del mes.
 
