@@ -314,14 +314,24 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 **Afectan el flujo crítico**
 
 1. **Reserva a medias (RNF-12).** SEC-01 solo escribe el pago en el paso 10. Si la aplicación cae después de cobrar, no queda rastro local y el reconciliador no tiene qué revisar. Hace falta registrar el intento antes de llamar a Stripe. Resuelto en SCRUM-59: el cobro se registra como `PENDIENTE` antes de llamar a la pasarela y pasa a `APROBADO` en la transacción de la reserva. Cada 5 min, `ServicioPagos.revertirCobrosSinReserva` devuelve los que llevan 10 min pendientes, así que quedan resueltos en máximo 15 min. Pide el cobro con la misma clave: si ya se hizo, la pasarela devuelve el mismo pago sin cobrar otra vez (ADR-04); si nunca se hizo, se cobra y se devuelve en el acto. Un periodo bloqueado sin pago no puede darse, porque la reserva y el pago se guardan en la misma transacción.
-2. **Método de pago de prueba.** CU-17 y CU-19 lo piden como entrada, pero `cobrar(monto, clave)` no lo recibe. Por ahora sale de la variable `STRIPE_METODO_PAGO`, así que no se puede elegir por petición.
+2. **Método de pago de prueba.** Resuelto en SCRUM-116: `POST /api/v1/reservas` recibe `metodoPagoId`, el identificador de un método de prueba de Stripe (`pm_card_...`); otro valor responde 400. Sin él se usa `STRIPE_METODO_PAGO`. El método queda en `pago.metodo_pago`, porque la reconciliación repite el cobro con la misma clave y Stripe exige los mismos parámetros. La pasarela simulada rechaza, como Stripe, los que empiezan por `pm_card_charge` (por ejemplo `pm_card_chargeDeclined`).
 3. **Devolución fallida.** CU-20 E4 supone que la reserva no cambia de estado. El Proceso 4 la deja cancelada con "devolución no procesada". Decisión tomada en SCRUM-37: se sigue el Proceso 4. La reserva queda cancelada con `DEVOLUCION_NO_PROCESADA`, la falla queda en la auditoría como `DevolucionFallida` y se notifica al huésped. El pago sigue `APROBADO`, para poder devolverlo después.
 4. **Reintento tras un solape.** Resuelto en SCRUM-34: el rechazo se guarda con su clave en una transacción aparte, y un reintento recibe el mismo rechazo sin volver a cobrar.
 
 **Faltan reglas o datos**
 
-5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`, y la cotización la cobra en 0 hasta que el administrador le asigne un porcentaje en `PUT /api/v1/admin/tarifas`.
-6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase. Decisión tomada en SCRUM-38: mientras no se definan, una política sin clase responde 409 con un mensaje claro, en vez de inventar reglas.
+5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Decisión tomada en SCRUM-115: es un porcentaje del subtotal, como dicen los documentos, y arranca en 5 % (`V13`); en 3 noches de COP 300.000 son COP 45.000, cerca del mockup. El administrador lo cambia en `PUT /api/v1/admin/tarifas`.
+6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tenían reglas definidas. Decisión tomada en SCRUM-114, con la tarifa de servicio no reembolsable en las tres:
+
+   | Días antes de la llegada | Flexible | Moderada | Estricta |
+   |---|---|---|---|
+   | 14 o más | 100 % | 100 % | 50 % |
+   | 7 a 13 | 100 % | 50 % | 0 % |
+   | 5 a 6 | 100 % | 0 % | 0 % |
+   | 2 a 4 | 50 % | 0 % | 0 % |
+   | Menos de 2 | 0 % | 0 % | 0 % |
+
+   `politica_cancelacion` guarda un solo tramo y las políticas tienen hasta dos, así que los tramos viven en una clase por política (`PoliticaFlexible`, `PoliticaModerada`, `PoliticaEstricta`) y la tabla solo da el nombre y la descripción (`V14`). Una política sin clase sigue respondiendo 409 con un mensaje claro (SCRUM-38).
 7. **Código de recuperación (CU-03).** Resuelto en SCRUM-110: el enlace llega por correo y la API ya no devuelve el código. Los tokens se guardan en `token_correo`, solo con su hash. Ver "Correos".
 8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
 9. **Duración del JWT y revocación.** Por ahora los tokens duran 8 horas. Un usuario restringido o desactivado conserva su token hasta que venza, salvo que se verifique en cada petición.

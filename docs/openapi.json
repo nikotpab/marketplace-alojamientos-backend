@@ -199,6 +199,10 @@
             "format" : "date",
             "type" : "string"
           },
+          "metodoPagoId" : {
+            "pattern" : "pm_card_[A-Za-z0-9_]+",
+            "type" : "string"
+          },
           "publicacionId" : {
             "format" : "uuid",
             "type" : "string"

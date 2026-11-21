@@ -162,7 +162,7 @@ class ServicioCancelacionesTest {
 
     @Test
     void unaPoliticaSinReglasDefinidasRespondeConflictoSinCancelar() {
-        prepararReserva(HOY.plusDays(10), EstadoReserva.CONFIRMADA, HUESPED, "Moderada");
+        prepararReserva(HOY.plusDays(10), EstadoReserva.CONFIRMADA, HUESPED, "Personalizada");
 
         assertThatThrownBy(() -> servicio.cancelarReserva(HUESPED, RESERVA, COMANDO))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
