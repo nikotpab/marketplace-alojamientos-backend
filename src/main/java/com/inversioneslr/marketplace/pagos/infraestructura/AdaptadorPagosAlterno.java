@@ -18,7 +18,7 @@ class AdaptadorPagosAlterno implements PasarelaPagos {
     private final Map<String, String> cobrosPorClave = new HashMap<>();
 
     @Override
-    public synchronized String cobrar(BigDecimal monto, String clave) {
+    public synchronized String cobrar(BigDecimal monto, String clave, String metodoPago) {
         if (monto.compareTo(MONTO_MAXIMO) > 0) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_RECHAZADO, "El proveedor alterno no aprueba cobros de más de 20 millones.");
         }

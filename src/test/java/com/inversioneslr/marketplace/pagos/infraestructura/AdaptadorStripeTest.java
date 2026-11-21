@@ -45,7 +45,7 @@ class AdaptadorStripeTest {
     void cobraEnCentavosConLaClaveDeIdempotencia() {
         responder("/v1/payment_intents", 200, PAGO_APROBADO);
 
-        String referencia = adaptador.cobrar(new BigDecimal("1062000.00"), "clave-1");
+        String referencia = adaptador.cobrar(new BigDecimal("1062000.00"), "clave-1", null);
 
         assertThat(referencia).isEqualTo("pi_1");
         assertThat(clave.get()).isEqualTo("clave-1");
@@ -53,10 +53,19 @@ class AdaptadorStripeTest {
     }
 
     @Test
+    void usaElMetodoDePagoDeLaPeticionEnVezDelPredeterminado() {
+        responder("/v1/payment_intents", 200, PAGO_APROBADO);
+
+        adaptador.cobrar(BigDecimal.TEN, "clave-5", "pm_card_mastercard");
+
+        assertThat(cuerpo.get()).contains("payment_method=pm_card_mastercard").doesNotContain("pm_card_visa");
+    }
+
+    @Test
     void tarjetaRechazadaEsPagoRechazado() {
         responder("/v1/payment_intents", 402, TARJETA_RECHAZADA);
 
-        assertThatThrownBy(() -> adaptador.cobrar(BigDecimal.TEN, "clave-2"))
+        assertThatThrownBy(() -> adaptador.cobrar(BigDecimal.TEN, "clave-2", null))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.PAGO_RECHAZADO));
     }
@@ -65,7 +74,7 @@ class AdaptadorStripeTest {
     void errorDelProveedorEsPagoNoProcesado() {
         responder("/v1/payment_intents", 500, "{\"error\":{\"type\":\"api_error\",\"message\":\"caido\"}}");
 
-        assertThatThrownBy(() -> adaptador.cobrar(BigDecimal.TEN, "clave-3"))
+        assertThatThrownBy(() -> adaptador.cobrar(BigDecimal.TEN, "clave-3", null))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO));
     }
@@ -83,7 +92,7 @@ class AdaptadorStripeTest {
         });
         Instant inicio = Instant.now();
 
-        assertThatThrownBy(() -> adaptador.cobrar(BigDecimal.TEN, "clave-4"))
+        assertThatThrownBy(() -> adaptador.cobrar(BigDecimal.TEN, "clave-4", null))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class,
                         error -> assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO));
 

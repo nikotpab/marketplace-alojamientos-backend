@@ -10,6 +10,7 @@ import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.Disponib
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionAprobada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionBloqueada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionCreada;
+import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionDesbloqueada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionEditada;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionEnviadaARevision;
 import com.inversioneslr.marketplace.publicaciones.EventosPublicaciones.PublicacionPausada;
@@ -124,7 +125,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     /**
      * Decisión temporal: el frontend envía la política como texto libre. Se asocia a la política cuyo nombre
-     * aparece en el texto, y si ninguna aparece, a la Flexible, la única implementada (ajuste 8 del README).
+     * aparece en el texto, y si ninguna aparece, a la Flexible (ajuste 8 del README).
      */
     private UUID politicaDesde(String texto) {
         if (texto == null || texto.isBlank()) {
@@ -171,9 +172,9 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     /**
-     * CU-07: solo el anfitrión propietario o un administrador. Conserva el estado: si editar una publicación
-     * activa debe devolverla a revisión sigue sin definirse (pendiente 12 del README). Solo un borrador
-     * puede quedar incompleto.
+     * CU-07: solo el anfitrión propietario o un administrador. Si el anfitrión edita una publicación activa o pausada,
+     * vuelve a revisión (SCRUM-118, pendiente 12 del README); lo que edita un administrador conserva el estado. Solo un
+     * borrador puede quedar incompleto.
      */
     @Transactional
     public PublicacionVista editar(UsuarioAutenticado usuario, UUID publicacionId, DatosPublicacionComando datos) {
@@ -182,8 +183,14 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         if (editada.estado() != EstadoPublicacion.BORRADOR) {
             editada.exigirInformacionMinima();
         }
+        if (usuario.rol() != Rol.ADMINISTRADOR) {
+            editada = editada.revisarTrasEdicion();
+        }
         publicaciones.guardar(editada);
         eventos.publicar(new PublicacionEditada(usuario.id(), publicacionId));
+        if (editada.estado() != actual.estado()) {
+            eventos.publicar(new PublicacionEnviadaARevision(usuario.id(), publicacionId));
+        }
         return vista(publicacionId);
     }
 
@@ -376,6 +383,13 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         Publicacion bloqueada = publicaciones.guardar(existente(publicacionId.valor()).bloquear(motivo));
         eventos.publicar(new PublicacionBloqueada(administradorId.valor(), publicacionId.valor(), bloqueada.motivoEstado(),
                 bloqueada.anfitrionId()));
+    }
+
+    @Override
+    @Transactional
+    public void desbloquear(UsuarioId administradorId, PublicacionId publicacionId) {
+        Publicacion desbloqueada = publicaciones.guardar(existente(publicacionId.valor()).desbloquear());
+        eventos.publicar(new PublicacionDesbloqueada(administradorId.valor(), publicacionId.valor(), desbloqueada.anfitrionId()));
     }
 
     /** CU-31: todos, también los inactivos, para la pantalla de configuración. */

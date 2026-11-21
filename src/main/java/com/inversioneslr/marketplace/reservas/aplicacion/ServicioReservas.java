@@ -12,13 +12,17 @@ import com.inversioneslr.marketplace.cotizacion.FachadaCotizacion;
 import com.inversioneslr.marketplace.pagos.FachadaPagos;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.DatosPublicacion;
+import com.inversioneslr.marketplace.reservas.CancelacionesDeReservas;
+import com.inversioneslr.marketplace.reservas.CancelacionesDeReservas.CancelacionResumen;
 import com.inversioneslr.marketplace.reservas.EstadoReserva;
 import com.inversioneslr.marketplace.reservas.EventosReservas.DevolucionFallida;
 import com.inversioneslr.marketplace.reservas.EventosReservas.PagoFallido;
 import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaCompletada;
 import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaConfirmada;
 import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaEnRevision;
+import com.inversioneslr.marketplace.reservas.EventosReservas.ReservaRestablecida;
 import com.inversioneslr.marketplace.reservas.FachadaReservas;
+import com.inversioneslr.marketplace.reservas.ResenasDeReservas;
 import com.inversioneslr.marketplace.reservas.dominio.AdicionalReservado;
 import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleException;
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
@@ -26,16 +30,21 @@ import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -48,6 +57,9 @@ public class ServicioReservas implements FachadaReservas {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
 
+    static final String METODO_PAGO_PRUEBA = "pm_card_[A-Za-z0-9_]+";
+    static final String MENSAJE_METODO_PAGO = "Usa un método de pago de prueba de Stripe, por ejemplo pm_card_visa";
+
     /** Coincide con el mínimo que Stripe conserva sus claves de idempotencia. */
     private static final Duration RETENCION_CLAVE = Duration.ofHours(24);
     private static final String RESULTADO_RECHAZADO = "{\"rechazo\":\"PERIODO_NO_DISPONIBLE\"}";
@@ -57,19 +69,24 @@ public class ServicioReservas implements FachadaReservas {
     private final FachadaCotizacion cotizacion;
     private final FachadaPagos pagos;
     private final FachadaUsuarios usuarios;
+    private final CancelacionesDeReservas cancelaciones;
+    private final ResenasDeReservas resenas;
     private final PublicadorEventos eventos;
     private final TransactionTemplate transaccion;
     private final Clock reloj;
     private final JsonMapper json;
 
     public ServicioReservas(RepositorioReservas reservas, FachadaPublicaciones publicaciones, FachadaCotizacion cotizacion,
-                            FachadaPagos pagos, FachadaUsuarios usuarios, PublicadorEventos eventos,
-                            TransactionTemplate transaccion, Clock reloj, JsonMapper json) {
+                            FachadaPagos pagos, FachadaUsuarios usuarios, CancelacionesDeReservas cancelaciones,
+                            ResenasDeReservas resenas, PublicadorEventos eventos, TransactionTemplate transaccion,
+                            Clock reloj, JsonMapper json) {
         this.reservas = reservas;
         this.publicaciones = publicaciones;
         this.cotizacion = cotizacion;
         this.pagos = pagos;
         this.usuarios = usuarios;
+        this.cancelaciones = cancelaciones;
+        this.resenas = resenas;
         this.eventos = eventos;
         this.transaccion = transaccion;
         this.reloj = reloj;
@@ -98,7 +115,7 @@ public class ServicioReservas implements FachadaReservas {
         List<UUID> seleccionados = comando.adicionales() == null ? List.of() : comando.adicionales();
         List<AdicionalReservado> adicionales = adicionalesSeleccionados(publicacion, seleccionados);
         Cotizacion cotizacionFinal = cotizacion.cotizar(new PublicacionId(publicacion.id()), comando.llegada(), comando.salida(), seleccionados);
-        String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud);
+        String referencia = cobrar(huespedId, publicacion, cotizacionFinal, claveSolicitud, comando.metodoPagoId());
         Reserva reserva = nuevaReserva(huespedId, comando, cotizacionFinal);
         try {
             return transaccion.execute(estado -> {
@@ -178,9 +195,10 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     /** SEC-02: un pago rechazado o no procesado no crea nada, pero la falla queda en auditoría. */
-    private String cobrar(UUID huespedId, DatosPublicacion publicacion, Cotizacion cotizacionFinal, String claveSolicitud) {
+    private String cobrar(UUID huespedId, DatosPublicacion publicacion, Cotizacion cotizacionFinal, String claveSolicitud,
+                          String metodoPago) {
         try {
-            return pagos.cobrar(cotizacionFinal.total(), claveSolicitud);
+            return pagos.cobrar(cotizacionFinal.total(), claveSolicitud, metodoPago);
         } catch (ExcepcionNegocio error) {
             eventos.publicar(new PagoFallido(huespedId, publicacion.id(), error.tipo().name(), cotizacionFinal.total()));
             throw error;
@@ -198,8 +216,9 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     /**
-     * CU-18: el huésped ve sus reservas y el anfitrión las de sus alojamientos. El contacto del huésped solo llega al
-     * anfitrión, y solo si la reserva está confirmada (RNF-21).
+     * CU-18: el huésped ve sus reservas y el anfitrión las de sus alojamientos. Cada reserva dice si ya tiene reseña, y
+     * las canceladas traen el motivo y la devolución (SCRUM-113). El anfitrión ve el nombre del huésped; su contacto,
+     * solo si la reserva está confirmada (RNF-21). Una consulta por módulo, sin N+1 (SCRUM-142).
      */
     public List<ReservaVista> consultarHistorial(UsuarioAutenticado usuario, EstadoReserva estado) {
         boolean anfitrion = usuario.rol() == Rol.ANFITRION;
@@ -207,12 +226,39 @@ public class ServicioReservas implements FachadaReservas {
                 ? reservas.listarPorPublicaciones(publicaciones.publicacionesDelAnfitrion(new UsuarioId(usuario.id())).stream()
                         .map(PublicacionId::valor).toList(), estado)
                 : reservas.listarPorHuesped(usuario.id(), estado);
-        // SCRUM-142: los títulos en una sola consulta a la fachada de publicaciones, sin leer su tabla
+        if (listadas.isEmpty()) {
+            return List.of();
+        }
+        List<ReservaId> ids = listadas.stream().map(reserva -> new ReservaId(reserva.id())).toList();
         Map<PublicacionId, String> alojamientos = publicaciones.titulos(listadas.stream().map(reserva -> new PublicacionId(reserva.publicacionId())).toList());
+        Map<ReservaId, CancelacionResumen> canceladas = cancelaciones.deReservas(ids);
+        Set<ReservaId> resenadas = resenas.conResena(ids);
+        Map<UsuarioId, FachadaUsuarios.Persona> huespedes = anfitrion
+                ? usuarios.personas(listadas.stream().map(reserva -> new UsuarioId(reserva.huespedId())).collect(Collectors.toSet()))
+                : Map.of();
+        Map<UsuarioId, FachadaUsuarios.DatosContacto> contactos = anfitrion
+                ? usuarios.datosContacto(listadas.stream().filter(reserva -> reserva.estado() == EstadoReserva.CONFIRMADA)
+                        .map(reserva -> new UsuarioId(reserva.huespedId())).collect(Collectors.toSet()))
+                : Map.of();
         return listadas.stream()
-                .map(reserva -> ReservaVista.de(reserva, alojamientos.get(new PublicacionId(reserva.publicacionId())),
-                        anfitrion && reserva.estado() == EstadoReserva.CONFIRMADA ? usuarios.datosContacto(new UsuarioId(reserva.huespedId())) : null))
+                .map(reserva -> {
+                    UsuarioId huesped = new UsuarioId(reserva.huespedId());
+                    ReservaId id = new ReservaId(reserva.id());
+                    return ReservaVista.de(reserva, alojamientos.get(new PublicacionId(reserva.publicacionId())),
+                            nombre(huespedes.get(huesped)),
+                            reserva.estado() == EstadoReserva.CONFIRMADA ? contactos.get(huesped) : null,
+                            canceladas.get(id), resenadas.contains(id));
+                })
                 .toList();
+    }
+
+    /** Nombre y apellido guardados, sin los que falten; null si el huésped no se muestra. */
+    private static String nombre(FachadaUsuarios.Persona persona) {
+        if (persona == null) {
+            return null;
+        }
+        String completo = Stream.of(persona.nombre(), persona.apellido()).filter(Objects::nonNull).collect(Collectors.joining(" ")).trim();
+        return completo.isEmpty() ? null : completo;
     }
 
     /** ADR-04: las claves se conservan 24 h, tiempo suficiente para los reintentos de un cliente. */
@@ -235,7 +281,16 @@ public class ServicioReservas implements FachadaReservas {
 
     @Override
     public DatosReserva datosReserva(ReservaId reservaId) {
-        Reserva reserva = buscar(reservaId.valor());
+        return datos(buscar(reservaId.valor()));
+    }
+
+    @Override
+    public Map<ReservaId, DatosReserva> datosReservas(Collection<ReservaId> reservaIds) {
+        return reservas.buscarPorIds(reservaIds.stream().map(ReservaId::valor).toList()).stream()
+                .collect(Collectors.toMap(reserva -> new ReservaId(reserva.id()), ServicioReservas::datos));
+    }
+
+    private static DatosReserva datos(Reserva reserva) {
         return new DatosReserva(reserva.id(), reserva.huespedId(), reserva.publicacionId(), reserva.fechaLlegada(),
                 reserva.estado(), reserva.total(), reserva.tarifaServicio());
     }
@@ -258,27 +313,47 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     @Override
+    public void restablecerEnRevision(PublicacionId publicacionId) {
+        reservas.restablecerEnRevision(publicacionId.valor()).forEach(reserva ->
+                eventos.publicar(new ReservaRestablecida(reserva.id(), publicacionId.valor(), reserva.huespedId())));
+    }
+
+    @Override
     public Map<ReservaId, UsuarioId> huespedPorReserva(PublicacionId publicacionId) {
         return reservas.huespedPorReserva(publicacionId.valor()).entrySet().stream()
                 .collect(Collectors.toMap(fila -> new ReservaId(fila.getKey()), fila -> new UsuarioId(fila.getValue())));
     }
 
-    /** Con los nombres que envía el frontend. */
+    /**
+     * Con los nombres que envía el frontend. {@code metodoPagoId} es opcional: sin él se usa STRIPE_METODO_PAGO. Solo
+     * se aceptan métodos de prueba de Stripe ({@code pm_card_...}), nunca números de tarjeta (RNF-25).
+     */
     public record ConfirmarReservaComando(@NotNull UUID publicacionId,
                                           @NotNull LocalDate llegada,
                                           @NotNull LocalDate salida,
                                           @NotNull @Positive Integer huespedes,
-                                          List<UUID> adicionales) {
+                                          List<UUID> adicionales,
+                                          @Pattern(regexp = METODO_PAGO_PRUEBA, message = MENSAJE_METODO_PAGO) String metodoPagoId) {
     }
 
-    /** Con los nombres del frontend. El frontend agrupa por estado: próximas, completadas y canceladas. */
+    /**
+     * Con los nombres del frontend. El frontend agrupa por estado: próximas, completadas y canceladas.
+     *
+     * @param nombreHuesped   solo en la vista del anfitrión
+     * @param contactoHuesped solo en la vista del anfitrión y en reservas confirmadas (RNF-21)
+     * @param cancelacion     solo en las canceladas: motivo, devolución y cómo terminó (SCRUM-113)
+     * @param resenada        si ya tiene reseña: el huésped no puede reseñarla otra vez
+     */
     public record ReservaVista(UUID id, String codigo, EstadoReserva estado, UUID publicacionId, String alojamiento,
                                LocalDate llegada, LocalDate salida, int huespedes, int noches, BigDecimal total,
-                               FachadaUsuarios.DatosContacto contactoHuesped) {
+                               String nombreHuesped, FachadaUsuarios.DatosContacto contactoHuesped,
+                               CancelacionResumen cancelacion, boolean resenada) {
 
-        static ReservaVista de(Reserva reserva, String alojamiento, FachadaUsuarios.DatosContacto contacto) {
+        static ReservaVista de(Reserva reserva, String alojamiento, String nombreHuesped, FachadaUsuarios.DatosContacto contacto,
+                               CancelacionResumen cancelacion, boolean resenada) {
             return new ReservaVista(reserva.id(), reserva.codigo(), reserva.estado(), reserva.publicacionId(), alojamiento,
-                    reserva.fechaLlegada(), reserva.fechaSalida(), reserva.numeroHuespedes(), reserva.noches(), reserva.total(), contacto);
+                    reserva.fechaLlegada(), reserva.fechaSalida(), reserva.numeroHuespedes(), reserva.noches(), reserva.total(),
+                    nombreHuesped, contacto, cancelacion, resenada);
         }
     }
 }
