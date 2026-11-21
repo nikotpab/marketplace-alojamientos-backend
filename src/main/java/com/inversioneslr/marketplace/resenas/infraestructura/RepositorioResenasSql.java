@@ -4,6 +4,7 @@ import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import com.inversioneslr.marketplace.resenas.dominio.RepositorioResenas;
 import com.inversioneslr.marketplace.resenas.dominio.Resena;
 import com.inversioneslr.marketplace.resenas.dominio.ResenaGuardada;
+import com.inversioneslr.marketplace.resenas.dominio.ResenaReportadaGuardada;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -77,6 +78,49 @@ public class RepositorioResenasSql implements RepositorioResenas {
         return jdbc.sql(VISIBLES + " AND reserva_id IN (:reservas) ORDER BY creado_en DESC")
                 .param("reservas", reservaIds)
                 .query(RepositorioResenasSql::aGuardada)
+                .list();
+    }
+
+    @Override
+    public void reportar(UUID resenaId, UUID usuarioId, String motivo, String comentario) {
+        try {
+            jdbc.sql("INSERT INTO reporte_resena (resena_id, usuario_id, motivo, comentario) VALUES (:resena, :usuario, :motivo, :comentario)")
+                    .param("resena", resenaId)
+                    .param("usuario", usuarioId)
+                    .param("motivo", motivo)
+                    .param("comentario", comentario)
+                    .update();
+        } catch (DuplicateKeyException e) {
+            throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Ya reportaste esta reseña.");
+        }
+    }
+
+    @Override
+    public List<ResenaReportadaGuardada> listarReportadas() {
+        return jdbc.sql("""
+                SELECT r.id, r.reserva_id, r.calificacion, r.contenido, r.creado_en, count(*) AS reportes,
+                       array_agg(DISTINCT rr.motivo ORDER BY rr.motivo) AS motivos, max(rr.creado_en) AS ultimo_reporte
+                FROM resena r JOIN reporte_resena rr ON rr.resena_id = r.id
+                WHERE NOT r.oculta
+                GROUP BY r.id
+                ORDER BY reportes DESC, ultimo_reporte DESC""")
+                .query((fila, numero) -> new ResenaReportadaGuardada(
+                        fila.getObject("id", UUID.class),
+                        fila.getObject("reserva_id", UUID.class),
+                        fila.getInt("calificacion"),
+                        fila.getString("contenido"),
+                        fila.getTimestamp("creado_en").toInstant(),
+                        fila.getLong("reportes"),
+                        List.of((String[]) fila.getArray("motivos").getArray()),
+                        fila.getTimestamp("ultimo_reporte").toInstant()))
+                .list();
+    }
+
+    @Override
+    public List<UUID> reservasConResena(Collection<UUID> reservaIds) {
+        return jdbc.sql("SELECT reserva_id FROM resena WHERE reserva_id IN (:reservas)")
+                .param("reservas", reservaIds)
+                .query(UUID.class)
                 .list();
     }
 

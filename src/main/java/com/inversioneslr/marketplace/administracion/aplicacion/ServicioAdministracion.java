@@ -49,12 +49,32 @@ public class ServicioAdministracion {
         reservas.marcarFuturasEnRevision(new PublicacionId(publicacionId));
     }
 
+    /** SCRUM-112: la publicación vuelve a ACTIVA y sus reservas en revisión a CONFIRMADA, todo o nada. */
+    @Transactional
+    public void desbloquearPublicacion(UUID administradorId, UUID publicacionId) {
+        publicaciones.desbloquear(new UsuarioId(administradorId), new PublicacionId(publicacionId));
+        reservas.restablecerEnRevision(new PublicacionId(publicacionId));
+    }
+
     public List<UsuarioResumen> listarUsuarios() {
         return usuarios.listar();
     }
 
     public void restringirUsuario(UUID administradorId, UUID usuarioId, MotivoComando comando) {
         usuarios.restringir(new UsuarioId(administradorId), new UsuarioId(usuarioId), comando.motivo());
+    }
+
+    /** SCRUM-111 · RF-29: Moderación las muestra con su número de reportes; se ocultan con {@link #ocultarResena}. */
+    public List<FachadaResenas.ResenaConReportes> listarResenasReportadas() {
+        return resenas.listarReportadas();
+    }
+
+    public void levantarRestriccion(UUID administradorId, UUID usuarioId) {
+        usuarios.levantarRestriccion(new UsuarioId(administradorId), new UsuarioId(usuarioId));
+    }
+
+    public void reactivarCuenta(UUID administradorId, UUID usuarioId) {
+        usuarios.reactivar(new UsuarioId(administradorId), new UsuarioId(usuarioId));
     }
 
     public void ocultarResena(UUID administradorId, UUID resenaId) {

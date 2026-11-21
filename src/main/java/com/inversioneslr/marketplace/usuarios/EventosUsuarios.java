@@ -1,6 +1,7 @@
 package com.inversioneslr.marketplace.usuarios;
 
 import com.inversioneslr.marketplace.compartido.EventoDominio;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -110,6 +111,42 @@ public interface EventosUsuarios {
 
         public CuentaDesactivada(UUID usuarioId) {
             this(UUID.randomUUID(), usuarioId);
+        }
+    }
+
+    /** SCRUM-112: el administrador levanta la restricción; el usuario puede volver a iniciar sesión. */
+    record RestriccionLevantada(UUID id, UUID administradorId, UUID usuarioId) implements DeUsuario {
+
+        public RestriccionLevantada(UUID administradorId, UUID usuarioId) {
+            this(UUID.randomUUID(), administradorId, usuarioId);
+        }
+
+        @Override
+        public UUID actorId() {
+            return administradorId;
+        }
+
+        @Override
+        public List<UUID> destinatarios() {
+            return List.of(usuarioId);
+        }
+    }
+
+    /** SCRUM-112 · CU-05: el administrador reactiva una cuenta desactivada. */
+    record CuentaReactivada(UUID id, UUID administradorId, UUID usuarioId) implements DeUsuario {
+
+        public CuentaReactivada(UUID administradorId, UUID usuarioId) {
+            this(UUID.randomUUID(), administradorId, usuarioId);
+        }
+
+        @Override
+        public UUID actorId() {
+            return administradorId;
+        }
+
+        @Override
+        public List<UUID> destinatarios() {
+            return List.of(usuarioId);
         }
     }
 }

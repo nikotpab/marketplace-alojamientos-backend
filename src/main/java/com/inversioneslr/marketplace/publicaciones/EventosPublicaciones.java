@@ -203,4 +203,23 @@ public interface EventosPublicaciones {
             return administradorId;
         }
     }
+
+    /** SCRUM-112: el administrador revierte el bloqueo; la publicación vuelve a ACTIVA. */
+    record PublicacionDesbloqueada(UUID id, UUID administradorId, UUID publicacionId, UUID anfitrionId)
+            implements DePublicacion {
+
+        public PublicacionDesbloqueada(UUID administradorId, UUID publicacionId, UUID anfitrionId) {
+            this(UUID.randomUUID(), administradorId, publicacionId, anfitrionId);
+        }
+
+        @Override
+        public List<UUID> destinatarios() {
+            return List.of(anfitrionId);
+        }
+
+        @Override
+        public UUID actorId() {
+            return administradorId;
+        }
+    }
 }
