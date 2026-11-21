@@ -347,7 +347,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Despliegue**
 
-14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Para cumplir "un healthcheck si se cuelga" hace falta algo más.
+14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Resuelto en SCRUM-122: el timer de systemd `marketplace-autorreparacion` corre cada minuto `deploy/autorreparacion/reiniciar-colgados.sh`, que reinicia los contenedores del proyecto `marketplace` que su healthcheck marcó `unhealthy`, sin darle el socket de Docker a otro contenedor. Con el healthcheck de la imagen (cada 30 s, 3 fallos), una API colgada vuelve en menos de 3 minutos, dentro del MTTR de 15 de SCRUM-57. Cada reinicio queda en el journal (`journalctl -t marketplace-autorreparacion`), y mientras la API está caída falta el latido, así que salta la alarma del monitoreo. Se instala en la EC2 con `sudo sh /opt/marketplace/autorreparacion/instalar.sh`, que se puede repetir.
 15. **Secretos e imagen.** Falta el paso que pasa los secretos de SSM a `deploy/.env`, y definir dónde se publica la imagen. La infraestructura AWS no es parte de este repositorio.
 16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora el latido reporta `baseDeDatos` y `auditoria`. Si se refería al dominio web o a la pasarela de pagos, falta definirlo y agregarlo.
 
