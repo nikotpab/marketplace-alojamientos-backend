@@ -9,10 +9,11 @@ public interface FachadaPagos {
     /**
      * Antes de cobrar registra el intento como PENDIENTE: si nada lo completa, la reconciliación lo revierte (RNF-12).
      *
+     * @param metodoPago método de pago de prueba de Stripe; null usa el predeterminado
      * @return referencia del pago
      * @throws com.inversioneslr.marketplace.compartido.ExcepcionNegocio PAGO_RECHAZADO o PAGO_NO_PROCESADO
      */
-    String cobrar(BigDecimal monto, String claveSolicitud);
+    String cobrar(BigDecimal monto, String claveSolicitud, String metodoPago);
 
     /** SEC-03: devuelve un cobro que no llegó a tener reserva porque otra ganó el periodo. */
     void devolverCobroSinReserva(String claveSolicitud, String referencia, BigDecimal monto);

@@ -124,7 +124,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     /**
      * Decisión temporal: el frontend envía la política como texto libre. Se asocia a la política cuyo nombre
-     * aparece en el texto, y si ninguna aparece, a la Flexible, la única implementada (ajuste 8 del README).
+     * aparece en el texto, y si ninguna aparece, a la Flexible (ajuste 8 del README).
      */
     private UUID politicaDesde(String texto) {
         if (texto == null || texto.isBlank()) {

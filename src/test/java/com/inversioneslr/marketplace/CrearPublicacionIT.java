@@ -74,6 +74,13 @@ class CrearPublicacionIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.politicaCancelacion").doesNotExist());
     }
 
+    /** SCRUM-114: el formulario ofrece las tres políticas del catálogo. */
+    @Test
+    void sePuedePublicarConLaPoliticaEstricta() throws Exception {
+        crear(COMPLETA.replace("Flexible: 100 % hasta 5 días antes", "Estricta"))
+                .andExpect(jsonPath("$.politicaCancelacion").value("Estricta"));
+    }
+
     @Test
     void unaPoliticaSinNombreConocidoQuedaComoFlexible() throws Exception {
         crear(COMPLETA.replace("Flexible: 100 % hasta 5 días antes", "Devolución parcial hasta 2 días antes"))

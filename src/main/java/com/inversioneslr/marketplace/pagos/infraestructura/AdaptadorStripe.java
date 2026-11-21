@@ -24,11 +24,12 @@ class AdaptadorStripe implements PasarelaPagos {
     private static final String MONEDA = "cop";
 
     private final StripeClient stripe;
-    private final String metodoPago;
+    /** STRIPE_METODO_PAGO: el que se usa si la petición no trae uno. */
+    private final String metodoPredeterminado;
 
-    AdaptadorStripe(StripeClient stripe, String metodoPago) {
+    AdaptadorStripe(StripeClient stripe, String metodoPredeterminado) {
         this.stripe = stripe;
-        this.metodoPago = metodoPago;
+        this.metodoPredeterminado = metodoPredeterminado;
     }
 
     static StripeClient.StripeClientBuilder cliente(String claveSecreta) {
@@ -40,11 +41,11 @@ class AdaptadorStripe implements PasarelaPagos {
     }
 
     @Override
-    public String cobrar(BigDecimal monto, String clave) {
+    public String cobrar(BigDecimal monto, String clave, String metodoPago) {
         PaymentIntentCreateParams parametros = PaymentIntentCreateParams.builder()
                 .setAmount(enCentavos(monto))
                 .setCurrency(MONEDA)
-                .setPaymentMethod(metodoPago)
+                .setPaymentMethod(metodoPago == null ? metodoPredeterminado : metodoPago)
                 .setConfirm(true)
                 .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
                         .setEnabled(true)
