@@ -232,6 +232,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 .flatMap(usuarios::buscarPorId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(TOKEN, mensaje)));
         usuarios.guardar(usuario.cambiarContrasena(cifrador.encode(comando.contrasenaNueva())).verificarCorreo());
+        usuarios.invalidarSesiones(usuario.id());
         eventos.publicar(new ContrasenaRestablecida(usuario.id()));
     }
 
@@ -256,10 +257,17 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         return new Perfil(usuario.nombre(), usuario.apellido(), usuario.correo(), usuario.telefono(), usuario.rol(), usuario.cuentaActiva());
     }
 
-    /** CU-05: cada cambio de estado queda en la auditoría. Una cuenta desactivada no puede iniciar sesión. */
+    /**
+     * CU-05: cada cambio de estado queda en la auditoría. Una cuenta desactivada no puede iniciar sesión, y sus tokens
+     * dejan de servir en la siguiente petición (SCRUM-117).
+     */
+    @Transactional
     public Perfil cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
         Usuario actual = buscar(usuarioId);
         Usuario usuario = usuarios.guardar(comando.activo() ? actual.activar() : actual.desactivar());
+        if (!comando.activo()) {
+            usuarios.invalidarSesiones(usuarioId);
+        }
         eventos.publicar(comando.activo() ? new CuentaActivada(usuario.id()) : new CuentaDesactivada(usuario.id()));
         return perfil(usuario);
     }
@@ -270,11 +278,12 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         return usuarios.listar().stream().map(ServicioAutenticacion::resumen).toList();
     }
 
-    /** CU-25: queda en la auditoría con el motivo. */
+    /** CU-25: queda en la auditoría con el motivo. Los tokens del usuario dejan de servir de inmediato (SCRUM-117). */
     @Override
     @Transactional
     public void restringir(UsuarioId administradorId, UsuarioId usuarioId, String motivo) {
         Usuario restringido = usuarios.guardar(buscar(usuarioId.valor()).restringir(motivo));
+        usuarios.invalidarSesiones(usuarioId.valor());
         eventos.publicar(new UsuarioRestringido(administradorId.valor(), usuarioId.valor(), restringido.motivoRestriccion()));
     }
 

@@ -334,7 +334,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
    `politica_cancelacion` guarda un solo tramo y las políticas tienen hasta dos, así que los tramos viven en una clase por política (`PoliticaFlexible`, `PoliticaModerada`, `PoliticaEstricta`) y la tabla solo da el nombre y la descripción (`V14`). Una política sin clase sigue respondiendo 409 con un mensaje claro (SCRUM-38).
 7. **Código de recuperación (CU-03).** Resuelto en SCRUM-110: el enlace llega por correo y la API ya no devuelve el código. Los tokens se guardan en `token_correo`, solo con su hash. Ver "Correos".
 8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
-9. **Duración del JWT y revocación.** Por ahora los tokens duran 8 horas. Un usuario restringido o desactivado conserva su token hasta que venza, salvo que se verifique en cada petición.
+9. **Duración del JWT y revocación.** Los tokens duran 8 horas. Resuelto en SCRUM-117: cada token lleva la versión de sesión del usuario (`usuario.version_sesion`, `V15`), y `TokensJwt` la compara en cada petición con una consulta por llave primaria, sin caché, así que el efecto es inmediato. Restringir, desactivar la cuenta o restablecer la contraseña sube la versión, y la siguiente petición con un token anterior responde 401. Un token de una cuenta desactivada o restringida tampoco sirve. Se eligió una versión y no la fecha de emisión porque el `iat` del JWT va en segundos: un token anterior y un inicio de sesión del mismo segundo no se distinguirían.
 
 **Transiciones sin caso de uso**
 
