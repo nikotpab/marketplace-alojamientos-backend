@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  SCRUM-57 - Monitoreo del marketplace: metrica del latido de la API, alarma si falta o falla, aviso por correo con SNS
+  y recuperacion automatica de la EC2 si falla el host (RNF-09, RNF-15, RNF-16).
+
+Parameters:
+  InstanciaId:
+    Type: AWS::EC2::Instance::Id
+    Description: EC2 donde corre la API.
+  CorreoAlertas:
+    Type: String
+    AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[A-Za-z]{2,}$"
+    Description: Correo del equipo que recibe las alarmas. Hay que confirmar la suscripcion desde el correo que llega.
+  GrupoLogsApi:
+    Type: String
+    Default: /marketplace/api
+    AllowedPattern: "^[A-Za-z0-9_./#-]+$"
+    Description: Grupo de logs de la API, creado por el stack de deploy/aws/despliegue.yaml.
+
+Resources:
+  # Sin cifrado con KMS a propósito: las alarmas no llevan datos personales, y una alarma de CloudWatch no puede publicar
+  # en un tema cifrado con la llave administrada aws/sns; haría falta una llave propia solo para esto.
+  TemaAlertas:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Marketplace - alertas
+
+  SuscripcionCorreo:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref TemaAlertas
+      Protocol: email
+      Endpoint: !Ref CorreoAlertas
+
+  # La API escribe cada 30 s una línea "Latido" con latido = OK o FALLA (TareaLatido). Cada OK suma 1.
+  FiltroLatido:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref GrupoLogsApi
+      FilterPattern: '{ $.latido = "OK" }'
+      MetricTransformations:
+        - MetricNamespace: Marketplace
+          MetricName: LatidoOk
+          MetricValue: "1"
+          Unit: Count
+
+  # Un solo umbral cubre los dos casos: si la API se detiene, faltan los datos, que cuentan como incumplidos; si un
+  # componente falla, el latido deja de ser OK. Avisa en unos 2 minutos (RNF-15) y también cuando se recupera.
+  AlarmaLatido:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: >-
+        La API del marketplace no reporto latido OK en los ultimos 2 minutos: esta caida, colgada o un componente
+        (base de datos, auditoria) fallo. Ver el grupo de logs /marketplace/api.
+      Namespace: Marketplace
+      MetricName: LatidoOk
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions:
+        - !Ref TemaAlertas
+      OKActions:
+        - !Ref TemaAlertas
+
+  # RNF-16: si falla el hardware o la red del host, AWS mueve la instancia a otro con la misma IP y el mismo disco.
+  AlarmaRecuperarInstancia:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Fallo el host de la EC2 del marketplace; AWS la recupera en otro.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref InstanciaId
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: missing
+      AlarmActions:
+        - !Sub arn:${AWS::Partition}:automate:${AWS::Region}:ec2:recover
+        - !Ref TemaAlertas
+
+  # Si el sistema operativo de la instancia deja de responder, se reinicia. Docker vuelve a levantar los contenedores.
+  AlarmaReiniciarInstancia:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: La EC2 del marketplace no responde a su status check; se reinicia.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_Instance
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref InstanciaId
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: missing
+      AlarmActions:
+        - !Sub arn:${AWS::Partition}:automate:${AWS::Region}:ec2:reboot
+        - !Ref TemaAlertas
+
+Outputs:
+  TemaAlertas:
+    Description: Tema de SNS de las alarmas; se le pueden agregar más suscripciones.
+    Value: !Ref TemaAlertas
