@@ -108,6 +108,17 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.BLOQUEADA, motivo.trim());
     }
 
+    /**
+     * SCRUM-118 · pendiente 12: lo que el anfitrión cambia en una publicación ya aprobada vuelve a revisión. Una pausada
+     * también, porque se reactiva sin revisión y sería un atajo. Las demás conservan su estado.
+     */
+    public Publicacion revisarTrasEdicion() {
+        if (estado != EstadoPublicacion.ACTIVA && estado != EstadoPublicacion.PAUSADA) {
+            return this;
+        }
+        return conEstado(EstadoPublicacion.PENDIENTE_REVISION, null);
+    }
+
     /** SCRUM-112: el administrador revierte el bloqueo y la publicación vuelve a ACTIVA, sin pasar por revisión. */
     public Publicacion desbloquear() {
         if (estado != EstadoPublicacion.BLOQUEADA) {

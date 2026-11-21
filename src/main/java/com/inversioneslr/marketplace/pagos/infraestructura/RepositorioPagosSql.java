@@ -83,6 +83,15 @@ public class RepositorioPagosSql implements RepositorioPagos {
     }
 
     @Override
+    public void liberarClavesCreadasAntesDe(Instant momento) {
+        jdbc.sql("""
+                UPDATE pago SET clave_idempotencia = NULL
+                WHERE clave_idempotencia IS NOT NULL AND estado <> 'PENDIENTE' AND creado_en < :momento""")
+                .param("momento", Timestamp.from(momento))
+                .update();
+    }
+
+    @Override
     public Optional<String> marcarDevuelto(UUID reservaId) {
         return jdbc.sql("UPDATE pago SET estado = 'DEVUELTO' WHERE reserva_id = :reserva AND estado = 'APROBADO' RETURNING id_pago_stripe")
                 .param("reserva", reservaId)

@@ -28,6 +28,12 @@ public interface RepositorioPagos {
      */
     Optional<String> marcarDevuelto(UUID reservaId);
 
+    /**
+     * SCRUM-118 · ADR-04: quita la clave de los pagos ya resueltos que se crearon antes de ese momento. Un reintento con
+     * la misma clave se trata como un intento nuevo, como hace Stripe, en vez de sobrescribir el pago anterior.
+     */
+    void liberarClavesCreadasAntesDe(Instant momento);
+
     /** Deshace {@link #marcarDevuelto} cuando la pasarela no procesó la devolución. */
     void marcarAprobado(UUID reservaId);
 }

@@ -25,25 +25,40 @@ class EditarPublicacionIT extends PruebaIntegracion {
         cuerpo = cuerpo(6, "250000");
     }
 
+    /** SCRUM-118 · pendiente 12: lo que el anfitrión cambia en una publicación aprobada vuelve a revisión. */
     @Test
-    void elPropietarioEditaSinCambiarElEstadoYQuedaEnAuditoria() throws Exception {
+    void elPropietarioEditaUnaActivaQueVuelveARevisionYQuedaEnAuditoria() throws Exception {
         editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, cuerpo)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.titulo").value("Título nuevo"))
                 .andExpect(jsonPath("$.ubicacion").value("El Poblado, Medellín"))
                 .andExpect(jsonPath("$.servicios[0]").value("WiFi"))
-                .andExpect(jsonPath("$.estado").value("ACTIVA"));
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_REVISION"));
 
         assertThat(comoAplicacion.queryForObject("SELECT capacidad FROM publicacion WHERE id = ?", Integer.class, publicacion)).isEqualTo(6);
         assertThat(comoAplicacion.queryForObject("SELECT ciudad FROM publicacion WHERE id = ?", String.class, publicacion)).isEqualTo("Medellín");
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'PublicacionEditada' AND actor_id = ?", publicacion, anfitrion)).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'PublicacionEnviadaARevision' AND actor_id = ?", publicacion, anfitrion)).isEqualTo(1);
+    }
+
+    /** Si una pausada conservara su estado, el anfitrión podría editarla y reactivarla sin revisión. */
+    @Test
+    void unaPausadaEditadaTambienVuelveARevision() throws Exception {
+        comoAplicacion.update("UPDATE publicacion SET estado = 'PAUSADA' WHERE id = ?", publicacion);
+
+        editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, cuerpo)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_REVISION"));
     }
 
     @Test
-    void unAdministradorPuedeEditarUnaPublicacionAjena() throws Exception {
-        editar(sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR), publicacion, cuerpo).andExpect(status().isOk());
+    void unAdministradorPuedeEditarUnaPublicacionAjenaYConservaSuEstado() throws Exception {
+        editar(sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR), publicacion, cuerpo)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("ACTIVA"));
 
         assertThat(comoAplicacion.queryForObject("SELECT anfitrion_id FROM publicacion WHERE id = ?", UUID.class, publicacion)).isEqualTo(anfitrion);
+        assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'PublicacionEnviadaARevision'", publicacion)).isZero();
     }
 
     @Test

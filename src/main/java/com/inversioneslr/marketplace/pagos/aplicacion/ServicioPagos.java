@@ -25,6 +25,8 @@ public class ServicioPagos implements FachadaPagos {
 
     /** Una confirmación tarda segundos: a los 10 min, un cobro pendiente ya no va a tener reserva. */
     private static final Duration ESPERA_ANTES_DE_REVERTIR = Duration.ofMinutes(10);
+    /** ADR-04: lo mínimo que Stripe conserva sus claves de idempotencia (SCRUM-118). */
+    private static final Duration RETENCION_CLAVE = Duration.ofHours(24);
 
     private final PasarelaPagos pasarela;
     private final RepositorioPagos pagos;
@@ -87,6 +89,16 @@ public class ServicioPagos implements FachadaPagos {
      * máximo 15 min. Le pide el cobro a la pasarela con la misma clave: si ya se hizo, devuelve el mismo pago sin
      * cobrar otra vez (ADR-04). Luego lo devuelve completo.
      */
+    /**
+     * SCRUM-118 · ADR-04: cada hora, los pagos ya resueltos de hace más de 24 h sueltan su clave, como las solicitudes de
+     * reserva (ServicioReservas.eliminarSolicitudesVencidas) y como Stripe. Los PENDIENTES la conservan, porque la
+     * reconciliación la necesita, y los resuelve en máximo 15 min.
+     */
+    @Scheduled(cron = "0 0 * * * *")
+    public void liberarClavesVencidas() {
+        pagos.liberarClavesCreadasAntesDe(reloj.instant().minus(RETENCION_CLAVE));
+    }
+
     @Scheduled(cron = "${marketplace.pagos.reconciliacion-cron:0 */5 * * * *}")
     public void revertirCobrosSinReserva() {
         pagos.listarPendientesCreadosAntesDe(reloj.instant().minus(ESPERA_ANTES_DE_REVERTIR)).forEach(this::revertir);
