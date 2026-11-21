@@ -320,7 +320,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 
 **Faltan reglas o datos**
 
-5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Por eso `LIMPIEZA` queda en `NULL` en `V3`, y la cotización la cobra en 0 hasta que el administrador le asigne un porcentaje en `PUT /api/v1/admin/tarifas`.
+5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Decisión tomada en SCRUM-115: es un porcentaje del subtotal, como dicen los documentos, y arranca en 5 % (`V13`); en 3 noches de COP 300.000 son COP 45.000, cerca del mockup. El administrador lo cambia en `PUT /api/v1/admin/tarifas`.
 6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tenían reglas definidas. Decisión tomada en SCRUM-114, con la tarifa de servicio no reembolsable en las tres:
 
    | Días antes de la llegada | Flexible | Moderada | Estricta |
