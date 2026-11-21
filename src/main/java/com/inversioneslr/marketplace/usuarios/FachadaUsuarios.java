@@ -20,8 +20,11 @@ public interface FachadaUsuarios {
     /** SCRUM-112 · CU-05: reactiva una cuenta desactivada. */
     void reactivar(UsuarioId administradorId, UsuarioId usuarioId);
 
-    /** RNF-21: solo se muestran al anfitrión de una reserva confirmada con ese huésped. */
-    DatosContacto datosContacto(UsuarioId usuarioId);
+    /**
+     * RNF-21: solo se muestran al anfitrión de una reserva confirmada con ese huésped. Una sola consulta para todos los
+     * ids (SCRUM-113); los que no existen no aparecen.
+     */
+    Map<UsuarioId, DatosContacto> datosContacto(Collection<UsuarioId> usuarioIds);
 
     /**
      * SCRUM-142: los otros módulos ya no leen la tabla usuario. Una sola consulta para todos los ids; los que no

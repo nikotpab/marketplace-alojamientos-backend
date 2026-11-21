@@ -26,6 +26,8 @@ import com.inversioneslr.marketplace.reservas.dominio.PeriodoNoDisponibleExcepti
 import com.inversioneslr.marketplace.reservas.dominio.RepositorioReservas;
 import com.inversioneslr.marketplace.reservas.dominio.Reserva;
 import com.inversioneslr.marketplace.reservas.dominio.SolicitudProcesada;
+import com.inversioneslr.marketplace.reservas.CancelacionesDeReservas;
+import com.inversioneslr.marketplace.reservas.ResenasDeReservas;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -74,6 +76,10 @@ class ServicioReservasTest {
     @Mock
     private FachadaUsuarios usuarios;
     @Mock
+    private CancelacionesDeReservas cancelaciones;
+    @Mock
+    private ResenasDeReservas resenas;
+    @Mock
     private PublicadorEventos eventos;
     @Mock
     private PlatformTransactionManager transacciones;
@@ -83,7 +89,7 @@ class ServicioReservasTest {
 
     @BeforeEach
     void preparar() {
-        servicio = new ServicioReservas(reservas, publicaciones, cotizacion, pagos, usuarios, eventos,
+        servicio = new ServicioReservas(reservas, publicaciones, cotizacion, pagos, usuarios, cancelaciones, resenas, eventos,
                 new TransactionTemplate(transacciones), RELOJ, json);
     }
 
