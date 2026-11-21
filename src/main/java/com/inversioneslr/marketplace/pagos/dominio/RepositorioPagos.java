@@ -9,7 +9,7 @@ import java.util.UUID;
 public interface RepositorioPagos {
 
     /** Registra el cobro como PENDIENTE antes de llamar a la pasarela. Un reintento con la misma clave no lo duplica. */
-    void registrarIntento(String clave, BigDecimal monto);
+    void registrarIntento(String clave, BigDecimal monto, String metodoPago);
 
     /** Guarda el pago aprobado; si ya estaba el intento con esa clave, lo completa. */
     void guardar(Pago pago);

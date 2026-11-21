@@ -21,7 +21,7 @@ class PagosIT extends PruebaIntegracion {
     void elAdaptadorSimuladoApruebaYElPagoQuedaRegistrado() {
         String clave = UUID.randomUUID().toString();
 
-        String referencia = pagos.cobrar(new BigDecimal("1062000.00"), clave);
+        String referencia = pagos.cobrar(new BigDecimal("1062000.00"), clave, null);
         pagos.registrarPago(null, referencia, clave, new BigDecimal("1062000.00"));
 
         var pago = comoAplicacion.queryForMap("SELECT id_pago_stripe, monto, estado FROM pago WHERE clave_idempotencia = ?", clave);
@@ -43,7 +43,7 @@ class PagosIT extends PruebaIntegracion {
         // Sin esto, la reconciliación de otras pruebas (ReconciliacionIT) intentaría revertir este cobro pendiente.
         comoAplicacion.update("UPDATE pago SET estado = 'RECHAZADO' WHERE clave_idempotencia = ?", pendiente);
 
-        String referencia = pagos.cobrar(new BigDecimal("50000.00"), vieja);
+        String referencia = pagos.cobrar(new BigDecimal("50000.00"), vieja, null);
         pagos.registrarPago(null, referencia, vieja, new BigDecimal("50000.00"));
         assertThat(comoAplicacion.queryForObject("SELECT count(*) FROM pago WHERE id_pago_stripe = ?", Long.class, "pi_" + vieja)).isEqualTo(1);
         assertThat(contar(vieja)).isEqualTo(1);

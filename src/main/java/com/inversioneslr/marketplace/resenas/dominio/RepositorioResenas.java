@@ -16,4 +16,7 @@ public interface RepositorioResenas {
 
     /** Las visibles de esas reservas, de la más reciente a la más antigua. */
     List<ResenaGuardada> listarVisibles(Collection<UUID> reservaIds);
+
+    /** Una sola consulta: cuáles de esas reservas ya tienen reseña, oculta o no (SCRUM-113). */
+    List<UUID> reservasConResena(Collection<UUID> reservaIds);
 }

@@ -21,12 +21,13 @@ public class RepositorioPagosSql implements RepositorioPagos {
     }
 
     @Override
-    public void registrarIntento(String clave, BigDecimal monto) {
+    public void registrarIntento(String clave, BigDecimal monto, String metodoPago) {
         jdbc.sql("""
-                INSERT INTO pago (clave_idempotencia, monto, estado) VALUES (:clave, :monto, 'PENDIENTE')
+                INSERT INTO pago (clave_idempotencia, monto, estado, metodo_pago) VALUES (:clave, :monto, 'PENDIENTE', :metodo)
                 ON CONFLICT (clave_idempotencia) DO NOTHING""")
                 .param("clave", clave)
                 .param("monto", monto)
+                .param("metodo", metodoPago)
                 .update();
     }
 
@@ -76,7 +77,8 @@ public class RepositorioPagosSql implements RepositorioPagos {
                         fila.getString("id_pago_stripe"),
                         fila.getString("clave_idempotencia"),
                         fila.getBigDecimal("monto"),
-                        Pago.Estado.valueOf(fila.getString("estado"))))
+                        Pago.Estado.valueOf(fila.getString("estado")),
+                        fila.getString("metodo_pago")))
                 .list();
     }
 

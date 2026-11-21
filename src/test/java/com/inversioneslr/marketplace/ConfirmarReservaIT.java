@@ -71,7 +71,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
         publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
         when(cotizacion.cotizar(any(), any(), any(), any())).thenReturn(new Cotizacion(3, new BigDecimal("300000.00"),
                 BigDecimal.ZERO, new BigDecimal("30000.00"), BigDecimal.ZERO, BigDecimal.ZERO, TOTAL));
-        when(pasarela.cobrar(any(), any())).thenAnswer(llamada -> "pi_" + llamada.getArgument(1));
+        when(pasarela.cobrar(any(), any(), any())).thenAnswer(llamada -> "pi_" + llamada.getArgument(1));
     }
 
     @Test
@@ -89,12 +89,34 @@ class ConfirmarReservaIT extends PruebaIntegracion {
         assertThat(contar("SELECT count(*) FROM reserva WHERE id = ? AND estado = 'CONFIRMADA'", id)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM pago WHERE reserva_id = ? AND estado = 'APROBADO'", id)).isEqualTo(1);
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ? AND accion = 'ReservaConfirmada'", id)).isEqualTo(1);
-        verify(pasarela).cobrar(TOTAL, clave);
+        verify(pasarela).cobrar(TOTAL, clave, null);
+    }
+
+    /** SCRUM-116 · CU-17: el cobro usa el método de prueba que eligió el huésped, y queda guardado para la reconciliación. */
+    @Test
+    void cobraConElMetodoDePagoQueEnviaElFrontend() throws Exception {
+        String clave = UUID.randomUUID().toString();
+
+        confirmar(clave, cuerpo("2030-06-10", "2030-06-13", 2, "pm_card_mastercard")).andExpect(status().isCreated());
+
+        verify(pasarela).cobrar(TOTAL, clave, "pm_card_mastercard");
+        assertThat(comoAplicacion.queryForObject("SELECT metodo_pago FROM pago WHERE clave_idempotencia = ?", String.class, clave))
+                .isEqualTo("pm_card_mastercard");
+    }
+
+    @Test
+    void unMetodoQueNoEsDePruebaRespondeBadRequestSinCobrar() throws Exception {
+        confirmar(UUID.randomUUID().toString(), cuerpo("2030-06-10", "2030-06-13", 2, "4242424242424242"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.metodoPagoId").value("Usa un método de pago de prueba de Stripe, por ejemplo pm_card_visa"));
+
+        verify(pasarela, never()).cobrar(any(), any(), any());
+        assertThat(reservasDeLaPublicacion()).isZero();
     }
 
     @Test
     void pagoRechazadoNoCreaLaReservaYSeAudita() throws Exception {
-        when(pasarela.cobrar(any(), any())).thenThrow(new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_RECHAZADO, "No aprobado"));
+        when(pasarela.cobrar(any(), any(), any())).thenThrow(new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_RECHAZADO, "No aprobado"));
 
         confirmar(UUID.randomUUID().toString(), "2030-06-10", "2030-06-13", 2).andExpect(status().isPaymentRequired());
 
@@ -104,7 +126,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
 
     @Test
     void pagoNoProcesadoNoCreaLaReservaNiBloqueaElPeriodo() throws Exception {
-        when(pasarela.cobrar(any(), any())).thenThrow(new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO, "No se procesó"));
+        when(pasarela.cobrar(any(), any(), any())).thenThrow(new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO, "No se procesó"));
 
         confirmar(UUID.randomUUID().toString(), "2030-06-10", "2030-06-13", 2)
                 .andExpect(status().isServiceUnavailable())
@@ -119,7 +141,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
 
         confirmar(UUID.randomUUID().toString(), "2030-06-10", "2030-06-13", 2).andExpect(status().isConflict());
 
-        verify(pasarela, never()).cobrar(any(), any());
+        verify(pasarela, never()).cobrar(any(), any(), any());
     }
 
     @Test
@@ -144,7 +166,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
             Thread.sleep(300);
             return llamada.callRealMethod();
         }).when(auditoria).atender(any(EventoDominio.class));
-        ConfirmarReservaComando comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 7, 10), LocalDate.of(2030, 7, 13), 2, List.of());
+        ConfirmarReservaComando comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 7, 10), LocalDate.of(2030, 7, 13), 2, List.of(), null);
         CountDownLatch salida = new CountDownLatch(1);
         AtomicInteger confirmadas = new AtomicInteger();
         AtomicInteger rechazadas = new AtomicInteger();
@@ -178,10 +200,10 @@ class ConfirmarReservaIT extends PruebaIntegracion {
 
     @Test
     void siLaDevolucionFallaQuedaEnAuditoria() {
-        ConfirmarReservaComando comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 8, 10), LocalDate.of(2030, 8, 13), 2, List.of());
+        ConfirmarReservaComando comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 8, 10), LocalDate.of(2030, 8, 13), 2, List.of(), null);
         doThrow(new ExcepcionNegocio(ExcepcionNegocio.Tipo.PAGO_NO_PROCESADO, "No se procesó")).when(pasarela).devolver(any(), any());
         // Otra reserva toma el periodo mientras se cobra: la verificación previa pasó, pero la base de datos rechaza.
-        when(pasarela.cobrar(any(), any())).thenAnswer(llamada -> {
+        when(pasarela.cobrar(any(), any(), any())).thenAnswer(llamada -> {
             comoAplicacion.update("""
                     INSERT INTO reserva (huesped_id, publicacion_id, fecha_llegada, fecha_salida, numero_huespedes, estado)
                     VALUES (?, ?, '2030-08-10', '2030-08-13', 1, 'CONFIRMADA')""", huesped, publicacion);
@@ -234,17 +256,27 @@ class ConfirmarReservaIT extends PruebaIntegracion {
     }
 
     private ResultActions confirmar(String clave, String llegada, String salida, int huespedes) throws Exception {
+        return confirmar(clave, cuerpo(llegada, salida, huespedes));
+    }
+
+    private ResultActions confirmar(String clave, String cuerpo) throws Exception {
         return mvc.perform(post("/api/v1/reservas")
                 .header("Authorization", sesionDe(huesped, Rol.HUESPED))
                 .header("Idempotency-Key", clave)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(cuerpo(llegada, salida, huespedes)));
+                .content(cuerpo));
     }
 
     private String cuerpo(String llegada, String salida, int huespedes) {
         return """
                 {"publicacionId":"%s","llegada":"%s","salida":"%s","huespedes":%d,"adicionales":[]}"""
                 .formatted(publicacion, llegada, salida, huespedes);
+    }
+
+    private String cuerpo(String llegada, String salida, int huespedes, String metodoPagoId) {
+        return """
+                {"publicacionId":"%s","llegada":"%s","salida":"%s","huespedes":%d,"adicionales":[],"metodoPagoId":"%s"}"""
+                .formatted(publicacion, llegada, salida, huespedes, metodoPagoId);
     }
 
     private long llamadasA(String metodo) {
