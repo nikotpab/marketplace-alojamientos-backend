@@ -2,12 +2,33 @@ package com.inversioneslr.marketplace.cancelaciones.dominio;
 
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 /** Strategy (RNF-31): una política nueva es una clase nueva y una línea en {@link #porNombre}. */
 public interface PoliticaCancelacion {
 
     BigDecimal calcularDevolucion(ReservaCancelable reserva, LocalDate fechaCancelacion);
+
+    /**
+     * SCRUM-114: devuelve el porcentaje del primer tramo que se cumple, sobre el total sin la tarifa de servicio, que
+     * no es reembolsable. Los tramos van del más lejano al más cercano a la llegada. Se redondea al peso.
+     */
+    static BigDecimal porTramos(ReservaCancelable reserva, LocalDate fechaCancelacion, Tramo... tramos) {
+        long diasAntes = ChronoUnit.DAYS.between(fechaCancelacion, reserva.fechaLlegada());
+        BigDecimal reembolsable = reserva.total().subtract(reserva.tarifaServicio());
+        for (Tramo tramo : tramos) {
+            if (diasAntes >= tramo.diasAntes()) {
+                return reembolsable.multiply(BigDecimal.valueOf(tramo.porcentaje())).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            }
+        }
+        return BigDecimal.ZERO;
+    }
+
+    /** Desde cuántos días antes de la llegada se devuelve ese porcentaje. */
+    record Tramo(int diasAntes, int porcentaje) {
+    }
 
     /** Una política sin clase responde un error claro en vez de inventar reglas (SCRUM-38). */
     static PoliticaCancelacion porNombre(String nombre) {

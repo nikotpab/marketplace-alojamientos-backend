@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -27,5 +28,12 @@ class PoliticaModeradaTest {
         BigDecimal valor = new PoliticaModerada().calcularDevolucion(RESERVA, LLEGADA.minusDays(diasAntes));
 
         assertThat(valor).isEqualByComparingTo(devolucion);
+    }
+
+    @Test
+    void laMitadSeRedondeaAlPeso() {
+        ReservaCancelable impar = new ReservaCancelable(LLEGADA, new BigDecimal("100001.00"), BigDecimal.ZERO);
+
+        assertThat(new PoliticaModerada().calcularDevolucion(impar, LLEGADA.minusDays(10))).isEqualByComparingTo("50001");
     }
 }

@@ -1,9 +1,7 @@
 package com.inversioneslr.marketplace.cancelaciones.dominio;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 
 /**
  * SCRUM-114: 50 % hasta 14 días antes de la llegada y nada después.
@@ -11,15 +9,10 @@ import java.time.temporal.ChronoUnit;
  */
 public class PoliticaEstricta implements PoliticaCancelacion {
 
-    private static final int DIAS_DEVOLUCION_PARCIAL = 14;
+    private static final Tramo DEVOLUCION_PARCIAL = new Tramo(14, 50);
 
     @Override
     public BigDecimal calcularDevolucion(ReservaCancelable reserva, LocalDate fechaCancelacion) {
-        BigDecimal reembolsable = reserva.total().subtract(reserva.tarifaServicio());
-        long diasAntes = ChronoUnit.DAYS.between(fechaCancelacion, reserva.fechaLlegada());
-        if (diasAntes >= DIAS_DEVOLUCION_PARCIAL) {
-            return reembolsable.divide(BigDecimal.TWO, 0, RoundingMode.HALF_UP);
-        }
-        return BigDecimal.ZERO;
+        return PoliticaCancelacion.porTramos(reserva, fechaCancelacion, DEVOLUCION_PARCIAL);
     }
 }
