@@ -1,0 +1,4 @@
+# Falsos positivos revisados a mano. Cada línea es la huella que imprime gitleaks (commit:archivo:regla:línea).
+# SCRUM-121: valor de ejemplo "cambiar-..." de JWT_SECRETO en el .env.example del esqueleto (96c70b0), no un secreto.
+# Solo aparece al revisar todo el historial, como en un despliegue manual (workflow_dispatch).
+96c70b00b03b1c8fc80c165b04bf5d8eb6f76bc4:.env.example:generic-api-key:7
