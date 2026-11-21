@@ -21,18 +21,17 @@
         <!-- Groovy 5.0.8 (gestionado por el BOM de Spring Boot) tiene un NPE en ClosureMetaClass
              que afecta las peticiones GET de RestAssured. Se fuerza 4.0.x para evitarlo. -->
         <groovy.version>4.0.21</groovy.version>
-        <!-- SCRUM-104: análisis en SonarQube Cloud. La cobertura sale del reporte de JaCoCo. -->
+        <!-- Análisis en SonarQube Cloud. La cobertura sale del reporte de JaCoCo. -->
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.organization>nikotpab</sonar.organization>
         <sonar.projectKey>nikotpab_marketplace-alojamientos-backend</sonar.projectKey>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
         <!-- Las migraciones y los datos de demostración no se pueden cambiar una vez aplicados: Flyway rechaza el checksum distinto. -->
         <sonar.exclusions>src/main/resources/db/**</sonar.exclusions>
-        <!-- Reglas que no aplican aquí (SCRUM-105):
+        <!-- Reglas que no aplican aquí:
              - java:S1192 en infraestructura: los textos repetidos son nombres de parámetros y columnas que deben
                coincidir con el SQL de al lado; como constantes, el SQL se lee peor.
-             - S1135 (en cualquier lenguaje): marca la palabra "todo" de los comentarios en español ("todo o nada"). Los pendientes
-               están en el README, sección "Decisiones pendientes". -->
+             - S1135 (en cualquier lenguaje): marca la palabra "todo" de los comentarios en español ("todo o nada"). -->
         <sonar.issue.ignore.multicriteria>sql,todo</sonar.issue.ignore.multicriteria>
         <sonar.issue.ignore.multicriteria.sql.ruleKey>java:S1192</sonar.issue.ignore.multicriteria.sql.ruleKey>
         <sonar.issue.ignore.multicriteria.sql.resourceKey>**/infraestructura/**</sonar.issue.ignore.multicriteria.sql.resourceKey>
@@ -73,7 +72,7 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-core</artifactId>
         </dependency>
-        <!-- RF-34: reportes en PDF y Excel, sin dependencias obligatorias ni binarios nativos. -->
+        <!-- Reportes en PDF y Excel, sin dependencias obligatorias ni binarios nativos. -->
         <dependency>
             <groupId>com.github.librepdf</groupId>
             <artifactId>openpdf</artifactId>
@@ -88,7 +87,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
-        <!-- SCRUM-109 y SCRUM-110: correos de verificación y de recuperación por SMTP (Gmail, Amazon SES u otro). -->
+        <!-- Correos de verificación y de recuperación por SMTP (Gmail, Amazon SES u otro). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
@@ -115,7 +114,7 @@
             <artifactId>stripe-java</artifactId>
             <version>34.1.0</version>
         </dependency>
-        <!-- SCRUM-99: documentación OpenAPI generada desde los controladores, con Swagger UI. -->
+        <!-- Documentación OpenAPI generada desde los controladores, con Swagger UI. -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -164,14 +163,14 @@
             <version>2.1.15</version>
             <scope>test</scope>
         </dependency>
-        <!-- SCRUM-130: HTTP real para las pruebas de sistema. -->
+        <!-- HTTP real para las pruebas de sistema. -->
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <version>5.3.2</version>
             <scope>test</scope>
         </dependency>
-        <!-- SCRUM-129: valida que las respuestas reales cumplan el contrato OpenAPI. -->
+        <!-- Valida que las respuestas reales cumplan el contrato OpenAPI. -->
         <dependency>
             <groupId>com.atlassian.oai</groupId>
             <artifactId>swagger-request-validator-core</artifactId>
@@ -200,7 +199,7 @@
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
             </plugin>
-            <!-- SCRUM-100: cobertura de las pruebas unitarias (Surefire) y de integración (Failsafe).
+            <!-- Cobertura de las pruebas unitarias (Surefire) y de integración (Failsafe).
                  prepare-agent deja el agente en argLine, que usan los dos; el reporte sale en verify. -->
             <plugin>
                 <groupId>org.jacoco</groupId>

@@ -4,10 +4,10 @@ import com.inversioneslr.marketplace.compartido.EventoDominio;
 import java.util.Map;
 import java.util.UUID;
 
-/** Eventos que emite el módulo de cotización (SCRUM-143). */
+/** Eventos que emite el módulo de cotización. */
 public interface EventosCotizacion {
 
-    /** CU-28. Los cambios van como "antes → después", solo lo que cambió. */
+    /** Los cambios van como "antes → después", solo lo que cambió. */
     record TarifasActualizadas(UUID id, UUID administradorId, Map<String, Object> cambios) implements EventoDominio {
 
         public TarifasActualizadas(UUID administradorId, Map<String, Object> cambios) {

@@ -12,7 +12,6 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -30,9 +29,9 @@ public class ServicioAuditoria implements FachadaAuditoria {
     }
 
     /**
-     * ADR-06 · SEC-05: se ejecuta al publicar el evento, dentro de la transacción del caso de uso. Si falla, el caso
+     * Se ejecuta al publicar el evento, dentro de la transacción del caso de uso. Si falla, el caso
      * de uso se revierte: no hay cambio sin registro.
-     * Pendiente ADR-07: alertar al administrador si un usuario acumula 5 denegaciones en 10 min.
+     * Pendiente: alertar al administrador si un usuario acumula 5 denegaciones en 10 min.
      */
     @EventListener
     public void atender(EventoDominio evento) {

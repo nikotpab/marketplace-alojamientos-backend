@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SCRUM-121 - Despliegue continuo del marketplace en la EC2 existente: rol de la instancia, grupo de seguridad web,
+  Despliegue continuo del marketplace en la EC2 existente: rol de la instancia, grupo de seguridad web,
   registros ECR, grupo de logs de la API, acceso de GitHub Actions por OIDC y documentos de SSM que despliegan una imagen.
 
 Parameters:
@@ -108,7 +108,7 @@ Resources:
       Roles:
         - !Ref RolInstancia
 
-  # Caddy recibe HTTP solo para redirigir a HTTPS y validar el certificado (RNF-26).
+  # Caddy recibe HTTP solo para redirigir a HTTPS y validar el certificado.
   GrupoSeguridadWeb:
     Type: AWS::EC2::SecurityGroup
     Properties:

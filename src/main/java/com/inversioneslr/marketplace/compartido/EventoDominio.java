@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Hecho del dominio (ADR-06). Cada evento es un record en la raíz del módulo que lo emite (SCRUM-143); la auditoría y
+ * Hecho del dominio. Cada evento es un record en la raíz del módulo que lo emite; la auditoría y
  * las notificaciones atienden esta interfaz, así que no dependen de ningún evento concreto.
  *
  * <p>Estos datos comunes se guardan también en el JSON de event_publication, junto a los campos del record, para poder
@@ -19,7 +19,7 @@ public interface EventoDominio {
     /** Resultado de un caso de uso que terminó bien. */
     String EXITO = "EXITO";
 
-    /** Identifica el evento, para que entregarlo otra vez no repita sus efectos (RNF-14). */
+    /** Identifica el evento, para que entregarlo otra vez no repita sus efectos. */
     UUID id();
 
     /** El nombre del record, por ejemplo "ReservaConfirmada". Es la acción que queda en la auditoría. */

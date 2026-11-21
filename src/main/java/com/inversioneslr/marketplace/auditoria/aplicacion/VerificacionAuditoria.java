@@ -12,8 +12,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * ASR-07: recalcula el hash de cada registro de auditoría. Uno alterado se registra como error y deja el latido en
- * FALLA, que dispara la alarma del equipo (SCRUM-57).
+ * Recalcula el hash de cada registro de auditoría. Uno alterado se registra como error y deja el latido en
+ * FALLA, que dispara la alarma del equipo.
  */
 @Component
 public class VerificacionAuditoria implements ComprobacionEstado {

@@ -44,7 +44,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** La cotización es de SCRUM-32, así que se simula. La pasarela se simula para provocar sus fallas. */
+/** La cotización es de otro módulo, así que se simula. La pasarela se simula para provocar sus fallas. */
 class ConfirmarReservaIT extends PruebaIntegracion {
 
     private static final BigDecimal TOTAL = new BigDecimal("330000.00");
@@ -92,7 +92,7 @@ class ConfirmarReservaIT extends PruebaIntegracion {
         verify(pasarela).cobrar(TOTAL, clave, null);
     }
 
-    /** SCRUM-116 · CU-17: el cobro usa el método de prueba que eligió el huésped, y queda guardado para la reconciliación. */
+    /** El cobro usa el método de prueba que eligió el huésped, y queda guardado para la reconciliación. */
     @Test
     void cobraConElMetodoDePagoQueEnviaElFrontend() throws Exception {
         String clave = UUID.randomUUID().toString();
@@ -155,13 +155,13 @@ class ConfirmarReservaIT extends PruebaIntegracion {
         assertThat(reservasDeLaPublicacion()).isEqualTo(1);
     }
 
-    /** RNF-13: la base de datos deja pasar exactamente una, y a las demás se les devuelve lo cobrado. */
+    /** La base de datos deja pasar exactamente una, y a las demás se les devuelve lo cobrado. */
     @Test
-    @SuppressWarnings("java:S2925") // Retrasa el commit de la ganadora para reproducir la carrera (SCRUM-102).
+    @SuppressWarnings("java:S2925") // Retrasa el commit de la ganadora para reproducir la carrera.
     void conDiezSolicitudesSimultaneasSoloSeConfirmaUna() {
         int solicitudes = 10;
         // Retrasa el commit de la reserva ganadora, como en una JVM recién arrancada: los INSERT se superponen y, sin
-        // el candado de RepositorioReservasSql, PostgreSQL aborta algunos por deadlock (SCRUM-102).
+        // el candado de RepositorioReservasSql, PostgreSQL aborta algunos por deadlock.
         doAnswer(llamada -> {
             Thread.sleep(300);
             return llamada.callRealMethod();

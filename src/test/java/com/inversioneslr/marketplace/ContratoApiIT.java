@@ -16,7 +16,7 @@ import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 
 /**
- * SCRUM-129: el spec OpenAPI en vivo debe coincidir byte a byte con docs/openapi.json.
+ * El spec OpenAPI en vivo debe coincidir byte a byte con docs/openapi.json.
  * Para regenerar el archivo: mvn verify -Dopenapi.actualizar=true
  */
 class ContratoApiIT extends PruebaIntegracion {

@@ -43,7 +43,8 @@ class NotificacionesIT extends PruebaIntegracion {
         UUID actorInexistente = UUID.randomUUID();
         UUID entidad = UUID.randomUUID();
 
-        assertThatThrownBy(() -> eventos.publicar(evento("ReservaConfirmada", actorInexistente, entidad, List.of())))
+        EventoDominio evento = evento("ReservaConfirmada", actorInexistente, entidad, List.of());
+        assertThatThrownBy(() -> eventos.publicar(evento))
                 .isInstanceOf(DataAccessException.class);
 
         assertThat(contar("SELECT count(*) FROM auditoria.evento_auditoria WHERE entidad_id = ?", entidad)).isZero();

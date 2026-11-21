@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** SCRUM-116 · CU-17, CU-19: con la pasarela simulada real, que como Stripe rechaza los métodos que fallan a propósito. */
+/** Con la pasarela simulada real, que como Stripe rechaza los métodos que fallan a propósito. */
 class MetodoPagoIT extends PruebaIntegracion {
 
     private UUID huesped;

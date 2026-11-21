@@ -1,5 +1,5 @@
 #!/bin/bash
-# SCRUM-121: despliega en la EC2 una imagen que el CI ya publicó en ECR. Lo corre como root el documento de SSM que
+# Despliega en la EC2 una imagen que el CI ya publicó en ECR. Lo corre como root el documento de SSM que
 # lanza cada push a main (ver "Despliegue en AWS" en el README).
 #
 #   desplegar.sh api <commit>   la API: .env desde SSM, usuario de la base y, si no queda sana, la imagen anterior
@@ -40,7 +40,7 @@ for nombre, valor in sorted(valores.items()):
     mv .env.nuevo .env
 }
 
-# Crea en RDS el usuario de la aplicación si no existe y le pone la contraseña de SSM (RNF-27): la migración V2 le da
+# Crea en RDS el usuario de la aplicación si no existe y le pone la contraseña de SSM: la migración V2 le da
 # permisos y fallaría sin él. Así, cambiar la contraseña es actualizar el parámetro y volver a desplegar. Los secretos
 # llegan a psql por variables de entorno, nunca por la línea de comandos.
 preparar_base() (
@@ -85,7 +85,7 @@ desplegar_api() {
     local imagen="$REGISTRO/marketplace-api:$ETIQUETA" anterior
     anterior=$(cat estado/api 2>/dev/null || true)
     preparar_base
-    # SCRUM-122: reinicia la API si se cuelga. El instalador se puede repetir.
+    # Reinicia la API si se cuelga. El instalador se puede repetir.
     if [ -f autorreparacion/instalar.sh ]; then
         sh autorreparacion/instalar.sh
     fi

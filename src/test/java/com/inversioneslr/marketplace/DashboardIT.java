@@ -10,7 +10,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /**
- * CU-29 · RF-33. Las reservas de la prueba se hicieron en marzo de 2001, un mes que no usa ninguna otra prueba, así que
+ * Las reservas de la prueba se hicieron en marzo de 2001, un mes que no usa ninguna otra prueba, así que
  * los indicadores del periodo son exactos.
  */
 class DashboardIT extends PruebaIntegracion {

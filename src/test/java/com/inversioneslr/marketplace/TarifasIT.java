@@ -13,7 +13,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
-/** CU-28 · RF-32. */
 class TarifasIT extends PruebaIntegracion {
 
     private static final String NUEVAS = """
@@ -64,7 +63,7 @@ class TarifasIT extends PruebaIntegracion {
                 WHERE actor_id = ? AND accion = 'TarifasActualizadas'""", String.class, administrador)).isEqualTo("10 % → 12 %");
     }
 
-    /** SCRUM-115: la limpieza arranca en 5 % del subtotal (V13); antes quedaba sin definir y se cobraba en 0. */
+    /** La limpieza arranca en 5 % del subtotal (V13); antes quedaba sin definir y se cobraba en 0. */
     @Test
     void laTarifaDeLimpiezaArrancaEnCincoPorCiento() throws Exception {
         mvc.perform(get("/api/v1/admin/tarifas").header("Authorization", sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR)))

@@ -4,7 +4,7 @@ import java.util.regex.Pattern;
 import org.springframework.boot.json.JsonWriter;
 import org.springframework.boot.logging.structured.StructuredLoggingJsonMembersCustomizer;
 
-/** Enmascara tokens y datos personales en todos los logs JSON (RNF-25). */
+/** Enmascara tokens y datos personales en todos los logs JSON. */
 public class EnmascaradorLogs implements StructuredLoggingJsonMembersCustomizer<Object> {
 
     private static final Pattern SENSIBLE = Pattern.compile(

@@ -14,7 +14,7 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
                           List<String> imagenes, EstadoPublicacion estado, String motivoEstado) {
 
     /**
-     * RF-08: título, descripción, ubicación, tipo, capacidad, precio, al menos una imagen y política.
+     * Título, descripción, ubicación, tipo, capacidad, precio, al menos una imagen y política.
      * El mensaje de cada campo que falta usa el nombre del campo en el formulario.
      */
     public void exigirInformacionMinima() {
@@ -49,7 +49,7 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         }
     }
 
-    /** RF-08: solo un borrador completo pasa a revisión. Se borra el motivo del rechazo anterior. */
+    /** Solo un borrador completo pasa a revisión. Se borra el motivo del rechazo anterior. */
     public Publicacion solicitarActivacion() {
         if (estado != EstadoPublicacion.BORRADOR) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo un borrador puede enviarse a revisión.");
@@ -58,13 +58,13 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.PENDIENTE_REVISION, null);
     }
 
-    /** RF-09: solo una publicación pendiente de revisión pasa a ACTIVA. */
+    /** Solo una publicación pendiente de revisión pasa a ACTIVA. */
     public Publicacion aprobar() {
         exigirPendienteDeRevision();
         return conEstado(EstadoPublicacion.ACTIVA, null);
     }
 
-    /** RF-09: vuelve a BORRADOR con el motivo, que es obligatorio, para que el anfitrión sepa qué corregir. */
+    /** Vuelve a BORRADOR con el motivo, que es obligatorio, para que el anfitrión sepa qué corregir. */
     public Publicacion rechazar(String motivo) {
         exigirPendienteDeRevision();
         if (vacio(motivo)) {
@@ -81,7 +81,7 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         }
     }
 
-    /** RF-10: deja de aparecer en la búsqueda y de recibir reservas. */
+    /** Deja de aparecer en la búsqueda y de recibir reservas. */
     public Publicacion pausar() {
         if (estado != EstadoPublicacion.ACTIVA) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo una publicación activa puede pausarse.");
@@ -89,7 +89,7 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.PAUSADA, null);
     }
 
-    /** Decisión temporal: vuelve a ACTIVA sin pasar por revisión (pendiente 10 del README). */
+    /** Vuelve a ACTIVA sin pasar por revisión. */
     public Publicacion reactivar() {
         if (estado == EstadoPublicacion.BLOQUEADA) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Una publicación bloqueada solo la puede desbloquear un administrador.");
@@ -100,7 +100,7 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.ACTIVA, null);
     }
 
-    /** RF-27: se bloquea una publicación activa o pausada. El anfitrión no puede reactivarla. */
+    /** Se bloquea una publicación activa o pausada. El anfitrión no puede reactivarla. */
     public Publicacion bloquear(String motivo) {
         if (estado != EstadoPublicacion.ACTIVA && estado != EstadoPublicacion.PAUSADA) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo una publicación activa o pausada puede bloquearse.");
@@ -109,7 +109,7 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
     }
 
     /**
-     * SCRUM-118 · pendiente 12: lo que el anfitrión cambia en una publicación ya aprobada vuelve a revisión. Una pausada
+     * Lo que el anfitrión cambia en una publicación ya aprobada vuelve a revisión. Una pausada
      * también, porque se reactiva sin revisión y sería un atajo. Las demás conservan su estado.
      */
     public Publicacion revisarTrasEdicion() {
@@ -119,7 +119,7 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         return conEstado(EstadoPublicacion.PENDIENTE_REVISION, null);
     }
 
-    /** SCRUM-112: el administrador revierte el bloqueo y la publicación vuelve a ACTIVA, sin pasar por revisión. */
+    /** El administrador revierte el bloqueo y la publicación vuelve a ACTIVA, sin pasar por revisión. */
     public Publicacion desbloquear() {
         if (estado != EstadoPublicacion.BLOQUEADA) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "Solo una publicación bloqueada puede desbloquearse.");

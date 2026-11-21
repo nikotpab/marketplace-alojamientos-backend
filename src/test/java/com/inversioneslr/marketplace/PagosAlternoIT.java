@@ -13,7 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** ASR-08b: el flujo de pago completo funciona igual con el segundo proveedor, sin tocar dominio ni aplicación. */
+/** El flujo de pago completo funciona igual con el segundo proveedor, sin tocar dominio ni aplicación. */
 @TestPropertySource(properties = "marketplace.pagos.proveedor=alterno")
 class PagosAlternoIT extends PruebaIntegracion {
 

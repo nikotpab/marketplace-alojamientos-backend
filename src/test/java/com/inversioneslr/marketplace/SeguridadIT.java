@@ -19,7 +19,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** SCRUM-68 · RNF-19, RNF-22, RNF-23: inyección SQL, XSS, fuerza bruta y contraseñas. */
+/** Inyección SQL, XSS, fuerza bruta y contraseñas. */
 @ExtendWith(OutputCaptureExtension.class)
 class SeguridadIT extends PruebaIntegracion {
 

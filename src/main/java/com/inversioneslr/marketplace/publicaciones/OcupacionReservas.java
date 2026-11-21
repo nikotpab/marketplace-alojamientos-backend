@@ -3,10 +3,9 @@ package com.inversioneslr.marketplace.publicaciones;
 import com.inversioneslr.marketplace.compartido.PublicacionId;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * SCRUM-142: lo que publicaciones necesita saber de las reservas, sin leer su tabla. Lo implementa el módulo de
+ * Lo que publicaciones necesita saber de las reservas, sin leer su tabla. Lo implementa el módulo de
  * reservas, que ya depende de publicaciones: así no hay ciclo entre los dos módulos.
  */
 public interface OcupacionReservas {

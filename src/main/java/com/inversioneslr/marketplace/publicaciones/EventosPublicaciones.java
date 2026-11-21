@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Eventos que emite el módulo de publicaciones (SCRUM-143). */
+/** Eventos que emite el módulo de publicaciones. */
 public interface EventosPublicaciones {
 
     String MOTIVO = "motivo";
@@ -115,7 +115,7 @@ public interface EventosPublicaciones {
         }
     }
 
-    /** CU-12. Las fechas van como texto, igual que en la auditoría. */
+    /** Las fechas van como texto, igual que en la auditoría. */
     record DisponibilidadModificada(UUID id, UUID anfitrionId, UUID publicacionId, String desde, String hasta, String estado)
             implements DePublicacion {
 
@@ -146,7 +146,7 @@ public interface EventosPublicaciones {
         }
     }
 
-    /** CU-31. En la auditoría queda como TipoAlojamientoAgregado o TipoAlojamientoEditado. */
+    /** En la auditoría queda como TipoAlojamientoAgregado o TipoAlojamientoEditado. */
     record TipoAlojamientoGuardado(UUID id, UUID administradorId, UUID tipoId, String nombre, boolean activo, boolean nuevo)
             implements EventoDominio {
 
@@ -180,7 +180,6 @@ public interface EventosPublicaciones {
         }
     }
 
-    /** CU-24. */
     record PublicacionBloqueada(UUID id, UUID administradorId, UUID publicacionId, String motivo, UUID anfitrionId)
             implements DePublicacion {
 
@@ -204,7 +203,7 @@ public interface EventosPublicaciones {
         }
     }
 
-    /** SCRUM-112: el administrador revierte el bloqueo; la publicación vuelve a ACTIVA. */
+    /** El administrador revierte el bloqueo; la publicación vuelve a ACTIVA. */
     record PublicacionDesbloqueada(UUID id, UUID administradorId, UUID publicacionId, UUID anfitrionId)
             implements DePublicacion {
 

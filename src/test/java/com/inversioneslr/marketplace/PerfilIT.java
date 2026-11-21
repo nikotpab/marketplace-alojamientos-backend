@@ -50,7 +50,7 @@ class PerfilIT extends PruebaIntegracion {
         assertThat(comoAplicacion.queryForObject("SELECT apellido FROM usuario WHERE id = ?", String.class, usuario)).isEqualTo("Martínez");
     }
 
-    /** SCRUM-154: el mismo formato que en el registro. */
+    /** El mismo formato que en el registro. */
     @Test
     void elTelefonoDebeTenerDiezDigitosYEmpezarPorTres() throws Exception {
         mvc.perform(put("/api/v1/usuarios/me").header("Authorization", sesion).contentType(MediaType.APPLICATION_JSON)

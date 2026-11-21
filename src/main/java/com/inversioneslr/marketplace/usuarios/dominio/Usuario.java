@@ -6,7 +6,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-/** @param correoVerificado SCRUM-109: sin verificar no se puede iniciar sesión */
+/** @param correoVerificado sin verificar no se puede iniciar sesión */
 public record Usuario(UUID id, String nombre, String apellido, String correo, String telefono, String hashContrasena,
                       Rol rol, boolean cuentaActiva, boolean restringido, String motivoRestriccion,
                       int intentosFallidos, Instant bloqueadoHasta, boolean correoVerificado) {
@@ -40,7 +40,7 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
                 motivoRestriccion, intentosFallidos, bloqueadoHasta, correoVerificado);
     }
 
-    /** SCRUM-109: el dueño del correo abrió el enlace que le enviamos. */
+    /** El dueño del correo abrió el enlace que le enviamos. */
     public Usuario verificarCorreo() {
         return new Usuario(id, nombre, apellido, correo, telefono, hashContrasena, rol, cuentaActiva, restringido,
                 motivoRestriccion, intentosFallidos, bloqueadoHasta, true);
@@ -54,7 +54,7 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
         return conEstado(true);
     }
 
-    /** SCRUM-112: el administrador levanta la restricción, y el motivo deja de aplicar. */
+    /** El administrador levanta la restricción, y el motivo deja de aplicar. */
     public Usuario levantarRestriccion() {
         if (!restringido) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "El usuario no está restringido.");
@@ -63,7 +63,7 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
                 intentosFallidos, bloqueadoHasta, correoVerificado);
     }
 
-    /** SCRUM-112 · CU-05: la reactivación que hace el administrador; el usuario no puede, porque ya no inicia sesión. */
+    /** La reactivación que hace el administrador; el usuario no puede, porque ya no inicia sesión. */
     public Usuario reactivar() {
         if (cuentaActiva) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La cuenta ya está activa.");
@@ -76,7 +76,7 @@ public record Usuario(UUID id, String nombre, String apellido, String correo, St
                 motivoRestriccion, intentosFallidos, bloqueadoHasta, correoVerificado);
     }
 
-    /** RF-28: un usuario restringido no puede iniciar sesión. Un administrador no se restringe. */
+    /** Un usuario restringido no puede iniciar sesión. Un administrador no se restringe. */
     public Usuario restringir(String motivo) {
         if (rol == Rol.ADMINISTRADOR) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "No se puede restringir a un administrador.");

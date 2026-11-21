@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * SCRUM-151: el código de 6 dígitos que verifica el correo antes de crear la cuenta. Hay uno vigente por correo y solo
+ * El código de 6 dígitos que verifica el correo antes de crear la cuenta. Hay uno vigente por correo y solo
  * se guarda su hash.
  */
 public interface CodigosRegistro {

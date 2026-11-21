@@ -38,7 +38,7 @@ class TokensJwtTest {
         assertThat(tokens.verificar(tokens.emitir(usuario))).contains(usuario);
     }
 
-    /** SCRUM-117: restringir, desactivar o restablecer la contraseña sube la versión de sesión. */
+    /** Restringir, desactivar o restablecer la contraseña sube la versión de sesión. */
     @Test
     void unTokenDeUnaVersionAnteriorNoEsValido() {
         TokensJwt tokens = tokensEn(AHORA);
@@ -50,7 +50,7 @@ class TokensJwtTest {
         assertThat(tokens.verificar(tokens.emitir(usuario))).contains(usuario);
     }
 
-    /** SCRUM-117: el repositorio no da versión si la cuenta no existe, está desactivada o restringida. */
+    /** El repositorio no da versión si la cuenta no existe, está desactivada o restringida. */
     @Test
     void elTokenDeUnaCuentaQueNoPuedeOperarNoEsValido() {
         TokensJwt tokens = tokensEn(AHORA);

@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.Assert;
 
-/** El proveedor se elige por variable de entorno (ADR-08). */
+/** El proveedor se elige por variable de entorno. */
 @Configuration
 public class ConfiguracionPagos {
 

@@ -18,15 +18,15 @@ public interface RepositorioResenas {
     List<ResenaGuardada> listarVisibles(Collection<UUID> reservaIds);
 
     /**
-     * SCRUM-111: guarda el reporte. Un usuario reporta una reseña una sola vez.
+     * Guarda el reporte. Un usuario reporta una reseña una sola vez.
      *
      * @throws com.inversioneslr.marketplace.compartido.ExcepcionNegocio CONFLICTO si ya la había reportado
      */
     void reportar(UUID resenaId, UUID usuarioId, String motivo, String comentario);
 
-    /** SCRUM-111: las reseñas visibles con al menos un reporte, de la más reportada a la menos. */
+    /** Las reseñas visibles con al menos un reporte, de la más reportada a la menos. */
     List<ResenaReportadaGuardada> listarReportadas();
 
-    /** Una sola consulta: cuáles de esas reservas ya tienen reseña, oculta o no (SCRUM-113). */
+    /** Una sola consulta: cuáles de esas reservas ya tienen reseña, oculta o no. */
     List<UUID> reservasConResena(Collection<UUID> reservaIds);
 }

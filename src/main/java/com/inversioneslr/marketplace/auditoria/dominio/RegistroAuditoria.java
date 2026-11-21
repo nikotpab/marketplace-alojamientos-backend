@@ -24,7 +24,7 @@ public record RegistroAuditoria(UUID id, UUID actorId, String accion, String ent
                 hash(evento.actorId(), evento.tipo(), evento.entidad(), evento.entidadId(), evento.resultado(), detalle, fecha), fecha);
     }
 
-    /** ASR-07: false si alguien cambió la fila directamente en la base de datos, saltándose los triggers. */
+    /** False si alguien cambió la fila directamente en la base de datos, saltándose los triggers. */
     public boolean integro() {
         return hash.equals(hash(actorId, accion, entidad, entidadId, resultado, detalle, fecha));
     }

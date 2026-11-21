@@ -42,7 +42,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** SCRUM-141: CU-20 sin base de datos ni Docker, con las fachadas de reservas, publicaciones y pagos simuladas. */
+/** Cancelación sin base de datos ni Docker, con las fachadas de reservas, publicaciones y pagos simuladas. */
 @ExtendWith(MockitoExtension.class)
 class ServicioCancelacionesTest {
 

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * SCRUM-114: 50 % hasta 14 días antes de la llegada y nada después.
+ * 50 % hasta 14 días antes de la llegada y nada después.
  * La tarifa de servicio no es reembolsable. El valor se redondea al peso, como la cotización.
  */
 public class PoliticaEstricta implements PoliticaCancelacion {

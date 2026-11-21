@@ -5,7 +5,7 @@ import com.inversioneslr.marketplace.pagos.dominio.PasarelaPagos;
 import java.math.BigDecimal;
 
 /**
- * Cobra sin salir del proceso. Sirve en desarrollo y pruebas, y demuestra el cambio de proveedor (ADR-08). Como Stripe,
+ * Cobra sin salir del proceso. Sirve en desarrollo y pruebas, y demuestra el cambio de proveedor. Como Stripe,
  * rechaza los métodos de prueba que simulan un cobro fallido, como {@code pm_card_chargeDeclined}, y aprueba los demás.
  */
 class AdaptadorPagosSimulado implements PasarelaPagos {

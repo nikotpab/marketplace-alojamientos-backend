@@ -9,7 +9,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** CU-18 · RF-20. */
 class HistorialReservasIT extends PruebaIntegracion {
 
     UUID huesped;
@@ -41,7 +40,7 @@ class HistorialReservasIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$[1].estado").value("CANCELADA"));
     }
 
-    /** SCRUM-113: el motivo, cuánto se devolvió y cómo terminó la devolución, incluida una no procesada. */
+    /** El motivo, cuánto se devolvió y cómo terminó la devolución, incluida una no procesada. */
     @Test
     void lasCanceladasTraenElMotivoYLaDevolucion() throws Exception {
         UUID procesada = reservar(huesped, "2030-02-01", "2030-02-03", "CANCELADA");
@@ -60,7 +59,7 @@ class HistorialReservasIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$[2].cancelacion.valorDevolucion").value(90000));
     }
 
-    /** SCRUM-113: con reseña, aunque esté oculta, el frontend ya no ofrece "Reseñar" (una reserva admite una sola). */
+    /** Con reseña, aunque esté oculta, el frontend ya no ofrece "Reseñar" (una reserva admite una sola). */
     @Test
     void cadaReservaDiceSiYaTieneResena() throws Exception {
         UUID resenada = reservar(huesped, "2030-02-01", "2030-02-03", "COMPLETADA");
@@ -75,7 +74,7 @@ class HistorialReservasIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$[2].resenada").value(true));
     }
 
-    /** SCRUM-113: el nombre del huésped llega en todas; el contacto, solo en las confirmadas (RNF-21). */
+    /** El nombre del huésped llega en todas; el contacto, solo en las confirmadas. */
     @Test
     void elAnfitrionVeElNombreDelHuespedEnTodasLasReservas() throws Exception {
         reservar(huesped, "2030-03-01", "2030-03-04", "CONFIRMADA");
@@ -87,7 +86,7 @@ class HistorialReservasIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$[1].contactoHuesped").doesNotExist());
     }
 
-    /** ASR-06: un huésped no ve la cancelación ni la reseña de las reservas de otro. */
+    /** Un huésped no ve la cancelación ni la reseña de las reservas de otro. */
     @Test
     void unHuespedNoVeLosDatosDeLasReservasDeOtro() throws Exception {
         UUID otro = crearUsuario(Rol.HUESPED);

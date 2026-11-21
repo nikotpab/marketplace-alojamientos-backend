@@ -42,14 +42,14 @@ public class ServicioAdministracion {
         this.auditoria = auditoria;
     }
 
-    /** CU-24: publicación BLOQUEADA y reservas futuras en revisión manual, todo o nada. */
+    /** Publicación BLOQUEADA y reservas futuras en revisión manual, todo o nada. */
     @Transactional
     public void bloquearPublicacion(UUID administradorId, UUID publicacionId, MotivoComando comando) {
         publicaciones.bloquear(new UsuarioId(administradorId), new PublicacionId(publicacionId), comando.motivo());
         reservas.marcarFuturasEnRevision(new PublicacionId(publicacionId));
     }
 
-    /** SCRUM-112: la publicación vuelve a ACTIVA y sus reservas en revisión a CONFIRMADA, todo o nada. */
+    /** La publicación vuelve a ACTIVA y sus reservas en revisión a CONFIRMADA, todo o nada. */
     @Transactional
     public void desbloquearPublicacion(UUID administradorId, UUID publicacionId) {
         publicaciones.desbloquear(new UsuarioId(administradorId), new PublicacionId(publicacionId));
@@ -64,7 +64,7 @@ public class ServicioAdministracion {
         usuarios.restringir(new UsuarioId(administradorId), new UsuarioId(usuarioId), comando.motivo());
     }
 
-    /** SCRUM-111 · RF-29: Moderación las muestra con su número de reportes; se ocultan con {@link #ocultarResena}. */
+    /** Moderación las muestra con su número de reportes; se ocultan con {@link #ocultarResena}. */
     public List<FachadaResenas.ResenaConReportes> listarResenasReportadas() {
         return resenas.listarReportadas();
     }

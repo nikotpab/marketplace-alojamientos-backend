@@ -218,7 +218,7 @@
             "type" : "string"
           },
           "metodoPagoId" : {
-            "pattern" : "pm_card_[A-Za-z0-9_]+",
+            "pattern" : "pm_card_\\w+",
             "type" : "string"
           },
           "publicacionId" : {

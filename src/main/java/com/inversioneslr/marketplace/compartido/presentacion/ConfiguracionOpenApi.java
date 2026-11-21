@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * SCRUM-99: datos generales de la documentación OpenAPI. Con "Authorize" se pega el token de
+ * Datos generales de la documentación OpenAPI. Con "Authorize" se pega el token de
  * POST /api/v1/auth/login y Swagger UI lo envía como Bearer en cada solicitud.
  */
 @Configuration

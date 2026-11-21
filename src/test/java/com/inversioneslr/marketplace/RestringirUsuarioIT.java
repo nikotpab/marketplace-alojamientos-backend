@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** CU-25 · RF-28. */
 class RestringirUsuarioIT extends PruebaIntegracion {
 
     private static final String CONTRASENA = "Contrasena-de-prueba-1";

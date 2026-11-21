@@ -2,12 +2,11 @@ package com.inversioneslr.marketplace.pagos;
 
 import com.inversioneslr.marketplace.compartido.ReservaId;
 import java.math.BigDecimal;
-import java.util.UUID;
 
 public interface FachadaPagos {
 
     /**
-     * Antes de cobrar registra el intento como PENDIENTE: si nada lo completa, la reconciliación lo revierte (RNF-12).
+     * Antes de cobrar registra el intento como PENDIENTE: si nada lo completa, la reconciliación lo revierte.
      *
      * @param metodoPago método de pago de prueba de Stripe; null usa el predeterminado
      * @return referencia del pago
@@ -15,7 +14,7 @@ public interface FachadaPagos {
      */
     String cobrar(BigDecimal monto, String claveSolicitud, String metodoPago);
 
-    /** SEC-03: devuelve un cobro que no llegó a tener reserva porque otra ganó el periodo. */
+    /** Devuelve un cobro que no llegó a tener reserva porque otra ganó el periodo. */
     void devolverCobroSinReserva(String claveSolicitud, String referencia, BigDecimal monto);
 
     /**
@@ -26,6 +25,6 @@ public interface FachadaPagos {
      */
     void devolverPagoDeReserva(ReservaId reservaId, BigDecimal monto);
 
-    /** Se llama dentro de la transacción que confirma la reserva (SEC-01, paso 10). */
+    /** Se llama dentro de la transacción que confirma la reserva. */
     void registrarPago(ReservaId reservaId, String referencia, String claveSolicitud, BigDecimal monto);
 }

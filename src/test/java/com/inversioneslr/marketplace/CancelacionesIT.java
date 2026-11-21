@@ -26,7 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** CU-20 · RF-22, RF-23. La reserva cuesta 330.000, con 30.000 de tarifa de servicio. */
+/** La reserva cuesta 330.000, con 30.000 de tarifa de servicio. */
 class CancelacionesIT extends PruebaIntegracion {
 
     @MockitoBean
@@ -68,7 +68,7 @@ class CancelacionesIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.valorDevolucion").value(150000));
     }
 
-    /** SCRUM-118 · pendiente 11: su alojamiento fue bloqueado, así que se devuelve todo, también la tarifa de servicio. */
+    /** Su alojamiento fue bloqueado, así que se devuelve todo, también la tarifa de servicio. */
     @Test
     void unaReservaEnRevisionSeCancelaConDevolucionTotal() throws Exception {
         UUID reserva = reservar(1, "EN_REVISION");
@@ -87,7 +87,7 @@ class CancelacionesIT extends PruebaIntegracion {
         assertThat(texto("SELECT estado FROM reserva WHERE id = ?", reserva)).isEqualTo("CANCELADA");
     }
 
-    /** SCRUM-114: 100 % hasta 14 días antes y 50 % entre 13 y 7. */
+    /** 100 % hasta 14 días antes y 50 % entre 13 y 7. */
     @Test
     void conLaPoliticaModeradaEntreTreceYSieteDiasAntesSeDevuelveLaMitad() throws Exception {
         usarPolitica("Moderada");
@@ -99,7 +99,7 @@ class CancelacionesIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.politica").value("Moderada"));
     }
 
-    /** SCRUM-114: 50 % hasta 14 días antes y nada después. */
+    /** 50 % hasta 14 días antes y nada después. */
     @Test
     void conLaPoliticaEstrictaACuarentaDiasSeDevuelveLaMitadYADiezNada() throws Exception {
         usarPolitica("Estricta");

@@ -55,15 +55,15 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** La propiedad de la publicación se verifica en cada método (ADR-07). */
+/** La propiedad de la publicación se verifica en cada método. */
 @Service
 public class ServicioPublicaciones implements FachadaPublicaciones {
 
     private static final String HASTA = "hasta";
 
-    /** Decisión temporal: queda disponible dos años y el anfitrión bloquea lo que no (ajuste 9 del README). */
+    /** Queda disponible dos años y el anfitrión bloquea lo que no. */
     private static final Period DISPONIBILIDAD_INICIAL = Period.ofYears(2);
-    /** La única política implementada. */
+    /** La que se usa si el texto no nombra ninguna política. */
     private static final String POLITICA_POR_DEFECTO = "Flexible";
     private static final int MAXIMO_DIAS_RANGO = 366;
 
@@ -83,8 +83,8 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     /**
-     * CU-06: queda en BORRADOR y pertenece al anfitrión del token. Puede estar incompleto: la información
-     * mínima se valida al solicitar la activación (RF-08).
+     * Queda en BORRADOR y pertenece al anfitrión del token. Puede estar incompleto: la información
+     * mínima se valida al solicitar la activación.
      */
     @Transactional
     public PublicacionVista crear(UUID anfitrionId, DatosPublicacionComando datos) {
@@ -124,8 +124,8 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     /**
-     * Decisión temporal: el frontend envía la política como texto libre. Se asocia a la política cuyo nombre
-     * aparece en el texto, y si ninguna aparece, a la Flexible (ajuste 8 del README).
+     * El frontend envía la política como texto libre. Se asocia a la política cuyo nombre aparece en el texto, y si
+     * ninguna aparece, a la Flexible.
      */
     private UUID politicaDesde(String texto) {
         if (texto == null || texto.isBlank()) {
@@ -143,7 +143,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return conAnfitriones(List.of(publicaciones.buscarVista(publicacionId).orElseThrow(ServicioPublicaciones::noExiste))).get(0);
     }
 
-    /** SCRUM-142: los nombres de los anfitriones en una sola consulta al módulo de usuarios. */
+    /** Los nombres de los anfitriones en una sola consulta al módulo de usuarios. */
     private List<PublicacionVista> conAnfitriones(List<PublicacionConAnfitrion> listadas) {
         Map<UsuarioId, Persona> anfitriones = usuarios.personas(listadas.stream().map(listada -> new UsuarioId(listada.anfitrionId())).toList());
         return listadas.stream()
@@ -172,8 +172,8 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     /**
-     * CU-07: solo el anfitrión propietario o un administrador. Si el anfitrión edita una publicación activa o pausada,
-     * vuelve a revisión (SCRUM-118, pendiente 12 del README); lo que edita un administrador conserva el estado. Solo un
+     * Solo el anfitrión propietario o un administrador. Si el anfitrión edita una publicación activa o pausada,
+     * vuelve a revisión; lo que edita un administrador conserva el estado. Solo un
      * borrador puede quedar incompleto.
      */
     @Transactional
@@ -198,7 +198,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return lista == null ? List.of() : lista;
     }
 
-    /** CU-08: pasa a PENDIENTE_REVISION para que la revise un administrador. */
+    /** Pasa a PENDIENTE_REVISION para que la revise un administrador. */
     @Transactional
     public PublicacionVista solicitarActivacion(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).solicitarActivacion());
@@ -206,7 +206,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return vista(publicacionId);
     }
 
-    /** CU-09: pasa a ACTIVA y se avisa al anfitrión. */
+    /** Pasa a ACTIVA y se avisa al anfitrión. */
     @Transactional
     public PublicacionVista aprobar(UUID administradorId, UUID publicacionId) {
         Publicacion aprobada = publicaciones.guardar(existente(publicacionId).aprobar());
@@ -214,7 +214,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return vista(publicacionId);
     }
 
-    /** CU-09: vuelve a BORRADOR con el motivo y se avisa al anfitrión. */
+    /** Vuelve a BORRADOR con el motivo y se avisa al anfitrión. */
     @Transactional
     public PublicacionVista rechazar(UUID administradorId, UUID publicacionId, String motivo) {
         Publicacion rechazada = publicaciones.guardar(existente(publicacionId).rechazar(motivo));
@@ -226,7 +226,6 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return publicaciones.buscarPorId(publicacionId).orElseThrow(ServicioPublicaciones::noExiste);
     }
 
-    /** CU-10. */
     @Transactional
     public PublicacionVista pausar(UsuarioAutenticado anfitrion, UUID publicacionId) {
         publicaciones.guardar(propia(anfitrion, publicacionId).pausar());
@@ -241,12 +240,12 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return vista(publicacionId);
     }
 
-    /** CU-11: el anfitrión ve las suyas en cualquier estado. El huésped ve las activas en la búsqueda. */
+    /** El anfitrión ve las suyas en cualquier estado. El huésped ve las activas en la búsqueda. */
     public List<PublicacionVista> listarDelAnfitrion(UUID anfitrionId) {
         return conAnfitriones(publicaciones.listarVistas(anfitrionId, null));
     }
 
-    /** CU-11: el administrador ve todas. */
+    /** El administrador ve todas. */
     public List<PublicacionVista> listarTodas(EstadoPublicacion estado) {
         return conAnfitriones(publicaciones.listarVistas(null, estado));
     }
@@ -256,7 +255,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return vista(propia(usuario, publicacionId).id());
     }
 
-    /** ADR-07: la publicación existe y es del usuario, salvo que sea administrador. */
+    /** La publicación existe y es del usuario, salvo que sea administrador. */
     private Publicacion propia(UsuarioAutenticado usuario, UUID publicacionId) {
         Publicacion publicacion = publicaciones.buscarPorId(publicacionId)
                 .orElseThrow(ServicioPublicaciones::noExiste);
@@ -267,7 +266,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     /**
-     * CU-13: la de una publicación activa es pública; la de las demás solo la ven el propietario y un administrador.
+     * La de una publicación activa es pública; la de las demás solo la ven el propietario y un administrador.
      *
      * @param usuario null si no hay sesión
      */
@@ -284,7 +283,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
 
     /**
      * Días entre {@code desde} y {@code hasta}, ambos incluidos. Un día con una reserva confirmada cuenta como reservado
-     * aunque además esté bloqueado, como en la consulta que reemplaza (SCRUM-142).
+     * aunque además esté bloqueado, como en la consulta que reemplaza.
      */
     private Disponibilidad disponibilidad(UUID publicacionId, LocalDate desde, LocalDate hasta) {
         List<RangoOcupado> ocupados = ocupacion.confirmadas(new PublicacionId(publicacionId), desde, hasta.plusDays(1));
@@ -303,7 +302,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
     }
 
     /**
-     * CU-12: el rango es de días, con ambos extremos incluidos. No se cambian días con reservas confirmadas (RF-13).
+     * El rango es de días, con ambos extremos incluidos. No se cambian días con reservas confirmadas.
      * La respuesta cubre desde el mes anterior al del inicio hasta el mes siguiente al del fin, para que el
      * calendario de dos meses del frontend se vuelva a pintar completo.
      */
@@ -347,7 +346,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return publicaciones.listarTiposActivos();
     }
 
-    /** CU-06: lo que el anfitrión puede elegir al crear una publicación. Solo los tipos activos. */
+    /** Lo que el anfitrión puede elegir al crear una publicación. Solo los tipos activos. */
     public Catalogos consultarCatalogos() {
         List<TipoAlojamiento> activos = publicaciones.listarTipos().stream().filter(TipoAlojamiento::activo).toList();
         return new Catalogos(activos, publicaciones.listarServicios(), publicaciones.listarPoliticas());
@@ -376,7 +375,7 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return publicaciones.idsDelAnfitrion(anfitrionId.valor()).stream().map(PublicacionId::new).toList();
     }
 
-    /** CU-24: deja de aparecer en la búsqueda, que solo muestra las activas, y se avisa al anfitrión. */
+    /** Deja de aparecer en la búsqueda, que solo muestra las activas, y se avisa al anfitrión. */
     @Override
     @Transactional
     public void bloquear(UsuarioId administradorId, PublicacionId publicacionId, String motivo) {
@@ -392,15 +391,15 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         eventos.publicar(new PublicacionDesbloqueada(administradorId.valor(), publicacionId.valor(), desbloqueada.anfitrionId()));
     }
 
-    /** CU-31: todos, también los inactivos, para la pantalla de configuración. */
+    /** Todos, también los inactivos, para la pantalla de configuración. */
     @Override
     public List<TipoAlojamiento> listarTipos() {
         return publicaciones.listarTipos();
     }
 
     /**
-     * CU-31: los cambios aparecen de inmediato al crear publicaciones y en los filtros de búsqueda, porque se leen en
-     * cada consulta (RNF-32).
+     * Los cambios aparecen de inmediato al crear publicaciones y en los filtros de búsqueda, porque se leen en
+     * cada consulta.
      */
     @Override
     @Transactional

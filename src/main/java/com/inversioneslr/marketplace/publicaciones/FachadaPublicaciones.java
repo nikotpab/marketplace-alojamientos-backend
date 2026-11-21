@@ -15,21 +15,20 @@ public interface FachadaPublicaciones {
 
     boolean periodoDisponible(PublicacionId publicacionId, LocalDate llegada, LocalDate salida);
 
-    /** SCRUM-142: una sola consulta para todas; las que no existen no aparecen. */
+    /** Una sola consulta para todas; las que no existen no aparecen. */
     Map<PublicacionId, String> titulos(Collection<PublicacionId> publicacionIds);
 
-    /** SCRUM-142: todas las del anfitrión, en cualquier estado. */
+    /** Todas las del anfitrión, en cualquier estado. */
     List<PublicacionId> publicacionesDelAnfitrion(UsuarioId anfitrionId);
 
-    /** CU-24. */
     void bloquear(UsuarioId administradorId, PublicacionId publicacionId, String motivo);
 
-    /** SCRUM-112: de BLOQUEADA a ACTIVA, y se avisa al anfitrión. */
+    /** De BLOQUEADA a ACTIVA, y se avisa al anfitrión. */
     void desbloquear(UsuarioId administradorId, PublicacionId publicacionId);
 
     List<TipoAlojamiento> listarTipos();
 
-    /** CU-31: agrega un tipo, o lo edita o desactiva si ya tiene id. */
+    /** Agrega un tipo, o lo edita o desactiva si ya tiene id. */
     TipoAlojamiento guardarTipo(UsuarioId administradorId, TipoAlojamiento tipo);
 
     record DatosPublicacion(UUID id, UUID anfitrionId, boolean activa, BigDecimal precioNoche, int capacidad,

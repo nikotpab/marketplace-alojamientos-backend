@@ -20,7 +20,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Dashboard y reportes: nunca pueden afectar a búsqueda, reserva o cancelación (RNF-10). */
+/** Dashboard y reportes: nunca pueden afectar a búsqueda, reserva o cancelación. */
 @Service
 public class ServicioReportes {
 
@@ -43,8 +43,8 @@ public class ServicioReportes {
     }
 
     /**
-     * CU-29. Sin fechas, muestra los últimos 30 días. Si tarda más de 10 s, la transacción se cancela sin afectar a los
-     * demás casos de uso (RNF-10).
+     * Sin fechas, muestra los últimos 30 días. Si tarda más de 10 s, la transacción se cancela sin afectar a los
+     * demás casos de uso.
      */
     @Transactional(readOnly = true, timeout = TIEMPO_MAX_SEGUNDOS)
     public Indicadores consultarDashboard(LocalDate desde, LocalDate hasta) {
@@ -55,7 +55,7 @@ public class ServicioReportes {
     }
 
     /**
-     * CU-30: se genera en otro hilo, con hasta 5 exportaciones a la vez (RNF-08). Cada exportación queda en la auditoría
+     * Se genera en otro hilo, con hasta 5 exportaciones a la vez. Cada exportación queda en la auditoría
      * con quién la pidió y sus filtros, que es el historial de exportaciones.
      */
     @Async

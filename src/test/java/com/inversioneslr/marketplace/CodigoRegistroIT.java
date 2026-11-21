@@ -25,7 +25,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** SCRUM-151: el correo se verifica con un código antes de crear la cuenta. */
+/** El correo se verifica con un código antes de crear la cuenta. */
 @ExtendWith(OutputCaptureExtension.class)
 class CodigoRegistroIT extends PruebaIntegracion {
 
@@ -152,7 +152,7 @@ class CodigoRegistroIT extends PruebaIntegracion {
         await().during(Duration.ofMillis(500)).until(() -> correosPara(correo).isEmpty());
     }
 
-    /** SCRUM-154: no se envía un código a un correo incompleto. */
+    /** No se envía un código a un correo incompleto. */
     @Test
     void aUnCorreoIncompletoNoSeLeEnviaCodigo() throws Exception {
         String incompleto = "luicuadros07-" + UUID.randomUUID() + "@gmail";
@@ -175,7 +175,7 @@ class CodigoRegistroIT extends PruebaIntegracion {
         assertThat(comoAplicacion.queryForObject("SELECT count(*) FROM usuario WHERE correo = ?", Long.class, correo)).isZero();
     }
 
-    /** Las cuentas de SCRUM-109 que no usaron el enlace se verifican recuperando la contraseña (SCRUM-110). */
+    /** Las cuentas creadas sin verificar el correo se verifican recuperando la contraseña. */
     @Test
     void unaCuentaAntiguaSinVerificarDebeRecuperarLaContrasena() throws Exception {
         String correo = correoNuevo();

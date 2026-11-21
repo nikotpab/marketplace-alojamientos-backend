@@ -13,19 +13,19 @@ public interface FachadaReservas {
 
     DatosReserva datosReserva(ReservaId reservaId);
 
-    /** SCRUM-111: una sola consulta para todas; las que no existen no aparecen. */
+    /** Una sola consulta para todas; las que no existen no aparecen. */
     Map<ReservaId, DatosReserva> datosReservas(Collection<ReservaId> reservaIds);
 
-    /** Al salir de CONFIRMADA, la restricción anti-solape deja de aplicar y el periodo queda libre (RF-13). */
+    /** Al salir de CONFIRMADA, la restricción anti-solape deja de aplicar y el periodo queda libre. */
     void marcarCancelada(ReservaId reservaId);
 
-    /** CU-24: las reservas futuras se conservan y pasan a revisión manual. */
+    /** Las reservas futuras se conservan y pasan a revisión manual. */
     void marcarFuturasEnRevision(PublicacionId publicacionId);
 
-    /** SCRUM-112: al desbloquear la publicación, sus reservas en revisión vuelven a CONFIRMADA. Se avisa a cada huésped. */
+    /** Al desbloquear la publicación, sus reservas en revisión vuelven a CONFIRMADA. Se avisa a cada huésped. */
     void restablecerEnRevision(PublicacionId publicacionId);
 
-    /** SCRUM-142: huésped de cada reserva de la publicación, para que reseñas no lea la tabla reserva. */
+    /** Huésped de cada reserva de la publicación, para que reseñas no lea la tabla reserva. */
     Map<ReservaId, UsuarioId> huespedPorReserva(PublicacionId publicacionId);
 
     record DatosReserva(UUID id, UUID huespedId, UUID publicacionId, LocalDate fechaLlegada, EstadoReserva estado,

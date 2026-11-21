@@ -19,7 +19,7 @@ public class RepositorioTarifasSql implements RepositorioTarifas {
         this.jdbc = jdbc;
     }
 
-    /** Un porcentaje sin definir no se cobra ni se descuenta. Desde V13 todos tienen valor; LIMPIEZA arranca en 5 % (SCRUM-115). */
+    /** Un porcentaje sin definir no se cobra ni se descuenta. Desde V13 todos tienen valor; LIMPIEZA arranca en 5 %. */
     @Override
     public ConfiguracionTarifas vigentes() {
         Map<String, Tarifa> porClave = jdbc.sql("SELECT clave, porcentaje, noches_minimas FROM configuracion_tarifa")

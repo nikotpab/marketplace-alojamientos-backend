@@ -9,13 +9,13 @@ import java.util.UUID;
 
 public interface FachadaResenas {
 
-    /** CU-23: excluye las ocultas. */
+    /** Excluye las ocultas. */
     List<ResenaVisible> listarVisibles(PublicacionId publicacionId);
 
-    /** CU-26: la reseña se oculta, no se elimina. */
+    /** La reseña se oculta, no se elimina. */
     void ocultar(UsuarioId administradorId, ResenaId resenaId);
 
-    /** SCRUM-111 · RF-29: las reseñas visibles que alguien reportó, de la más reportada a la menos. */
+    /** Las reseñas visibles que alguien reportó, de la más reportada a la menos. */
     List<ResenaConReportes> listarReportadas();
 
     /** @param autor nombre e inicial del apellido del huésped, para no exponer sus datos */

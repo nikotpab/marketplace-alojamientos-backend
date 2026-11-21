@@ -24,7 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 /**
- * SCRUM-130: tres recorridos de sistema contra la API real con HTTP auténtico (RestAssured).
+ * Tres recorridos de sistema contra la API real con HTTP auténtico (RestAssured).
  * Reutiliza Testcontainers/PostgreSQL y GreenMail de PruebaIntegracion.
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = {

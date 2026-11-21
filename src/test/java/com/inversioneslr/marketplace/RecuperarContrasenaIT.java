@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** CU-03 · RF-03 · SCRUM-110: recuperación de la contraseña con un enlace que llega por correo. */
+/** Recuperación de la contraseña con un enlace que llega por correo. */
 class RecuperarContrasenaIT extends PruebaIntegracion {
 
     private static final String NUEVA = "Nueva-contrasena-1";

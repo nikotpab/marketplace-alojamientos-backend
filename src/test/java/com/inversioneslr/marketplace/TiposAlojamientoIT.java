@@ -19,7 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/** CU-31 · RF-35 y los catálogos de CU-06. */
+/** Tipos de alojamiento y catálogos del formulario de publicación. */
 class TiposAlojamientoIT extends PruebaIntegracion {
 
     String administrador;

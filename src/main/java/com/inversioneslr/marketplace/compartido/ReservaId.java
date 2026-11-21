@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Identificador de una reserva (SCRUM-144). Con un tipo por entidad, el compilador no deja pasar un id en el lugar de
+ * Identificador de una reserva. Con un tipo por entidad, el compilador no deja pasar un id en el lugar de
  * otro, por ejemplo invertir los argumentos de {@code bloquear(administradorId, publicacionId, motivo)}. Solo se
  * usa entre módulos: el JSON y la base de datos siguen con el UUID.
  */

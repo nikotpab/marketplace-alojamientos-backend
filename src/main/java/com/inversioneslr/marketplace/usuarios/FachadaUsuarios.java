@@ -11,23 +11,23 @@ public interface FachadaUsuarios {
 
     List<UsuarioResumen> listar();
 
-    /** CU-25: un usuario restringido no puede iniciar sesión. */
+    /** Un usuario restringido no puede iniciar sesión. */
     void restringir(UsuarioId administradorId, UsuarioId usuarioId, String motivo);
 
-    /** SCRUM-112: el usuario puede volver a iniciar sesión. */
+    /** El usuario puede volver a iniciar sesión. */
     void levantarRestriccion(UsuarioId administradorId, UsuarioId usuarioId);
 
-    /** SCRUM-112 · CU-05: reactiva una cuenta desactivada. */
+    /** Reactiva una cuenta desactivada. */
     void reactivar(UsuarioId administradorId, UsuarioId usuarioId);
 
     /**
-     * RNF-21: solo se muestran al anfitrión de una reserva confirmada con ese huésped. Una sola consulta para todos los
-     * ids (SCRUM-113); los que no existen no aparecen.
+     * Solo se muestran al anfitrión de una reserva confirmada con ese huésped. Una sola consulta para todos los
+     * ids; los que no existen no aparecen.
      */
     Map<UsuarioId, DatosContacto> datosContacto(Collection<UsuarioId> usuarioIds);
 
     /**
-     * SCRUM-142: los otros módulos ya no leen la tabla usuario. Una sola consulta para todos los ids; los que no
+     * Los otros módulos ya no leen la tabla usuario. Una sola consulta para todos los ids; los que no
      * existen no aparecen. Cada módulo arma el nombre como lo muestra.
      */
     Map<UsuarioId, Persona> personas(Collection<UsuarioId> usuarioIds);

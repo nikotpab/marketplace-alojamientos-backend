@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** SCRUM-111 · RF-29 · pendiente 17 del README: reportar reseñas y verlas en Moderación con su número de reportes. */
+/** Reportar reseñas y verlas en Moderación con su número de reportes. */
 class ReportesResenasIT extends PruebaIntegracion {
 
     UUID autor;

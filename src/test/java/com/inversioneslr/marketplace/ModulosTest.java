@@ -8,7 +8,7 @@ import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
 
 /**
- * Fronteras entre módulos con Spring Modulith (ADR-01, EC-28). Cada paquete directo de
+ * Fronteras entre módulos con Spring Modulith. Cada paquete directo de
  * {@code marketplace} es un módulo; lo público es su paquete raíz y sus subpaquetes son internos.
  */
 class ModulosTest {

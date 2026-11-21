@@ -8,7 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** ADR-06 · SEC-05: publica el evento con Spring; todos los @EventListener lo atienden en la misma transacción. */
+/** Publica el evento con Spring; todos los @EventListener lo atienden en la misma transacción. */
 @Component
 public class PublicadorEventosSpring implements PublicadorEventos {
 

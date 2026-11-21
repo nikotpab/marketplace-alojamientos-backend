@@ -8,8 +8,8 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * Capas dentro de cada módulo (ADR-01). Las fronteras entre módulos las verifica {@link ModulosTest}.
- * Bloquean el merge si se rompen (EC-28).
+ * Capas dentro de cada módulo. Las fronteras entre módulos las verifica {@link ModulosTest}.
+ * Bloquean el merge si se rompen.
  */
 @AnalyzeClasses(packages = "com.inversioneslr.marketplace", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArquitecturaTest {

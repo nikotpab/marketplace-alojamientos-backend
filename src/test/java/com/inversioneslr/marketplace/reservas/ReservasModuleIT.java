@@ -33,7 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
- * SCRUM-127 (pendiente): módulo reservas en modo STANDALONE con los otros módulos simulados.
+ * Módulo reservas en modo STANDALONE con los otros módulos simulados.
  * Requiere Docker porque los repositorios del módulo usan SQL de PostgreSQL.
  */
 @ApplicationModuleTest(mode = BootstrapMode.STANDALONE, extraIncludes = {"compartido"})
@@ -76,7 +76,7 @@ class ReservasModuleIT {
     @MockitoBean FachadaPagos pagos;
     @MockitoBean FachadaPublicaciones publicaciones;
     @MockitoBean FachadaUsuarios usuarios;
-    // SCRUM-113: los implementan cancelaciones y reseñas, que en STANDALONE no se cargan.
+    // Los implementan cancelaciones y reseñas, que en STANDALONE no se cargan.
     @MockitoBean CancelacionesDeReservas cancelaciones;
     @MockitoBean ResenasDeReservas resenas;
     // Tokens está en el módulo usuarios (excluido en STANDALONE); necesario para ConfiguracionSeguridad.

@@ -17,7 +17,7 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 /**
- * Punto único de autorización (ADR-07): la cadena autentica con {@link FiltroAutenticacion}
+ * Punto único de autorización: la cadena autentica con {@link FiltroAutenticacion}
  * y autoriza con el AuthorizationFilter de Spring según esta tabla. Ruta sin declarar, ruta denegada.
  * La propiedad del recurso se verifica en cada caso de uso.
  */
@@ -80,7 +80,7 @@ public class ConfiguracionSeguridad {
                 .build();
     }
 
-    /** Hash con salt único por usuario (RNF-19). */
+    /** Hash con salt único por usuario. */
     @Bean
     PasswordEncoder cifradorContrasenas() {
         return new BCryptPasswordEncoder();

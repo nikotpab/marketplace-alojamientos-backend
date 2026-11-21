@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * ADR-02: una sola consulta con los filtros, la disponibilidad y la paginación, con tiempo máximo.
+ * Una sola consulta con los filtros, la disponibilidad y la paginación, con tiempo máximo.
  * La caché, si la prueba de carga la exige, sería un Decorator de este repositorio.
  */
 @Repository

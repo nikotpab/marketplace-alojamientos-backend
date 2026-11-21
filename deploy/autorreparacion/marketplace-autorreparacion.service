@@ -1,4 +1,4 @@
-# SCRUM-122: reinicia los contenedores del marketplace que quedaron unhealthy. Lo lanza el timer del mismo nombre.
+# Reinicia los contenedores del marketplace que quedaron unhealthy. Lo lanza el timer del mismo nombre.
 [Unit]
 Description=Reinicia los contenedores unhealthy del marketplace
 Requires=docker.service

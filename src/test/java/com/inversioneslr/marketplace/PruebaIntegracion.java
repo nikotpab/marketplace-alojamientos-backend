@@ -47,7 +47,7 @@ abstract class PruebaIntegracion {
     static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine")
             .withInitScript("crear-roles.sql");
 
-    /** SMTP en memoria: recibe los correos que envía la aplicación (SCRUM-109, SCRUM-110). */
+    /** SMTP en memoria: recibe los correos que envía la aplicación. */
     static final GreenMail correo = new GreenMail(ServerSetupTest.SMTP.dynamicPort());
 
     static {
@@ -91,7 +91,7 @@ abstract class PruebaIntegracion {
     @Autowired
     Clock reloj;
 
-    /** Hoy para la aplicación. LocalDate.now() usa la zona del sistema, que en el CI es UTC (SCRUM-106). */
+    /** Hoy para la aplicación. LocalDate.now() usa la zona del sistema, que en el CI es UTC. */
     LocalDate hoy() {
         return LocalDate.now(reloj);
     }
@@ -135,7 +135,7 @@ abstract class PruebaIntegracion {
         return enlace.group(1);
     }
 
-    /** SCRUM-151: pide el código de registro por la API y lo lee del correo, como haría la persona. */
+    /** Pide el código de registro por la API y lo lee del correo, como haría la persona. */
     String codigoDeRegistro(String direccion) throws Exception {
         int antes = correosPara(direccion).size();
         mvc.perform(post("/api/v1/auth/register/code").contentType(MediaType.APPLICATION_JSON)

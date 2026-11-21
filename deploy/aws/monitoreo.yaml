@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SCRUM-57 - Monitoreo del marketplace: metrica del latido de la API, alarma si falta o falla, aviso por correo con SNS
-  y recuperacion automatica de la EC2 si falla el host (RNF-09, RNF-15, RNF-16).
+  Monitoreo del marketplace: metrica del latido de la API, alarma si falta o falla, aviso por correo con SNS
+  y recuperacion automatica de la EC2 si falla el host.
 
 Parameters:
   InstanciaId:
@@ -45,7 +45,7 @@ Resources:
           Unit: Count
 
   # Un solo umbral cubre los dos casos: si la API se detiene, faltan los datos, que cuentan como incumplidos; si un
-  # componente falla, el latido deja de ser OK. Avisa en unos 2 minutos (RNF-15) y también cuando se recupera.
+  # componente falla, el latido deja de ser OK. Avisa en unos 2 minutos y también cuando se recupera.
   AlarmaLatido:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -66,7 +66,7 @@ Resources:
       OKActions:
         - !Ref TemaAlertas
 
-  # RNF-16: si falla el hardware o la red del host, la recuperación automática simplificada de EC2 (activa por defecto,
+  # Si falla el hardware o la red del host, la recuperación automática simplificada de EC2 (activa por defecto,
   # MaintenanceOptions.AutoRecovery = default) mueve la instancia a otro host con la misma IP y el mismo disco. CloudWatch
   # no acepta además una acción Recover en esta instancia, así que la alarma solo avisa al equipo.
   AlarmaHostDeLaInstancia:

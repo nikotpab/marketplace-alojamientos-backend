@@ -25,7 +25,7 @@ class EditarPublicacionIT extends PruebaIntegracion {
         cuerpo = cuerpo(6, "250000");
     }
 
-    /** SCRUM-118 · pendiente 12: lo que el anfitrión cambia en una publicación aprobada vuelve a revisión. */
+    /** Lo que el anfitrión cambia en una publicación aprobada vuelve a revisión. */
     @Test
     void elPropietarioEditaUnaActivaQueVuelveARevisionYQuedaEnAuditoria() throws Exception {
         editar(sesionDe(anfitrion, Rol.ANFITRION), publicacion, cuerpo)

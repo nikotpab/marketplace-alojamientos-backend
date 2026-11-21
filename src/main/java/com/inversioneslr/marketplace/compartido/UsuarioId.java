@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Identificador de un usuario (huésped, anfitrión o administrador) (SCRUM-144). Con un tipo por entidad, el compilador no deja pasar un id en el lugar de
+ * Identificador de un usuario (huésped, anfitrión o administrador). Con un tipo por entidad, el compilador no deja pasar un id en el lugar de
  * otro, por ejemplo invertir los argumentos de {@code bloquear(administradorId, publicacionId, motivo)}. Solo se
  * usa entre módulos: el JSON y la base de datos siguen con el UUID.
  */
