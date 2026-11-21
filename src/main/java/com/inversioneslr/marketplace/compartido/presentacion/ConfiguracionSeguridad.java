@@ -74,6 +74,7 @@ public class ConfiguracionSeguridad {
 
                         // Cualquier usuario con sesión
                         .requestMatchers("/api/v1/usuarios/me/**", "/api/v1/notificaciones/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/resenas/*/reportes").authenticated()
 
                         .anyRequest().denyAll())
                 .build();

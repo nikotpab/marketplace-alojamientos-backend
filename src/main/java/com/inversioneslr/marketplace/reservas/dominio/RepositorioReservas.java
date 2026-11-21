@@ -33,6 +33,8 @@ public interface RepositorioReservas {
 
     Optional<Reserva> buscarPorId(UUID id);
 
+    List<Reserva> buscarPorIds(Collection<UUID> ids);
+
     /**
      * De la llegada más reciente a la más antigua.
      *

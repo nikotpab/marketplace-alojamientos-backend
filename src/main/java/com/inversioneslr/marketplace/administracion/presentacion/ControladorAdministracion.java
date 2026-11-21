@@ -11,6 +11,7 @@ import com.inversioneslr.marketplace.auditoria.FachadaAuditoria.FiltrosAuditoria
 import com.inversioneslr.marketplace.compartido.UsuarioAutenticado;
 import com.inversioneslr.marketplace.cotizacion.ConfiguracionTarifas;
 import com.inversioneslr.marketplace.publicaciones.FachadaPublicaciones.TipoAlojamiento;
+import com.inversioneslr.marketplace.resenas.FachadaResenas;
 import com.inversioneslr.marketplace.usuarios.FachadaUsuarios.UsuarioResumen;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -68,6 +69,11 @@ public class ControladorAdministracion {
     public void restringirUsuario(@AuthenticationPrincipal UsuarioAutenticado administrador, @PathVariable UUID id,
                                   @Valid @RequestBody ServicioAdministracion.MotivoComando comando) {
         administracion.restringirUsuario(administrador.id(), id, comando);
+    }
+
+    @GetMapping("/resenas/reportadas")
+    public List<FachadaResenas.ResenaConReportes> listarResenasReportadas() {
+        return administracion.listarResenasReportadas();
     }
 
     @DeleteMapping("/usuarios/{id}/restriccion")

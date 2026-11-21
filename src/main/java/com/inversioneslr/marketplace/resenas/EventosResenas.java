@@ -55,4 +55,32 @@ public interface EventosResenas {
             return resenaId;
         }
     }
+
+    /** SCRUM-111 · RF-29: un usuario reporta una reseña. Queda en la auditoría con el motivo. */
+    record ResenaReportada(UUID id, UUID usuarioId, UUID resenaId, String motivo) implements EventoDominio {
+
+        public ResenaReportada(UUID usuarioId, UUID resenaId, String motivo) {
+            this(UUID.randomUUID(), usuarioId, resenaId, motivo);
+        }
+
+        @Override
+        public UUID actorId() {
+            return usuarioId;
+        }
+
+        @Override
+        public String entidad() {
+            return "resena";
+        }
+
+        @Override
+        public UUID entidadId() {
+            return resenaId;
+        }
+
+        @Override
+        public Map<String, Object> detalle() {
+            return Map.of("motivo", motivo);
+        }
+    }
 }
