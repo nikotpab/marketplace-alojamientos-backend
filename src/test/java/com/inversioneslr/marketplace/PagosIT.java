@@ -40,6 +40,8 @@ class PagosIT extends PruebaIntegracion {
         assertThat(contar(vieja)).isZero();
         assertThat(contar(reciente)).isEqualTo(1);
         assertThat(contar(pendiente)).isEqualTo(1);
+        // Sin esto, la reconciliación de otras pruebas (ReconciliacionIT) intentaría revertir este cobro pendiente.
+        comoAplicacion.update("UPDATE pago SET estado = 'RECHAZADO' WHERE clave_idempotencia = ?", pendiente);
 
         String referencia = pagos.cobrar(new BigDecimal("50000.00"), vieja);
         pagos.registrarPago(null, referencia, vieja, new BigDecimal("50000.00"));
