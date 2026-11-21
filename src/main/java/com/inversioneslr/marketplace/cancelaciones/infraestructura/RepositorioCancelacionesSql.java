@@ -4,6 +4,9 @@ import com.inversioneslr.marketplace.cancelaciones.dominio.Cancelacion;
 import com.inversioneslr.marketplace.cancelaciones.dominio.RepositorioCancelaciones;
 import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import java.sql.Timestamp;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -36,5 +39,20 @@ public class RepositorioCancelacionesSql implements RepositorioCancelaciones {
         } catch (DuplicateKeyException e) {
             throw new ExcepcionNegocio(ExcepcionNegocio.Tipo.CONFLICTO, "La reserva ya fue cancelada.");
         }
+    }
+
+    @Override
+    public List<Cancelacion> buscarPorReservas(Collection<UUID> reservaIds) {
+        return jdbc.sql("SELECT * FROM cancelacion WHERE reserva_id IN (:reservas)")
+                .param("reservas", reservaIds)
+                .query((fila, numero) -> new Cancelacion(
+                        fila.getObject("id", UUID.class),
+                        fila.getObject("reserva_id", UUID.class),
+                        fila.getObject("usuario_id", UUID.class),
+                        fila.getTimestamp("fecha") == null ? null : fila.getTimestamp("fecha").toInstant(),
+                        fila.getString("motivo"),
+                        fila.getBigDecimal("valor_devolucion"),
+                        Cancelacion.EstadoFinal.valueOf(fila.getString("estado_final"))))
+                .list();
     }
 }
