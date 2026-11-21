@@ -66,11 +66,13 @@ Resources:
       OKActions:
         - !Ref TemaAlertas
 
-  # RNF-16: si falla el hardware o la red del host, AWS mueve la instancia a otro con la misma IP y el mismo disco.
-  AlarmaRecuperarInstancia:
+  # RNF-16: si falla el hardware o la red del host, la recuperación automática simplificada de EC2 (activa por defecto,
+  # MaintenanceOptions.AutoRecovery = default) mueve la instancia a otro host con la misma IP y el mismo disco. CloudWatch
+  # no acepta además una acción Recover en esta instancia, así que la alarma solo avisa al equipo.
+  AlarmaHostDeLaInstancia:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: Fallo el host de la EC2 del marketplace; AWS la recupera en otro.
+      AlarmDescription: Fallo el host de la EC2 del marketplace; AWS la recupera sola en otro host.
       Namespace: AWS/EC2
       MetricName: StatusCheckFailed_System
       Dimensions:
@@ -83,14 +85,15 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: missing
       AlarmActions:
-        - !Sub arn:${AWS::Partition}:automate:${AWS::Region}:ec2:recover
+        - !Ref TemaAlertas
+      OKActions:
         - !Ref TemaAlertas
 
-  # Si el sistema operativo de la instancia deja de responder, se reinicia. Docker vuelve a levantar los contenedores.
-  AlarmaReiniciarInstancia:
+  # Si el sistema operativo de la instancia deja de responder, se avisa para reiniciarla (aws ec2 reboot-instances).
+  AlarmaSistemaDeLaInstancia:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: La EC2 del marketplace no responde a su status check; se reinicia.
+      AlarmDescription: La EC2 del marketplace no responde a su status check; hay que reiniciarla.
       Namespace: AWS/EC2
       MetricName: StatusCheckFailed_Instance
       Dimensions:
@@ -103,7 +106,8 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: missing
       AlarmActions:
-        - !Sub arn:${AWS::Partition}:automate:${AWS::Region}:ec2:reboot
+        - !Ref TemaAlertas
+      OKActions:
         - !Ref TemaAlertas
 
 Outputs:
