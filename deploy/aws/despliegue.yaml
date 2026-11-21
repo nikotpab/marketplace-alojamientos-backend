@@ -1,0 +1,351 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  SCRUM-121 - Despliegue continuo del marketplace en la EC2 existente: rol de la instancia, grupo de seguridad web,
+  registros ECR, grupo de logs de la API, acceso de GitHub Actions por OIDC y documentos de SSM que despliegan una imagen.
+
+Parameters:
+  InstanciaId:
+    Type: AWS::EC2::Instance::Id
+    Description: EC2 donde corren la API y Caddy.
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC de la instancia, para el grupo de seguridad web.
+  RepositorioApi:
+    Type: String
+    Default: nikotpab/marketplace-alojamientos-backend
+    AllowedPattern: "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    Description: Repositorio de GitHub que puede publicar y desplegar la API (solo desde main).
+  RepositorioWeb:
+    Type: String
+    Default: nikotpab/marketplace-alojamientos-frontend
+    AllowedPattern: "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    Description: Repositorio de GitHub que puede publicar y desplegar el frontend (solo desde main).
+  ProveedorOidcExistente:
+    Type: String
+    Default: ""
+    AllowedPattern: "^(arn:aws:iam::[0-9]{12}:oidc-provider/token\\.actions\\.githubusercontent\\.com)?$"
+    Description: ARN del proveedor OIDC de GitHub si la cuenta ya tiene uno (solo puede haber uno). Vacío para crearlo.
+  RutaParametros:
+    Type: String
+    Default: /marketplace/prod
+    AllowedPattern: "^(/[A-Za-z0-9_.-]+)+$"
+    Description: Ruta de SSM Parameter Store con la configuración y los secretos de la API.
+  DiasRetencionLogs:
+    Type: Number
+    Default: 30
+    AllowedValues: [7, 14, 30, 60, 90, 180, 365]
+    Description: Días que se conservan los logs de la API en CloudWatch.
+
+Conditions:
+  CrearProveedorOidc: !Equals [!Ref ProveedorOidcExistente, ""]
+
+Resources:
+  # --- La instancia ---------------------------------------------------------------------------------------------------
+
+  RolInstancia:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: EC2 del marketplace - SSM, sus parametros, sus imagenes de ECR y sus logs.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        # Run Command y Session Manager: el CI despliega por SSM y no hace falta abrir el puerto 22.
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: marketplace-instancia
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: LeerParametros
+                Effect: Allow
+                Action:
+                  - ssm:GetParametersByPath
+                  - ssm:GetParameters
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${RutaParametros}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${RutaParametros}/*
+              # AmazonSSMManagedInstanceCore permite leer cualquier parámetro; el contexto de cifrado limita el
+              # descifrado de los SecureString a los de esta ruta.
+              - Sid: DescifrarSoloSusParametros
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
+                  StringLike:
+                    kms:EncryptionContext:PARAMETER_ARN: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${RutaParametros}/*
+              - Sid: TokenDeEcr
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: BajarSusImagenes
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource:
+                  - !GetAtt RepositorioImagenApi.Arn
+                  - !GetAtt RepositorioImagenWeb.Arn
+              - Sid: EscribirLogsDeLaApi
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt GrupoLogsApi.Arn
+
+  PerfilInstancia:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref RolInstancia
+
+  # Caddy recibe HTTP solo para redirigir a HTTPS y validar el certificado (RNF-26).
+  GrupoSeguridadWeb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Marketplace - HTTP y HTTPS publicos hacia Caddy
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - Description: HTTP, redirige a HTTPS
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  # El driver awslogs de deploy/compose.yaml escribe aquí. El monitoreo (deploy/aws/monitoreo.yaml) lee el latido.
+  GrupoLogsApi:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: /marketplace/api
+      RetentionInDays: !Ref DiasRetencionLogs
+
+  # --- Imágenes ---------------------------------------------------------------------------------------------------------
+  # Los nombres son fijos porque los usan los workflows de los dos repositorios. La etiqueta es el commit, así que no se
+  # sobrescribe: volver atrás es desplegar una etiqueta anterior.
+
+  RepositorioImagenApi:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: marketplace-api
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Conserva las 10 imagenes mas recientes",
+          "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}
+
+  RepositorioImagenWeb:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: marketplace-web
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Conserva las 10 imagenes mas recientes",
+          "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}
+
+  # --- GitHub Actions ---------------------------------------------------------------------------------------------------
+  # GitHub entra con un token OIDC de corta duración: no hay llaves de acceso guardadas en los repositorios.
+
+  ProveedorOidcGithub:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CrearProveedorOidc
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+
+  RolDespliegueApi:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: GitHub Actions del backend (main) - publica marketplace-api y la despliega por SSM.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If [CrearProveedorOidc, !Ref ProveedorOidcGithub, !Ref ProveedorOidcExistente]
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub repo:${RepositorioApi}:ref:refs/heads/main
+      Policies:
+        - PolicyName: publicar-y-desplegar-api
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: TokenDeEcr
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PublicarImagen
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource: !GetAtt RepositorioImagenApi.Arn
+              - Sid: DesplegarSoloConSuDocumento
+                Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanciaId}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DocumentoDesplegarApi}
+              - Sid: VerElResultado
+                Effect: Allow
+                Action: ssm:GetCommandInvocation
+                Resource: "*"
+
+  RolDespliegueWeb:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: GitHub Actions del frontend (main) - publica marketplace-web y la despliega por SSM.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If [CrearProveedorOidc, !Ref ProveedorOidcGithub, !Ref ProveedorOidcExistente]
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub repo:${RepositorioWeb}:ref:refs/heads/main
+      Policies:
+        - PolicyName: publicar-y-desplegar-web
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: TokenDeEcr
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PublicarImagen
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource: !GetAtt RepositorioImagenWeb.Arn
+              - Sid: DesplegarSoloConSuDocumento
+                Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanciaId}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DocumentoDesplegarWeb}
+              - Sid: VerElResultado
+                Effect: Allow
+                Action: ssm:GetCommandInvocation
+                Resource: "*"
+
+  # --- Documentos de SSM --------------------------------------------------------------------------------------------------
+  # El CI solo puede correr estos dos documentos, y cada uno solo acepta un commit como etiqueta: no puede ejecutar otro
+  # comando en la instancia.
+
+  DocumentoDesplegarApi:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      UpdateMethod: NewVersion
+      Content:
+        schemaVersion: "2.2"
+        description: >-
+          Despliega marketplace-api con la etiqueta indicada. Primero actualiza en /opt/marketplace los archivos de
+          despliegue que trae la misma imagen (deploy/ del backend) y luego corre desplegar.sh.
+        parameters:
+          etiqueta:
+            type: String
+            description: Commit de la imagen que se despliega.
+            allowedPattern: "^[0-9a-f]{40}$"
+        mainSteps:
+          - action: aws:runShellScript
+            name: desplegarApi
+            inputs:
+              timeoutSeconds: "900"
+              runCommand:
+                - set -eu
+                - cd /opt/marketplace
+                - !Sub imagen=${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/marketplace-api:{{ etiqueta }}
+                - !Sub aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com > /dev/null
+                - docker pull -q "$imagen" > /dev/null
+                - contenedor=$(docker create "$imagen")
+                - docker cp "$contenedor:/despliegue/." /opt/marketplace/
+                - docker rm "$contenedor" > /dev/null
+                - bash /opt/marketplace/desplegar.sh api "{{ etiqueta }}"
+
+  DocumentoDesplegarWeb:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      UpdateMethod: NewVersion
+      Content:
+        schemaVersion: "2.2"
+        description: Despliega los archivos de marketplace-web con la etiqueta indicada; Caddy los sirve de inmediato.
+        parameters:
+          etiqueta:
+            type: String
+            description: Commit de la imagen que se despliega.
+            allowedPattern: "^[0-9a-f]{40}$"
+        mainSteps:
+          - action: aws:runShellScript
+            name: desplegarWeb
+            inputs:
+              timeoutSeconds: "600"
+              runCommand:
+                - bash /opt/marketplace/desplegar.sh web "{{ etiqueta }}"
+
+Outputs:
+  PerfilInstancia:
+    Description: Perfil que se asocia una vez a la EC2 (aws ec2 associate-iam-instance-profile).
+    Value: !Ref PerfilInstancia
+  GrupoSeguridadWeb:
+    Description: Grupo de seguridad que se agrega una vez a la EC2 para abrir 80 y 443.
+    Value: !Ref GrupoSeguridadWeb
+  RolDespliegueApi:
+    Description: Variable AWS_ROL_DESPLIEGUE del repositorio del backend.
+    Value: !GetAtt RolDespliegueApi.Arn
+  RolDespliegueWeb:
+    Description: Variable AWS_ROL_DESPLIEGUE del repositorio del frontend.
+    Value: !GetAtt RolDespliegueWeb.Arn
+  DocumentoDesplegarApi:
+    Description: Variable AWS_DOCUMENTO_DESPLIEGUE del repositorio del backend.
+    Value: !Ref DocumentoDesplegarApi
+  DocumentoDesplegarWeb:
+    Description: Variable AWS_DOCUMENTO_DESPLIEGUE del repositorio del frontend.
+    Value: !Ref DocumentoDesplegarWeb

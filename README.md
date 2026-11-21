@@ -40,7 +40,7 @@ docker compose exec db psql -U marketplace_owner -d marketplace \
 
 Luego vuelve a iniciar sesión, porque el rol va en el token.
 
-El frontend agrega la versión: sus servicios llaman a `/api/...` y su interceptor (`version-api.interceptor.ts`) las convierte en `/api/v1/...`. En desarrollo, el proxy de Angular reenvía `/api` a `http://localhost:8080` sin reescribir la ruta, y en el servidor Caddy reenvía `/api/*` tal cual (`deploy/Caddyfile`). No hay que agregar un `uri replace` en Caddy: las peticiones quedarían en `/api/v1/v1/...`.
+El frontend agrega la versión: sus servicios llaman a `/api/...` y su interceptor (`version-api.interceptor.ts`) las convierte en `/api/v1/...`. En desarrollo, el proxy de Angular reenvía `/api` a `http://localhost:8080` sin reescribir la ruta, y en el servidor Caddy reenvía `/api/*` tal cual (`deploy/caddy/Caddyfile`). No hay que agregar un `uri replace` en Caddy: las peticiones quedarían en `/api/v1/v1/...`.
 
 ### Correos (SCRUM-151, SCRUM-110)
 
@@ -162,7 +162,7 @@ Cada evento es un record en la raíz del módulo que lo emite, agrupados en `Eve
 | ADR-07 Autorización | Tabla de rutas en `ConfiguracionSeguridad`, `ManejadorDenegaciones` |
 | ADR-08 Proveedor de pagos | `PasarelaPagos`, `ConfiguracionPagos` |
 | RNF-18, RNF-25 Logs | `FiltroCorrelacion`, `EnmascaradorLogs` |
-| RNF-26 HTTPS | `deploy/Caddyfile` |
+| RNF-26 HTTPS | `deploy/caddy/Caddyfile` |
 | RNF-27 Credenciales | `.env`, gitleaks en `.github/workflows/ci.yml` |
 | RNF-12 Reservas a medias | `ServicioPagos.revertirCobrosSinReserva` |
 | RNF-31 Nueva política | `PoliticaCancelacion` |
@@ -296,6 +296,91 @@ fields @timestamp, logger_name, message, correlationId
 | limit 50
 ```
 
+## Despliegue en AWS
+
+La API y el frontend corren en una EC2 (t4g.small, Amazon Linux 2023) con Docker Compose: Caddy sirve el frontend y reenvía `/api/*` a la API, que usa RDS (`deploy/compose.yaml`). Cada push a `main` que pasa el CI se despliega solo (SCRUM-121):
+
+1. El job `desplegar` de `.github/workflows/ci.yml` entra a AWS por OIDC, sin llaves guardadas, construye la imagen para ARM y la publica en ECR como `marketplace-api:<commit>`.
+2. Envía a la EC2 el documento de SSM del stack, que solo acepta un commit como parámetro. El documento copia a `/opt/marketplace` los archivos de despliegue que trae la misma imagen y corre `deploy/desplegar.sh api <commit>`.
+3. `desplegar.sh`:
+   - escribe `.env` con los parámetros de `/marketplace/prod`; solo root lo lee y falla si falta alguno obligatorio;
+   - crea o actualiza en RDS el usuario de la aplicación;
+   - levanta la imagen nueva y espera a que su healthcheck quede sano;
+   - si no queda sana en 5 minutos, vuelve a la imagen anterior y el job falla.
+
+El frontend hace lo mismo con su propio workflow: publica `marketplace-web:<commit>`, y `desplegar.sh web <commit>` copia sus archivos a `web/versiones/<commit>`. Luego cambia de una vez el enlace `web/actual`, que es lo que sirve Caddy.
+
+Lo que imprime el despliegue queda en el log público de GitHub Actions: no muestra valores de parámetros ni logs de la API. Esos se ven en CloudWatch (ver "Consultar los logs").
+
+### Preparación (una sola vez)
+
+Requiere una identidad de AWS con permisos de CloudFormation, IAM, EC2 y SSM. `REGION=us-east-1` e `INSTANCIA=i-...`, el id de la EC2.
+
+1. **Stack de despliegue.** Crea el rol y el perfil de la instancia, el grupo de seguridad web, los repositorios ECR, el grupo de logs `/marketplace/api`, el proveedor OIDC de GitHub, un rol por repositorio y los dos documentos de SSM:
+
+   ```bash
+   aws cloudformation deploy --region $REGION --stack-name marketplace-despliegue \
+     --template-file deploy/aws/despliegue.yaml --capabilities CAPABILITY_IAM \
+     --parameter-overrides InstanciaId=$INSTANCIA VpcId=<vpc de la instancia>
+   aws cloudformation describe-stacks --region $REGION --stack-name marketplace-despliegue --query 'Stacks[0].Outputs'
+   ```
+
+   Si la cuenta ya tiene el proveedor OIDC de GitHub, se pasa su ARN en `ProveedorOidcExistente`.
+
+2. **Perfil y grupo de seguridad de la EC2.** Con la instancia detenida o encendida:
+
+   ```bash
+   aws ec2 associate-iam-instance-profile --region $REGION --instance-id $INSTANCIA \
+     --iam-instance-profile Name=<salida PerfilInstancia>
+   aws ec2 modify-instance-attribute --region $REGION --instance-id $INSTANCIA \
+     --groups <grupos actuales> <salida GrupoSeguridadWeb>
+   ```
+
+   El grupo nuevo abre 80 y 443. El despliegue y la consola usan SSM, así que el puerto 22 abierto a internet ya no hace falta: conviene quitarlo y entrar con `aws ssm start-session --target $INSTANCIA`.
+
+3. **Docker en la instancia.** Con la instancia encendida, el agente de SSM ya registrado y el script en `main`:
+
+   ```bash
+   aws ssm send-command --region $REGION --instance-ids $INSTANCIA --document-name AWS-RunShellScript \
+     --parameters 'commands=["curl -fsSL https://raw.githubusercontent.com/nikotpab/marketplace-alojamientos-backend/main/deploy/preparar-instancia.sh | bash"]'
+   ```
+
+   `deploy/preparar-instancia.sh` instala Docker y Docker Compose (verifica el hash del binario) y crea `/opt/marketplace`.
+
+4. **Parámetros de SSM.** `desplegar.sh` exige estos en `/marketplace/prod`:
+   - `DB_URL`, `DB_USUARIO_APP`, `DB_CONTRASENA_APP`, `DB_USUARIO_MIGRACION`, `DB_CONTRASENA_MIGRACION`;
+   - `JWT_SECRETO`, `PAGOS_PROVEEDOR`, `DOMINIO`;
+   - `CORREO_SERVIDOR`, `CORREO_PUERTO`, `CORREO_USUARIO`, `CORREO_CONTRASENA`, `CORREO_SEGURO`, `CORREO_REMITENTE` (ver "Correos").
+
+   Los secretos van como SecureString, creados desde la consola. `STRIPE_CLAVE_SECRETA` y `STRIPE_METODO_PAGO` son opcionales. `IMAGEN_API` ya no se usa: la imagen la elige el despliegue.
+
+5. **Variables de GitHub.** En cada repositorio, con las salidas del stack:
+
+   ```bash
+   gh variable set AWS_ROL_DESPLIEGUE --body <salida RolDespliegueApi>
+   gh variable set AWS_DOCUMENTO_DESPLIEGUE --body <salida DocumentoDesplegarApi>
+   gh variable set AWS_INSTANCIA --body $INSTANCIA
+   ```
+
+   En el frontend van `RolDespliegueWeb` y `DocumentoDesplegarWeb` (`-R nikotpab/marketplace-alojamientos-frontend`).
+
+6. **Primer despliegue.** Se corre el workflow CI en `main` de cada repositorio, primero el backend: `gh workflow run CI --ref main`.
+
+### Operación
+
+- **Volver a una versión anterior:** se busca el commit en ECR y se corre el documento con esa etiqueta:
+
+  ```bash
+  aws ecr describe-images --region $REGION --repository-name marketplace-api \
+    --query 'reverse(sort_by(imageDetails,&imagePushedAt))[].[imageTags[0],imagePushedAt]' --output text
+  aws ssm send-command --region $REGION --instance-ids $INSTANCIA \
+    --document-name <salida DocumentoDesplegarApi> --parameters etiqueta=<commit>
+  ```
+
+  Lo mismo con `marketplace-web` y `DocumentoDesplegarWeb`. ECR conserva las 10 imágenes más recientes de cada repositorio.
+- **Cambiar un secreto:** se actualiza el parámetro en SSM y se vuelve a desplegar. `desplegar.sh` reescribe `.env` y, si cambió `DB_CONTRASENA_APP`, también la contraseña del usuario en RDS.
+- **Entrar a la instancia:** `aws ssm start-session --target $INSTANCIA`; el despliegue vive en `/opt/marketplace`.
+
 ## Monitoreo
 
 Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos` y `auditoria`. `auditoria` figura caída si algún registro de auditoría fue alterado: cada 10 min, `VerificacionAuditoria` recalcula el hash de cada uno (ASR-07).
@@ -336,7 +421,7 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 **Despliegue**
 
 14. **Contenedor colgado.** `restart: always` no reinicia un contenedor que solo está `unhealthy`. Para cumplir "un healthcheck si se cuelga" hace falta algo más.
-15. **Secretos e imagen.** Falta el paso que pasa los secretos de SSM a `deploy/.env`, y definir dónde se publica la imagen. La infraestructura AWS no es parte de este repositorio.
+15. **Secretos e imagen.** Resuelto en SCRUM-121: la imagen se publica en ECR (`marketplace-api`, con el commit como etiqueta) y `deploy/desplegar.sh` escribe en la EC2 el `.env` con los parámetros de SSM. La infraestructura nueva está en `deploy/aws/despliegue.yaml`; la EC2 y RDS, que ya existían, siguen fuera de este repositorio. Ver "Despliegue en AWS".
 16. **"Estado del dominio" en el latido.** El diagrama de despliegue y SCRUM-57 lo piden, pero no definen qué significa. Por ahora el latido reporta `baseDeDatos` y `auditoria`. Si se refería al dominio web o a la pasarela de pagos, falta definirlo y agregarlo.
 
 **Sin caso de uso**

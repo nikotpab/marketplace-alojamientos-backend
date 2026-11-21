@@ -5,12 +5,15 @@
         protocols tls1.2 tls1.3
     }
 
+    encode zstd gzip
+
     handle /api/* {
         reverse_proxy marketplace-api:8080
     }
 
+    # SCRUM-121: web/actual es un enlace a la versión desplegada del frontend (deploy/desplegar.sh web).
     handle {
-        root * /srv/marketplace-web
+        root * /srv/web/actual
         try_files {path} /index.html
         file_server
     }
