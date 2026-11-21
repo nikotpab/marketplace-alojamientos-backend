@@ -300,12 +300,33 @@ fields @timestamp, logger_name, message, correlationId
 
 Cada 30 s la aplicación escribe una línea `Latido` con el campo `latido` (`OK` o `FALLA`) y el estado de cada componente: `baseDeDatos` y `auditoria`. `auditoria` figura caída si algún registro de auditoría fue alterado: cada 10 min, `VerificacionAuditoria` recalcula el hash de cada uno (ASR-07).
 
-**Falta configurar en AWS:**
+En AWS, `deploy/aws/monitoreo.yaml` (SCRUM-57) crea:
 
-1. Un filtro de métrica en `/marketplace/api`, con el patrón `{ $.latido = "OK" }` y valor 1.
-2. Una alarma sobre esa métrica: suma menor que 1 durante 2 periodos de 1 minuto, con los datos faltantes tratados como incumplidos, que avise al tema de SNS del equipo.
+1. **Filtro de métrica en `/marketplace/api`:** con el patrón `{ $.latido = "OK" }`, suma 1 a `Marketplace/LatidoOk` por cada latido correcto.
+2. **Alarma de latido:** se dispara si la suma es menor que 1 durante 2 periodos de 1 minuto, con los datos faltantes tratados como incumplidos. Avisa por correo al tema de SNS del equipo, también cuando se recupera, y su historial registra cada falla.
+   - Un solo filtro cubre los dos casos: si la aplicación se detiene, faltan los datos; si un componente falla, el latido deja de ser `OK`.
+3. **Recuperación de la EC2:**
+   - si falla el host (`StatusCheckFailed_System`), AWS la recupera en otro, con la misma IP y el mismo disco;
+   - si deja de responder su sistema (`StatusCheckFailed_Instance`), se reinicia;
+   - en los dos casos se avisa al equipo.
 
-Con un solo filtro se cubren los dos casos: si la aplicación se detiene, faltan los datos; si un componente falla, el latido deja de ser `OK`.
+Si la API se cuelga sin caerse, la reinicia el timer de SCRUM-122 (decisión pendiente 14). La disponibilidad mensual de RNF-09 se mide con la misma métrica: son los minutos con `LatidoOk` mayor o igual a 1 sobre los minutos del mes.
+
+Se crea después del stack de despliegue, que es el que crea el grupo de logs:
+
+```bash
+aws cloudformation deploy --region us-east-1 --stack-name marketplace-monitoreo \
+  --template-file deploy/aws/monitoreo.yaml \
+  --parameter-overrides InstanciaId=<id de la EC2> CorreoAlertas=<correo del equipo>
+```
+
+SNS envía un correo para confirmar la suscripción; hasta que alguien lo confirme, las alarmas no llegan. Para probarla, se detiene la API y en unos 2 minutos debe llegar el aviso:
+
+```bash
+aws ssm start-session --target <id de la EC2>
+sudo docker stop marketplace-marketplace-api-1   # detenida a mano, Docker no la vuelve a levantar
+sudo docker start marketplace-marketplace-api-1  # después del aviso
+```
 
 ## Decisiones pendientes
 
