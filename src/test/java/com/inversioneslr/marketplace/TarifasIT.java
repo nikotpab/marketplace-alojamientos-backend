@@ -20,12 +20,12 @@ class TarifasIT extends PruebaIntegracion {
             {"porcentajeLimpieza":0,"porcentajeServicio":12,"porcentajeDescuento":5,
              "porcentajeDescuentoEstanciaLarga":10,"nochesEstanciaLarga":7}""";
 
-    /** Vuelve a los valores de V3, que usan las demás pruebas. */
+    /** Vuelve a los valores de V3 y V13, que usan las demás pruebas. */
     @AfterEach
     void restaurar() {
         comoAplicacion.update("""
                 UPDATE configuracion_tarifa SET porcentaje = CASE clave
-                    WHEN 'LIMPIEZA' THEN NULL WHEN 'SERVICIO' THEN 10 WHEN 'DESCUENTO_PROMOCIONAL' THEN 5 ELSE 10 END,
+                    WHEN 'LIMPIEZA' THEN 5 WHEN 'SERVICIO' THEN 10 WHEN 'DESCUENTO_PROMOCIONAL' THEN 5 ELSE 10 END,
                     noches_minimas = CASE clave WHEN 'DESCUENTO_ESTANCIA_LARGA' THEN 7 END,
                     modificado_por = NULL""");
     }
@@ -62,6 +62,14 @@ class TarifasIT extends PruebaIntegracion {
         assertThat(comoAplicacion.queryForObject("""
                 SELECT detalle ->> 'Tarifa de servicio' FROM auditoria.evento_auditoria
                 WHERE actor_id = ? AND accion = 'TarifasActualizadas'""", String.class, administrador)).isEqualTo("10 % → 12 %");
+    }
+
+    /** SCRUM-115: la limpieza arranca en 5 % del subtotal (V13); antes quedaba sin definir y se cobraba en 0. */
+    @Test
+    void laTarifaDeLimpiezaArrancaEnCincoPorCiento() throws Exception {
+        mvc.perform(get("/api/v1/admin/tarifas").header("Authorization", sesionDe(crearUsuario(Rol.ADMINISTRADOR), Rol.ADMINISTRADOR)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.porcentajeLimpieza").value(5.0));
     }
 
     @Test

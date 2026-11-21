@@ -17,7 +17,7 @@ class PagosIT extends PruebaIntegracion {
     void elAdaptadorSimuladoApruebaYElPagoQuedaRegistrado() {
         String clave = UUID.randomUUID().toString();
 
-        String referencia = pagos.cobrar(new BigDecimal("1062000.00"), clave);
+        String referencia = pagos.cobrar(new BigDecimal("1062000.00"), clave, null);
         pagos.registrarPago(null, referencia, clave, new BigDecimal("1062000.00"));
 
         var pago = comoAplicacion.queryForMap("SELECT id_pago_stripe, monto, estado FROM pago WHERE clave_idempotencia = ?", clave);

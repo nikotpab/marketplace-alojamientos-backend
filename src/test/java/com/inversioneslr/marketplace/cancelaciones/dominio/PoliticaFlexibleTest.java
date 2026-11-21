@@ -7,6 +7,7 @@ import com.inversioneslr.marketplace.compartido.ExcepcionNegocio;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -39,12 +40,18 @@ class PoliticaFlexibleTest {
         assertThat(new PoliticaFlexible().calcularDevolucion(impar, LLEGADA.minusDays(3))).isEqualByComparingTo("50001");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"Flexible", "Moderada", "Estricta"})
+    void lasTresPoliticasTienenReglas(String nombre) {
+        assertThat(PoliticaCancelacion.porNombre(nombre).calcularDevolucion(RESERVA, LLEGADA.minusDays(30))).isPositive();
+    }
+
     @Test
     void unaPoliticaSinReglasResponde409() {
-        assertThatThrownBy(() -> PoliticaCancelacion.porNombre("Estricta"))
+        assertThatThrownBy(() -> PoliticaCancelacion.porNombre("Personalizada"))
                 .isInstanceOfSatisfying(ExcepcionNegocio.class, error -> {
                     assertThat(error.tipo()).isEqualTo(ExcepcionNegocio.Tipo.CONFLICTO);
-                    assertThat(error.getMessage()).contains("Estricta", "no tiene reglas");
+                    assertThat(error.getMessage()).contains("Personalizada", "no tiene reglas");
                 });
     }
 }

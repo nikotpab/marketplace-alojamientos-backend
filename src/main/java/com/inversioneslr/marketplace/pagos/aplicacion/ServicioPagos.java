@@ -38,12 +38,15 @@ public class ServicioPagos implements FachadaPagos {
         this.reloj = reloj;
     }
 
-    /** Registra el intento antes de llamar a la pasarela, para que un cobro nunca quede sin rastro (RNF-12). */
+    /**
+     * Registra el intento antes de llamar a la pasarela, para que un cobro nunca quede sin rastro (RNF-12). Guarda el
+     * método porque la reconciliación repite la llamada con la misma clave, y Stripe exige los mismos parámetros.
+     */
     @Override
-    public String cobrar(BigDecimal monto, String claveSolicitud) {
-        pagos.registrarIntento(claveSolicitud, monto);
+    public String cobrar(BigDecimal monto, String claveSolicitud, String metodoPago) {
+        pagos.registrarIntento(claveSolicitud, monto, metodoPago);
         try {
-            return pasarela.cobrar(monto, claveSolicitud);
+            return pasarela.cobrar(monto, claveSolicitud, metodoPago);
         } catch (ExcepcionNegocio error) {
             if (error.tipo() == ExcepcionNegocio.Tipo.PAGO_RECHAZADO) {
                 pagos.marcarRechazado(claveSolicitud);
@@ -75,7 +78,8 @@ public class ServicioPagos implements FachadaPagos {
     /** @param reservaId null si el pago todavía no tiene reserva, como antes de SCRUM-144 */
     @Override
     public void registrarPago(ReservaId reservaId, String referencia, String claveSolicitud, BigDecimal monto) {
-        pagos.guardar(new Pago(UUID.randomUUID(), reservaId == null ? null : reservaId.valor(), referencia, claveSolicitud, monto, Pago.Estado.APROBADO));
+        pagos.guardar(new Pago(UUID.randomUUID(), reservaId == null ? null : reservaId.valor(), referencia, claveSolicitud, monto,
+                Pago.Estado.APROBADO, null));
     }
 
     /**
@@ -90,7 +94,7 @@ public class ServicioPagos implements FachadaPagos {
 
     private void revertir(Pago pago) {
         try {
-            String referencia = pasarela.cobrar(pago.monto(), pago.claveIdempotencia());
+            String referencia = pasarela.cobrar(pago.monto(), pago.claveIdempotencia(), pago.metodoPago());
             pasarela.devolver(referencia, pago.monto());
             pagos.marcarDevueltoSinReserva(pago.claveIdempotencia(), referencia);
             eventos.publicar(new CobroRevertido(pago.id(), pago.monto(), referencia));

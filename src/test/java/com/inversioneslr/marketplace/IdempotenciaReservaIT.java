@@ -55,11 +55,11 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
     void preparar() {
         huesped = crearUsuario(Rol.HUESPED);
         publicacion = crearPublicacionActiva(crearUsuario(Rol.ANFITRION));
-        comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 9, 10), LocalDate.of(2030, 9, 13), 2, List.of());
+        comando = new ConfirmarReservaComando(publicacion, LocalDate.of(2030, 9, 10), LocalDate.of(2030, 9, 13), 2, List.of(), null);
         when(cotizacion.cotizar(any(), any(), any(), any())).thenReturn(new Cotizacion(3, new BigDecimal("300000.00"),
                 BigDecimal.ZERO, new BigDecimal("30000.00"), BigDecimal.ZERO, BigDecimal.ZERO, TOTAL));
         // Como Stripe: la misma clave siempre produce el mismo pago.
-        when(pasarela.cobrar(any(), any())).thenAnswer(llamada -> "pi_" + llamada.getArgument(1));
+        when(pasarela.cobrar(any(), any(), any())).thenAnswer(llamada -> "pi_" + llamada.getArgument(1));
     }
 
     @Test
@@ -81,7 +81,7 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         Reserva repetida = reservas.confirmarReserva(huesped, comando, clave);
 
         assertThat(repetida).isEqualTo(original);
-        verify(pasarela, times(1)).cobrar(any(), any());
+        verify(pasarela, times(1)).cobrar(any(), any(), any());
         assertThat(contar("SELECT count(*) FROM reserva WHERE publicacion_id = ?", publicacion)).isEqualTo(1);
     }
 
@@ -132,7 +132,7 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
     void unReintentoTrasPerderElPeriodoRecibeElMismoRechazoSinCobrarDeNuevo() {
         String clave = UUID.randomUUID().toString();
         // Otra reserva toma el periodo mientras se cobra.
-        when(pasarela.cobrar(any(), any())).thenAnswer(llamada -> {
+        when(pasarela.cobrar(any(), any(), any())).thenAnswer(llamada -> {
             comoAplicacion.update("""
                     INSERT INTO reserva (huesped_id, publicacion_id, fecha_llegada, fecha_salida, numero_huespedes, estado)
                     VALUES (?, ?, '2030-09-10', '2030-09-13', 1, 'CONFIRMADA')""", huesped, publicacion);
@@ -142,7 +142,7 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         assertThatThrownBy(() -> reservas.confirmarReserva(huesped, comando, clave)).isInstanceOf(PeriodoNoDisponibleException.class);
         assertThatThrownBy(() -> reservas.confirmarReserva(huesped, comando, clave)).isInstanceOf(PeriodoNoDisponibleException.class);
 
-        verify(pasarela, times(1)).cobrar(any(), any());
+        verify(pasarela, times(1)).cobrar(any(), any(), any());
         verify(pasarela, times(1)).devolver(any(), any());
     }
 
