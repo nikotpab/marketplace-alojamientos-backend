@@ -321,7 +321,17 @@ Los documentos no las resuelven y bloquean la implementación de lo indicado:
 **Faltan reglas o datos**
 
 5. **Tarifa de limpieza.** Los mockups muestran un monto fijo (COP 60.000); RF-32, CU-28 y el modelo de datos, un porcentaje. Decisión tomada en SCRUM-115: es un porcentaje del subtotal, como dicen los documentos, y arranca en 5 % (`V13`); en 3 noches de COP 300.000 son COP 45.000, cerca del mockup. El administrador lo cambia en `PUT /api/v1/admin/tarifas`.
-6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tienen reglas definidas. Solo existe `PoliticaFlexible`. Además, `politica_cancelacion` guarda un solo tramo y la flexible tiene dos, así que sus reglas viven en la clase. Decisión tomada en SCRUM-38: mientras no se definan, una política sin clase responde 409 con un mensaje claro, en vez de inventar reglas.
+6. **Políticas Moderada y Estricta.** El mockup las ofrece, pero no tenían reglas definidas. Decisión tomada en SCRUM-114, con la tarifa de servicio no reembolsable en las tres:
+
+   | Días antes de la llegada | Flexible | Moderada | Estricta |
+   |---|---|---|---|
+   | 14 o más | 100 % | 100 % | 50 % |
+   | 7 a 13 | 100 % | 50 % | 0 % |
+   | 5 a 6 | 100 % | 0 % | 0 % |
+   | 2 a 4 | 50 % | 0 % | 0 % |
+   | Menos de 2 | 0 % | 0 % | 0 % |
+
+   `politica_cancelacion` guarda un solo tramo y las políticas tienen hasta dos, así que los tramos viven en una clase por política (`PoliticaFlexible`, `PoliticaModerada`, `PoliticaEstricta`) y la tabla solo da el nombre y la descripción (`V14`). Una política sin clase sigue respondiendo 409 con un mensaje claro (SCRUM-38).
 7. **Código de recuperación (CU-03).** Resuelto en SCRUM-110: el enlace llega por correo y la API ya no devuelve el código. Los tokens se guardan en `token_correo`, solo con su hash. Ver "Correos".
 8. **Retención de claves de idempotencia (ADR-04).** Propuesta en SCRUM-34: 24 horas, lo mínimo que Stripe conserva las suyas. Falta validarla con el equipo.
 9. **Duración del JWT y revocación.** Por ahora los tokens duran 8 horas. Un usuario restringido o desactivado conserva su token hasta que venza, salvo que se verifique en cada petición.
