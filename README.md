@@ -325,7 +325,7 @@ Requiere una identidad de AWS con permisos de CloudFormation, IAM, EC2 y SSM. `R
    aws cloudformation describe-stacks --region $REGION --stack-name marketplace-despliegue --query 'Stacks[0].Outputs'
    ```
 
-   Si la cuenta ya tiene el proveedor OIDC de GitHub, se pasa su ARN en `ProveedorOidcExistente`.
+   Si la cuenta ya tiene el proveedor OIDC de GitHub, se pasa su ARN en `ProveedorOidcExistente`. Los roles solo aceptan tokens de `main` de cada repositorio, identificado como lo hace el token de GitHub: con su dueño y sus ids (`SujetoGithubApi` y `SujetoGithubWeb`, del campo `sub_claim_prefix` de `gh api repos/<dueño>/<repo>/actions/oidc/customization/sub`).
 
 2. **Perfil y grupo de seguridad de la EC2.** Con la instancia detenida o encendida:
 

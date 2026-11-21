@@ -10,16 +10,18 @@ Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC de la instancia, para el grupo de seguridad web.
-  RepositorioApi:
+  # El token de GitHub identifica el repositorio con su dueño y sus ids, que no cambian si se renombra:
+  # gh api repos/<dueño>/<repo>/actions/oidc/customization/sub (campo sub_claim_prefix).
+  SujetoGithubApi:
     Type: String
-    Default: nikotpab/marketplace-alojamientos-backend
-    AllowedPattern: "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
-    Description: Repositorio de GitHub que puede publicar y desplegar la API (solo desde main).
-  RepositorioWeb:
+    Default: repo:nikotpab@161153672/marketplace-alojamientos-backend@1376162737
+    AllowedPattern: "^repo:[A-Za-z0-9_.@-]+/[A-Za-z0-9_.@-]+$"
+    Description: Prefijo del sub del token de GitHub del backend, que puede publicar y desplegar la API (solo desde main).
+  SujetoGithubWeb:
     Type: String
-    Default: nikotpab/marketplace-alojamientos-frontend
-    AllowedPattern: "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
-    Description: Repositorio de GitHub que puede publicar y desplegar el frontend (solo desde main).
+    Default: repo:nikotpab@161153672/marketplace-alojamientos-frontend@1376164875
+    AllowedPattern: "^repo:[A-Za-z0-9_.@-]+/[A-Za-z0-9_.@-]+$"
+    Description: Prefijo del sub del token de GitHub del frontend, que puede publicar y desplegar la web (solo desde main).
   ProveedorOidcExistente:
     Type: String
     Default: ""
@@ -195,7 +197,7 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub repo:${RepositorioApi}:ref:refs/heads/main
+                token.actions.githubusercontent.com:sub: !Sub ${SujetoGithubApi}:ref:refs/heads/main
       Policies:
         - PolicyName: publicar-y-desplegar-api
           PolicyDocument:
@@ -242,7 +244,7 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub repo:${RepositorioWeb}:ref:refs/heads/main
+                token.actions.githubusercontent.com:sub: !Sub ${SujetoGithubWeb}:ref:refs/heads/main
       Policies:
         - PolicyName: publicar-y-desplegar-web
           PolicyDocument:
