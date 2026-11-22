@@ -42,6 +42,7 @@ class SolicitarActivacionIT extends PruebaIntegracion {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errores.descripcion").value("Agrega una descripción del alojamiento."))
                 .andExpect(jsonPath("$.errores.ubicacion").value("Indica la ubicación del alojamiento."))
+                .andExpect(jsonPath("$.errores.ciudad").value("Indica la ciudad del alojamiento."))
                 .andExpect(jsonPath("$.errores.tipo").value("Selecciona el tipo de alojamiento."))
                 .andExpect(jsonPath("$.errores.precioNoche").value("Indica un precio por noche mayor que 0."))
                 .andExpect(jsonPath("$.errores.imagenes").value("Agrega al menos una referencia de imagen (URL)."))

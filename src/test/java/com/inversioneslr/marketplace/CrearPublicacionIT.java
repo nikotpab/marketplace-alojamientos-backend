@@ -58,11 +58,12 @@ class CrearPublicacionIT extends PruebaIntegracion {
         assertThat(comoAplicacion.queryForObject("SELECT ciudad FROM publicacion WHERE id = ?", String.class, id)).isEqualTo("Bogotá");
     }
 
+    /** El frontend envía los campos vacíos como "": un borrador puede guardarse sin ciudad, que se exige al activarlo. */
     @Test
-    void unaCiudadVaciaSeRechaza() throws Exception {
-        crear(COMPLETA.replace("\"ciudad\":\"Cartagena\"", "\"ciudad\":\"\""))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.campos.ciudad").exists());
+    void unBorradorPuedeGuardarseSinCiudad() throws Exception {
+        UUID id = idDe(crear(COMPLETA.replace("\"ciudad\":\"Cartagena\"", "\"ciudad\":\"\"")));
+
+        assertThat(comoAplicacion.queryForObject("SELECT ciudad FROM publicacion WHERE id = ?", String.class, id)).isNull();
     }
 
     @Test

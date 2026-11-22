@@ -36,7 +36,7 @@ class PublicacionTest {
                 .isInstanceOfSatisfying(ExcepcionNegocio.class, e -> {
                     assertThat(e.tipo()).isEqualTo(ExcepcionNegocio.Tipo.INFORMACION_INCOMPLETA);
                     assertThat(e.campos()).containsKeys(
-                            "titulo", "descripcion", "ubicacion", "tipo",
+                            "titulo", "descripcion", "ubicacion", "ciudad", "tipo",
                             "capacidad", "precioNoche", "imagenes", "politicaCancelacion");
                 });
     }

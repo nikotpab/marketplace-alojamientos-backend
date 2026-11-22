@@ -28,6 +28,9 @@ public record Publicacion(UUID id, UUID anfitrionId, UUID tipoAlojamientoId, UUI
         if (vacio(ubicacionTextual)) {
             faltantes.put("ubicacion", "Indica la ubicación del alojamiento.");
         }
+        if (vacio(ciudad)) {
+            faltantes.put("ciudad", "Indica la ciudad del alojamiento.");
+        }
         if (tipoAlojamientoId == null) {
             faltantes.put("tipo", "Selecciona el tipo de alojamiento.");
         }
