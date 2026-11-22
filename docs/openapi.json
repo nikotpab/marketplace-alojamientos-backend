@@ -278,7 +278,7 @@
           },
           "ciudad" : {
             "maxLength" : 120,
-            "minLength" : 1,
+            "minLength" : 0,
             "type" : "string"
           },
           "descripcion" : {

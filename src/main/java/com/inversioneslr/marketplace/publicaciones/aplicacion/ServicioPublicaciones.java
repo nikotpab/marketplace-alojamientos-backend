@@ -409,12 +409,12 @@ public class ServicioPublicaciones implements FachadaPublicaciones {
         return guardado;
     }
 
-    /** Lo que envía el formulario del frontend. En borrador todos los campos pueden ir vacíos, salvo ciudad. */
+    /** Lo que envía el formulario del frontend. En borrador todos los campos pueden ir vacíos; un texto vacío se guarda como nulo. */
     public record DatosPublicacionComando(
             @Size(max = 180) String titulo,
             String descripcion,
             @Size(max = 255) String ubicacion,
-            @Size(min = 1, max = 120) String ciudad,
+            @Size(max = 120) String ciudad,
             String tipo,
             @Positive(message = "La capacidad debe ser mayor que cero. Ingresa 1 o más.") Integer capacidad,
             @Positive(message = "El precio por noche debe ser positivo. Ingresa un valor mayor que cero.") BigDecimal precioNoche,
