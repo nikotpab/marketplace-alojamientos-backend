@@ -6,13 +6,13 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-/** Strategy (RNF-31): una política nueva es una clase nueva y una línea en {@link #porNombre}. */
+/** Strategy: una política nueva es una clase nueva y una línea en {@link #porNombre}. */
 public interface PoliticaCancelacion {
 
     BigDecimal calcularDevolucion(ReservaCancelable reserva, LocalDate fechaCancelacion);
 
     /**
-     * SCRUM-114: devuelve el porcentaje del primer tramo que se cumple, sobre el total sin la tarifa de servicio, que
+     * Devuelve el porcentaje del primer tramo que se cumple, sobre el total sin la tarifa de servicio, que
      * no es reembolsable. Los tramos van del más lejano al más cercano a la llegada. Se redondea al peso.
      */
     static BigDecimal porTramos(ReservaCancelable reserva, LocalDate fechaCancelacion, Tramo... tramos) {
@@ -30,7 +30,7 @@ public interface PoliticaCancelacion {
     record Tramo(int diasAntes, int porcentaje) {
     }
 
-    /** Una política sin clase responde un error claro en vez de inventar reglas (SCRUM-38). */
+    /** Una política sin clase responde un error claro en vez de inventar reglas. */
     static PoliticaCancelacion porNombre(String nombre) {
         return switch (nombre) {
             case "Flexible" -> new PoliticaFlexible();

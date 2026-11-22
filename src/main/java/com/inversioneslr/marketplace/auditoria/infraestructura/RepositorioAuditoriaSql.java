@@ -99,7 +99,7 @@ public class RepositorioAuditoriaSql implements RepositorioAuditoria {
         }
     }
 
-    /** El actor y su rol quedan vacíos: los completa ServicioAuditoria con la fachada de usuarios (SCRUM-142). */
+    /** El actor y su rol quedan vacíos: los completa ServicioAuditoria con la fachada de usuarios. */
     private EventoAuditoria aEvento(ResultSet fila, int numero) throws SQLException {
         return new EventoAuditoria(
                 fila.getObject("id", UUID.class),

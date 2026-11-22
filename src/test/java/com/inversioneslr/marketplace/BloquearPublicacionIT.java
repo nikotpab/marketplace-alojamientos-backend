@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** CU-24 · RF-27. */
 class BloquearPublicacionIT extends PruebaIntegracion {
 
     UUID anfitrion;

@@ -4,14 +4,14 @@ on:
   pull_request:
   push:
     branches: [main]
-  # SCRUM-121: para volver a desplegar main sin un commit nuevo.
+  # Para volver a desplegar main sin un commit nuevo.
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  # Incluye las pruebas de arquitectura (EC-28).
+  # Incluye las pruebas de arquitectura.
   construir-y-probar:
     runs-on: ubuntu-latest
     env:
@@ -27,21 +27,21 @@ jobs:
           java-version: "21"
           cache: maven
       - run: mvn -B verify
-      # SCRUM-104: análisis en SonarQube Cloud con la cobertura de JaCoCo. Sin el secreto (PR de Dependabot), se omite.
-      # SCRUM-107: espera el quality gate y falla si queda en ERROR, así que bloquea el merge.
+      # Análisis en SonarQube Cloud con la cobertura de JaCoCo. Sin el secreto (PR de Dependabot), se omite.
+      # Espera el quality gate y falla si queda en ERROR, así que bloquea el merge.
       - if: env.SONAR_TOKEN != ''
         run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.qualitygate.wait=true
-      # SCRUM-100: reporte de cobertura de JaCoCo, descargable desde la ejecución del CI.
+      # Reporte de cobertura de JaCoCo, descargable desde la ejecución del CI.
       - uses: actions/upload-artifact@v7
         with:
           name: cobertura-jacoco
           path: target/site/jacoco
-      # SCRUM-129: contrato OpenAPI versionado, descargable para comparar entre builds.
+      # Contrato OpenAPI versionado, descargable para comparar entre builds.
       - uses: actions/upload-artifact@v7
         with:
           name: openapi-contrato
           path: docs/openapi.json
-      # SCRUM-102: si una prueba falla, sus reportes quedan descargables para revisar la causa.
+      # Si una prueba falla, sus reportes quedan descargables para revisar la causa.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -50,7 +50,7 @@ jobs:
             target/surefire-reports
             target/failsafe-reports
 
-  # Bloquea credenciales en el repositorio (EC-27).
+  # Bloquea credenciales en el repositorio.
   credenciales:
     runs-on: ubuntu-latest
     steps:
@@ -61,7 +61,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # SCRUM-121: cada push a main que pasa las pruebas publica la imagen en ECR, con el commit como etiqueta, y la despliega
+  # Cada push a main que pasa las pruebas publica la imagen en ECR, con el commit como etiqueta, y la despliega
   # en la EC2 por SSM. GitHub entra a AWS por OIDC, sin llaves guardadas. Las variables del repositorio salen del stack
   # de deploy/aws/despliegue.yaml; sin ellas el job no corre. Ver "Despliegue en AWS" en el README.
   desplegar:

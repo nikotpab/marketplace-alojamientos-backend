@@ -17,7 +17,7 @@ public class ExcepcionNegocio extends RuntimeException {
         this(tipo, mensaje, Map.of());
     }
 
-    /** @param campos mensaje por campo afectado, con la causa y cómo corregirla (RNF-35) */
+    /** @param campos mensaje por campo afectado, con la causa y cómo corregirla */
     public ExcepcionNegocio(Tipo tipo, String mensaje, Map<String, String> campos) {
         super(mensaje);
         this.tipo = tipo;

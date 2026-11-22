@@ -25,7 +25,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * SCRUM-129: valida que las respuestas reales cumplan el contrato de docs/openapi.json.
+ * Valida que las respuestas reales cumplan el contrato de docs/openapi.json.
  * Solo las operaciones con respuesta documentada en el spec (200, 201, 204) se validan con el
  * validador. Los errores (400, 401, 404) no están en el spec, por lo que solo se verifica el
  * código de estado.

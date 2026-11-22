@@ -1,7 +1,7 @@
 #!/bin/bash
-# SCRUM-67 · ASR-01: prepara un huésped y un administrador, corre plan.jmx y resume p95 y p99 por escenario.
+# Prepara un huésped y un administrador, corre plan.jmx y resume p95 y p99 por escenario.
 # Requiere el backend con el perfil demo en http://localhost:8080, su base en Docker, Mailpit en http://localhost:8025
-# (el registro pide el código que llega al correo, SCRUM-151) y JMeter 5.6.
+# (el registro pide el código que llega al correo) y JMeter 5.6.
 # Uso: pruebas/carga/ejecutar.sh [segundos, 120 por defecto]
 # Si la base corre con otro nombre de proyecto de Docker Compose, indícalo en PROYECTO_COMPOSE.
 set -euo pipefail
@@ -50,7 +50,7 @@ sql() {
     docker compose -f "$RAIZ/compose.yaml" ${PROYECTO_COMPOSE:+-p "$PROYECTO_COMPOSE"} exec -T db \
         psql -q -U marketplace_owner -d marketplace -c "$1" 2>&1 | grep -v 'is not set' || true
 }
-# El rol de administrador no se elige al registrarse (CU-01).
+# El rol de administrador no se elige al registrarse.
 sql "UPDATE marketplace.usuario SET rol = 'ADMINISTRADOR' WHERE correo = '$ADMINISTRADOR'"
 
 read -r PUBLICACION CIUDAD < <(curl -sf "$BASE/api/v1/alojamientos?tamano=1" | python3 -c '

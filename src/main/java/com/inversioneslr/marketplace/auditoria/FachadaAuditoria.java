@@ -8,7 +8,6 @@ import java.util.UUID;
 
 public interface FachadaAuditoria {
 
-    /** CU-27. */
     List<EventoAuditoria> consultar(FiltrosAuditoria filtros);
 
     /** @param actor y rol quedan vacíos si el evento lo provocó el sistema */

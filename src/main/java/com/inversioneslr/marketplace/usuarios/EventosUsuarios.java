@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Eventos que emite el módulo de usuarios (SCRUM-143). */
+/** Eventos que emite el módulo de usuarios. */
 public interface EventosUsuarios {
 
     /** Sobre una cuenta. Salvo que el record diga otra cosa, la provoca su propio usuario. */
@@ -48,7 +48,7 @@ public interface EventosUsuarios {
         }
     }
 
-    /** RNF-20. El usuario es null si el correo no existe. */
+    /** El usuario es null si el correo no existe. */
     record InicioSesionFallido(UUID id, UUID usuarioId, String causa) implements DeUsuario {
 
         public InicioSesionFallido(UUID usuarioId, String causa) {
@@ -68,7 +68,6 @@ public interface EventosUsuarios {
         }
     }
 
-    /** CU-25. */
     record UsuarioRestringido(UUID id, UUID administradorId, UUID usuarioId, String motivo) implements DeUsuario {
 
         public UsuarioRestringido(UUID administradorId, UUID usuarioId, String motivo) {
@@ -114,7 +113,7 @@ public interface EventosUsuarios {
         }
     }
 
-    /** SCRUM-112: el administrador levanta la restricción; el usuario puede volver a iniciar sesión. */
+    /** El administrador levanta la restricción; el usuario puede volver a iniciar sesión. */
     record RestriccionLevantada(UUID id, UUID administradorId, UUID usuarioId) implements DeUsuario {
 
         public RestriccionLevantada(UUID administradorId, UUID usuarioId) {
@@ -132,7 +131,7 @@ public interface EventosUsuarios {
         }
     }
 
-    /** SCRUM-112 · CU-05: el administrador reactiva una cuenta desactivada. */
+    /** El administrador reactiva una cuenta desactivada. */
     record CuentaReactivada(UUID id, UUID administradorId, UUID usuarioId) implements DeUsuario {
 
         public CuentaReactivada(UUID administradorId, UUID usuarioId) {

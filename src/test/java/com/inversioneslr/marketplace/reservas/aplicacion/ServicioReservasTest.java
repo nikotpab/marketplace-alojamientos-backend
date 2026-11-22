@@ -48,7 +48,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * SCRUM-141: CU-17 sin base de datos ni Docker. Los otros módulos se simulan por sus fachadas, así que cada prueba
+ * Confirmación de reservas sin base de datos ni Docker. Los otros módulos se simulan por sus fachadas, así que cada prueba
  * dice exactamente qué rama de la confirmación se rompió.
  */
 @ExtendWith(MockitoExtension.class)

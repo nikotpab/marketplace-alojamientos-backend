@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * SCRUM-151: el código que verifica el correo antes de crear la cuenta. SCRUM-110: el enlace de recuperación, que lleva
+ * El código que verifica el correo antes de crear la cuenta. El enlace de recuperación, que lleva
  * a la pantalla {@code /recuperar} del frontend.
  */
 @Component

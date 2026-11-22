@@ -25,14 +25,14 @@ public class ControladorUsuarios {
         this.servicio = servicio;
     }
 
-    /** SCRUM-151: 202 con el código en camino al correo, o 409 si ese correo ya tiene cuenta. */
+    /** 202 con el código en camino al correo, o 409 si ese correo ya tiene cuenta. */
     @PostMapping("/auth/register/code")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void solicitarCodigoRegistro(@Valid @RequestBody ServicioAutenticacion.CorreoComando comando) {
         servicio.solicitarCodigoRegistro(comando);
     }
 
-    /** SCRUM-151: exige el código que llegó al correo; la cuenta nace verificada. */
+    /** Exige el código que llegó al correo; la cuenta nace verificada. */
     @PostMapping("/auth/register")
     @ResponseStatus(HttpStatus.CREATED)
     public UsuarioResumen registrar(@Valid @RequestBody ServicioAutenticacion.RegistroComando comando) {
@@ -44,7 +44,7 @@ public class ControladorUsuarios {
         return servicio.iniciarSesion(comando);
     }
 
-    /** SCRUM-110: 202 siempre, exista o no el correo. El enlace llega por correo. */
+    /** 202 siempre, exista o no el correo. El enlace llega por correo. */
     @PostMapping("/auth/password/recover")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void solicitarRecuperacion(@Valid @RequestBody ServicioAutenticacion.CorreoComando comando) {

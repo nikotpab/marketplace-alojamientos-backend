@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Eventos que emite el módulo de cancelaciones (SCRUM-143). */
+/** Eventos que emite el módulo de cancelaciones. */
 public interface EventosCancelaciones {
 
     String VALOR_DEVOLUCION = "valorDevolucion";
@@ -74,7 +74,7 @@ public interface EventosCancelaciones {
         }
     }
 
-    /** La reserva queda cancelada igual (pendiente 3 del README). */
+    /** La reserva queda cancelada igual. */
     record DevolucionFallida(UUID id, UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) implements DeCancelacion {
 
         public DevolucionFallida(UUID huespedId, UUID reservaId, BigDecimal valorDevolucion) {

@@ -44,7 +44,7 @@ public class ServicioCotizacion implements FachadaCotizacion {
     }
 
     /**
-     * CU-16 desde la pantalla de cotización: valida las fechas, el estado, la capacidad y la disponibilidad antes de
+     * Desde la pantalla de cotización: valida las fechas, el estado, la capacidad y la disponibilidad antes de
      * calcular. No crea reserva ni bloquea el periodo.
      */
     public Desglose cotizarParaHuesped(UUID publicacionId, LocalDate llegada, LocalDate salida, int huespedes, List<UUID> adicionales) {
@@ -67,7 +67,7 @@ public class ServicioCotizacion implements FachadaCotizacion {
         return desglosar(publicacion, llegada, salida, adicionales);
     }
 
-    /** CU-17 la incluye después de validar la reserva. */
+    /** La confirmación de la reserva la pide después de validarla. */
     @Override
     public Cotizacion cotizar(PublicacionId publicacionId, LocalDate llegada, LocalDate salida, List<UUID> serviciosAdicionales) {
         Desglose desglose = desglosar(publicaciones.datosPublicacion(publicacionId), llegada, salida, serviciosAdicionales);
@@ -76,8 +76,8 @@ public class ServicioCotizacion implements FachadaCotizacion {
     }
 
     /**
-     * La tarifa de servicio y los descuentos son porcentajes del subtotal, como en el mockup de la cotización, y se
-     * redondean al peso. Los porcentajes se leen en cada cotización, así que un cambio aplica de inmediato (RNF-29).
+     * La tarifa de servicio y los descuentos son porcentajes del subtotal y se redondean al peso. Los porcentajes se
+     * leen en cada cotización, así que un cambio aplica de inmediato.
      */
     private Desglose desglosar(DatosPublicacion publicacion, LocalDate llegada, LocalDate salida, List<UUID> seleccionados) {
         ConfiguracionTarifas vigentes = tarifas.vigentes();
@@ -138,7 +138,7 @@ public class ServicioCotizacion implements FachadaCotizacion {
     }
 
     /**
-     * CU-28: cada cotización lee las tarifas, así que el cambio aplica de inmediato a las nuevas (RNF-29). Las reservas
+     * Cada cotización lee las tarifas, así que el cambio aplica de inmediato a las nuevas. Las reservas
      * ya confirmadas guardaron su desglose y no cambian. La auditoría registra quién, cuándo y qué cambió.
      */
     @Override
@@ -176,7 +176,7 @@ public class ServicioCotizacion implements FachadaCotizacion {
         return valor instanceof BigDecimal numero ? numero.stripTrailingZeros().toPlainString() : valor.toString();
     }
 
-    /** El desglose que muestra la pantalla de cotización del frontend (RNF-34). */
+    /** El desglose que muestra la pantalla de cotización del frontend. */
     public record Desglose(int noches, BigDecimal precioNoche, BigDecimal subtotal, BigDecimal tarifaLimpieza,
                            BigDecimal porcentajeServicio, BigDecimal tarifaServicio, List<Linea> descuentos,
                            List<Linea> adicionales, BigDecimal total, String moneda, List<AdicionalDisponible> adicionalesDisponibles) {

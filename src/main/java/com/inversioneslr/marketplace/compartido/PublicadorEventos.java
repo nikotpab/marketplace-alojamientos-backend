@@ -1,6 +1,6 @@
 package com.inversioneslr.marketplace.compartido;
 
-/** Observer (ADR-06). Los casos de uso publican sin conocer a los suscriptores. */
+/** Observer. Los casos de uso publican sin conocer a los suscriptores. */
 public interface PublicadorEventos {
 
     void publicar(EventoDominio evento);

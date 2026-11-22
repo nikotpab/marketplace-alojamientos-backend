@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RepositorioResenasSql implements RepositorioResenas {
 
-    /** Solo su tabla: el huésped de la reserva y su nombre los dan las fachadas de reservas y usuarios (SCRUM-142). */
+    /** Solo su tabla: el huésped de la reserva y su nombre los dan las fachadas de reservas y usuarios. */
     private static final String VISIBLES = "SELECT id, reserva_id, calificacion, contenido, creado_en FROM resena WHERE NOT oculta";
 
     private final JdbcClient jdbc;

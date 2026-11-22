@@ -18,13 +18,13 @@ spring:
       jdbc:
         schema-initialization:
           enabled: false
-      # ADR-06: una entrega que se queda a medias, por ejemplo porque la aplicación se reinició,
+      # Una entrega que se queda a medias, por ejemplo porque la aplicación se reinició,
       # se marca fallida al minuto y ProcesadorEventos la reintenta.
       staleness:
         published: 1m
         processing: 1m
         resubmitted: 1m
-  # SCRUM-109 y SCRUM-110. Por defecto, Mailpit de desarrollo (compose.yaml). En producción, Gmail o Amazon SES por SMTP
+  # Por defecto, Mailpit de desarrollo (compose.yaml). En producción, Gmail o Amazon SES por SMTP
   # con CORREO_SEGURO=true (README, "Correos").
   mail:
     host: ${CORREO_SERVIDOR:localhost}
@@ -48,7 +48,7 @@ spring:
   task:
     execution:
       pool:
-        # RNF-08: hasta 5 exportaciones simultáneas, fuera del camino crítico.
+        # Hasta 5 exportaciones simultáneas, fuera del camino crítico.
         core-size: 5
         max-size: 5
     scheduling:
@@ -75,12 +75,12 @@ management:
     health:
       probes:
         enabled: true
-  # ASR-05: el correo no es crítico; si el servidor SMTP cae, la API sigue sana.
+  # El correo no es crítico; si el servidor SMTP cae, la API sigue sana.
   health:
     mail:
       enabled: false
 
-# SCRUM-99: Swagger UI en /swagger-ui.html y la especificación en /v3/api-docs. Solo se documenta la API.
+# Swagger UI en /swagger-ui.html y la especificación en /v3/api-docs. Solo se documenta la API.
 springdoc:
   paths-to-match: /api/v1/**
 

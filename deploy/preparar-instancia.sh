@@ -1,5 +1,5 @@
 #!/bin/bash
-# SCRUM-121: prepara una vez la EC2 (Amazon Linux 2023) para el despliegue continuo. Se corre como root por SSM, como
+# Prepara una vez la EC2 (Amazon Linux 2023) para el despliegue continuo. Se corre como root por SSM, como
 # indica "Despliegue en AWS" en el README. Se puede repetir.
 set -euo pipefail
 VERSION_COMPOSE=v5.8.0

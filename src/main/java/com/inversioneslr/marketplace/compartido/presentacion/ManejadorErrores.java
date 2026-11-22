@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-/** Traduce los errores a respuestas HTTP. Los de validación indican el campo afectado (RNF-35). */
+/** Traduce los errores a respuestas HTTP. Los de validación indican el campo afectado. */
 @RestControllerAdvice
 public class ManejadorErrores extends ResponseEntityExceptionHandler {
 
@@ -64,7 +64,7 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
         return problema;
     }
 
-    /** El frontend lee los errores por campo en {@code errores}; se mantiene {@code campos} (ajuste 10 del README). */
+    /** El frontend lee los errores por campo en {@code errores}; se mantiene {@code campos} por compatibilidad. */
     private static void agregarCampos(ProblemDetail problema, Map<String, String> campos) {
         problema.setProperty("campos", campos);
         problema.setProperty("errores", campos);

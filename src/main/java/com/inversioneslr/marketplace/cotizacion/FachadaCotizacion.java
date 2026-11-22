@@ -8,11 +8,11 @@ import java.util.UUID;
 
 public interface FachadaCotizacion {
 
-    /** CU-16: no crea reserva ni bloquea el periodo. */
+    /** No crea reserva ni bloquea el periodo. */
     Cotizacion cotizar(PublicacionId publicacionId, LocalDate llegada, LocalDate salida, List<UUID> serviciosAdicionales);
 
     ConfiguracionTarifas consultarTarifas();
 
-    /** CU-28: aplica a las cotizaciones nuevas en máximo 1 min (RNF-29). */
+    /** Aplica a las cotizaciones nuevas en máximo 1 min. */
     void actualizarTarifas(UsuarioId administradorId, ConfiguracionTarifas tarifas);
 }

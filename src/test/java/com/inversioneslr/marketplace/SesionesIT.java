@@ -17,7 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** SCRUM-117 · pendiente 9 del README: la siguiente petición con un token anterior responde 401. */
+/** La siguiente petición con un token anterior responde 401. */
 class SesionesIT extends PruebaIntegracion {
 
     @Autowired

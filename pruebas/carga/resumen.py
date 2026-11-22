@@ -1,4 +1,4 @@
-"""Resume el .jtl de JMeter: ritmo, errores, p95 y p99 por escenario, comparados con las metas de RNF-01 a RNF-08."""
+"""Resume el .jtl de JMeter: ritmo, errores, p95 y p99 por escenario, comparados con sus metas."""
 import csv
 import math
 import sys

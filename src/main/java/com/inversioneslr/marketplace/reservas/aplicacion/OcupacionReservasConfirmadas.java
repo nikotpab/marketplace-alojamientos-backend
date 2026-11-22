@@ -8,7 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
- * SCRUM-142: publicaciones pregunta por las reservas confirmadas sin leer su tabla. Depende solo del repositorio, no
+ * Publicaciones pregunta por las reservas confirmadas sin leer su tabla. Depende solo del repositorio, no
  * de ServicioReservas, porque ServicioReservas depende de publicaciones y se formaría un ciclo de beans.
  */
 @Component

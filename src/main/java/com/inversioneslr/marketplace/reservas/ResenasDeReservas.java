@@ -5,8 +5,8 @@ import java.util.Collection;
 import java.util.Set;
 
 /**
- * SCRUM-113: qué reservas ya tienen reseña, sin leer la tabla de reseñas. Lo implementa el módulo de reseñas, que ya
- * depende de reservas: así no hay ciclo entre los dos (como OcupacionReservas, SCRUM-142).
+ * Qué reservas ya tienen reseña, sin leer la tabla de reseñas. Lo implementa el módulo de reseñas, que ya
+ * depende de reservas: así no hay ciclo entre los dos (como OcupacionReservas).
  */
 public interface ResenasDeReservas {
 

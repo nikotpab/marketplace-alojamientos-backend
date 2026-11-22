@@ -13,12 +13,12 @@ import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Único lugar con código de Stripe (ADR-08). */
+/** Único lugar con código de Stripe. */
 class AdaptadorStripe implements PasarelaPagos {
 
     private static final Logger log = LoggerFactory.getLogger(AdaptadorStripe.class);
 
-    /** Conexión y lectura suman los 7 s de RNF-11. Sin reintentos del SDK, que alargarían la espera. */
+    /** Conexión y lectura suman 7 s como máximo. Sin reintentos del SDK, que alargarían la espera. */
     private static final int TIEMPO_CONEXION_MS = 2_000;
     private static final int TIEMPO_LECTURA_MS = 5_000;
     private static final String MONEDA = "cop";

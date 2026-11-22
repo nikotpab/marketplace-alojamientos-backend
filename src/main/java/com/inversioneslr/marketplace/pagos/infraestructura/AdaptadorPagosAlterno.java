@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Experimento de modificabilidad (ASR-08b): un segundo proveedor simulado, distinto del primero. Tiene sus propias
+ * Experimento de modificabilidad: un segundo proveedor simulado, distinto del primero. Tiene sus propias
  * referencias, rechaza los cobros de más de 20 millones y, como Stripe, no cobra dos veces con la misma clave.
  */
 class AdaptadorPagosAlterno implements PasarelaPagos {

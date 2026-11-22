@@ -15,7 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
-/** Cada denegación devuelve 403 y queda registrada en auditoría (ADR-07). */
+/** Cada denegación devuelve 403 y queda registrada en auditoría. */
 @Component
 public class ManejadorDenegaciones implements AccessDeniedHandler {
 

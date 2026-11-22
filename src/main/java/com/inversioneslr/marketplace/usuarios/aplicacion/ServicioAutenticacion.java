@@ -36,7 +36,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -49,16 +48,16 @@ public class ServicioAutenticacion implements FachadaUsuarios {
 
     private static final String TOKEN = "token";
 
-    /** RNF-23: 5 intentos fallidos seguidos bloquean el inicio de sesión por 30 minutos. */
+    /** 5 intentos fallidos seguidos bloquean el inicio de sesión por 30 minutos. */
     private static final int MAXIMO_INTENTOS = 5;
     private static final Duration BLOQUEO = Duration.ofMinutes(30);
-    /** SCRUM-151: al quinto intento fallido el código se anula y hay que pedir otro. */
+    /** Al quinto intento fallido el código se anula y hay que pedir otro. */
     static final int INTENTOS_POR_CODIGO = 5;
 
-    /** SCRUM-154: celular de Colombia, 10 dígitos que empiezan por 3. */
+    /** Celular de Colombia, 10 dígitos que empiezan por 3. */
     static final String FORMATO_TELEFONO = "3\\d{9}";
     static final String MENSAJE_TELEFONO = "El teléfono debe tener 10 dígitos y empezar por 3.";
-    /** SCRUM-154: @Email acepta "ana@gmail"; además se exige un dominio con punto y terminación de 2 letras o más. */
+    /** @Email acepta "ana@gmail"; además se exige un dominio con punto y terminación de 2 letras o más. */
     static final String FORMATO_CORREO = "[^@\\s]+@[^@\\s]+\\.[A-Za-z]{2,}";
     static final String MENSAJE_CORREO = "Escribe un correo completo, por ejemplo nombre@gmail.com.";
 
@@ -90,7 +89,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     /**
-     * SCRUM-151: primer paso del registro. Envía al correo un código de 6 dígitos que vence en 15 minutos y anula el
+     * Primer paso del registro. Envía al correo un código de 6 dígitos que vence en 15 minutos y anula el
      * anterior. Si ya se envió uno hace menos de un minuto no envía otro, y responde igual. El correo sale después del
      * commit; si falla, se puede pedir otro código.
      */
@@ -106,7 +105,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     /**
-     * CU-01: solo HUESPED o ANFITRION; el rol ADMINISTRADOR lo asigna el equipo. SCRUM-151: solo con el código que llegó
+     * Solo HUESPED o ANFITRION; el rol ADMINISTRADOR lo asigna el equipo. Solo con el código que llegó
      * al correo, así que la cuenta nace verificada. El código se comprueba fuera de la transacción a propósito: el
      * intento fallido debe quedar guardado aunque se responda con error.
      */
@@ -129,7 +128,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         });
     }
 
-    /** SCRUM-151: el intento se gasta antes de comparar, así que nunca se prueban más de 5 códigos. */
+    /** El intento se gasta antes de comparar, así que nunca se prueban más de 5 códigos. */
     private void comprobarCodigo(String correo, String codigo) {
         String invalido = "El código no es correcto o venció. Revisa el correo o pide uno nuevo.";
         Intento intento = codigos.gastarIntento(correo, INTENTOS_POR_CODIGO, reloj.instant())
@@ -152,14 +151,14 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     /**
-     * CU-02 · RNF-23: un mensaje general para correo o contraseña incorrectos, y el estado de la cuenta solo
-     * después de validar la contraseña. Cada intento queda registrado (RF-31).
+     * Un mensaje general para correo o contraseña incorrectos, y el estado de la cuenta solo
+     * después de validar la contraseña. Cada intento queda registrado.
      */
     public Sesion iniciarSesion(CredencialesComando comando) {
         Usuario usuario = usuarios.buscarPorCorreo(normalizar(comando.correo())).orElse(null);
         if (usuario == null) {
             cifrador.matches(comando.contrasena(), hashDeRelleno);
-            // RNF-23: también se registra, sin el correo, para detectar fuerza bruta contra cuentas que no existen.
+            // También se registra, sin el correo, para detectar fuerza bruta contra cuentas que no existen.
             eventos.publicar(new InicioSesionFallido(null, "CORREO_DESCONOCIDO"));
             throw credencialesInvalidas();
         }
@@ -211,7 +210,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     /**
-     * CU-03 · RF-03 · SCRUM-110: envía un enlace de un solo uso, válido 15 minutos. La respuesta es la misma exista o no
+     * Envía un enlace de un solo uso, válido 15 minutos. La respuesta es la misma exista o no
      * el correo, y no lleva el token: solo lo recibe el dueño del correo.
      */
     @Transactional
@@ -224,7 +223,7 @@ public class ServicioAutenticacion implements FachadaUsuarios {
                 });
     }
 
-    /** SCRUM-110: abrir el enlace también prueba que el correo es suyo, así que queda verificado. */
+    /** Abrir el enlace también prueba que el correo es suyo, así que queda verificado. */
     @Transactional
     public void restablecerContrasena(RestablecerContrasenaComando comando) {
         String mensaje = "El enlace de recuperación no es válido o ya venció. Vuelve a empezar la recuperación.";
@@ -236,12 +235,12 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         eventos.publicar(new ContrasenaRestablecida(usuario.id()));
     }
 
-    /** CU-04: cada usuario consulta y modifica solo su propio perfil, identificado por el token. */
+    /** Cada usuario consulta y modifica solo su propio perfil, identificado por el token. */
     public Perfil consultarPerfil(UUID usuarioId) {
         return perfil(buscar(usuarioId));
     }
 
-    /** CU-04: el correo y el rol no se editan aquí. */
+    /** El correo y el rol no se editan aquí. */
     public Perfil actualizarPerfil(UUID usuarioId, PerfilComando comando) {
         Usuario usuario = usuarios.guardar(buscar(usuarioId).actualizarDatos(comando.nombre(), comando.apellido(), comando.telefono()));
         eventos.publicar(new PerfilActualizado(usuario.id()));
@@ -258,8 +257,8 @@ public class ServicioAutenticacion implements FachadaUsuarios {
     }
 
     /**
-     * CU-05: cada cambio de estado queda en la auditoría. Una cuenta desactivada no puede iniciar sesión, y sus tokens
-     * dejan de servir en la siguiente petición (SCRUM-117).
+     * Cada cambio de estado queda en la auditoría. Una cuenta desactivada no puede iniciar sesión, y sus tokens
+     * dejan de servir en la siguiente petición.
      */
     @Transactional
     public Perfil cambiarEstadoCuenta(UUID usuarioId, EstadoCuentaComando comando) {
@@ -272,13 +271,13 @@ public class ServicioAutenticacion implements FachadaUsuarios {
         return perfil(usuario);
     }
 
-    /** CU-25: del más reciente al más antiguo. */
+    /** Del más reciente al más antiguo. */
     @Override
     public List<UsuarioResumen> listar() {
         return usuarios.listar().stream().map(ServicioAutenticacion::resumen).toList();
     }
 
-    /** CU-25: queda en la auditoría con el motivo. Los tokens del usuario dejan de servir de inmediato (SCRUM-117). */
+    /** Queda en la auditoría con el motivo. Los tokens del usuario dejan de servir de inmediato. */
     @Override
     @Transactional
     public void restringir(UsuarioId administradorId, UsuarioId usuarioId, String motivo) {

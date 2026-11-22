@@ -85,7 +85,7 @@ class IdempotenciaReservaIT extends PruebaIntegracion {
         assertThat(contar("SELECT count(*) FROM reserva WHERE publicacion_id = ?", publicacion)).isEqualTo(1);
     }
 
-    /** RNF-14: 10 envíos de la misma solicitud producen 1 reserva, 1 pago y 1 notificación por destinatario. */
+    /** 10 envíos de la misma solicitud producen 1 reserva, 1 pago y 1 notificación por destinatario. */
     @Test
     void diezEnviosSimultaneosProducenUnSoloEfecto() throws Exception {
         String clave = UUID.randomUUID().toString();

@@ -91,7 +91,7 @@ class RegistroUsuarioIT extends PruebaIntegracion {
                 .andExpect(jsonPath("$.campos.contrasena").exists());
     }
 
-    /** Con el código que llegó al correo, como en el registro real (SCRUM-151). */
+    /** Con el código que llegó al correo, como en el registro real. */
     private ResultActions registrar(String correo, String rol, String contrasena) throws Exception {
         return registrar(correo, rol, contrasena, codigoDeRegistro(correo));
     }
@@ -108,7 +108,7 @@ class RegistroUsuarioIT extends PruebaIntegracion {
                         .formatted(correo, telefono, contrasena, rol, codigo)));
     }
 
-    /** SCRUM-154: celular de Colombia. Se rechaza antes de mirar el código. */
+    /** Celular de Colombia. Se rechaza antes de mirar el código. */
     @Test
     void elTelefonoDebeTenerDiezDigitosYEmpezarPorTres() throws Exception {
         for (String telefono : List.of("2001234567", "300123456", "30012345678", "300123456a", "")) {
@@ -118,7 +118,7 @@ class RegistroUsuarioIT extends PruebaIntegracion {
         }
     }
 
-    /** SCRUM-154: @Email solo aceptaba "luicuadros07@gmail". */
+    /** @Email solo aceptaba "luicuadros07@gmail". */
     @Test
     void elCorreoNecesitaUnDominioCompleto() throws Exception {
         for (String correo : List.of("luicuadros07@gmail", "ana@gmail.", "ana@gmail.c", "ana@.com", "ana gomez@gmail.com")) {

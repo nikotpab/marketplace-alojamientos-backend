@@ -33,7 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
- * SCRUM-127 (pendiente): módulo cancelaciones en modo STANDALONE con los otros módulos simulados.
+ * Módulo cancelaciones en modo STANDALONE con los otros módulos simulados.
  * Requiere Docker porque el repositorio del módulo usa SQL de PostgreSQL.
  */
 @ApplicationModuleTest(mode = BootstrapMode.STANDALONE, extraIncludes = {"compartido"})

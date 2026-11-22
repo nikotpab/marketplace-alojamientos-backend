@@ -57,7 +57,7 @@ public class ServicioCancelaciones {
         this.reloj = reloj;
     }
 
-    /** CU-20, paso 2: muestra la devolución antes de pedir la confirmación. */
+    /** Muestra la devolución antes de pedir la confirmación. */
     public EstimacionDevolucion estimarDevolucion(UUID huespedId, UUID reservaId) {
         DatosReserva reserva = reservaCancelable(huespedId, reservaId);
         String politica = publicaciones.datosPublicacion(new PublicacionId(reserva.publicacionId())).politicaCancelacion();
@@ -77,8 +77,8 @@ public class ServicioCancelaciones {
     }
 
     /**
-     * RF-23: según la política de la publicación y la fecha de hoy. Una reserva en revisión se devuelve completa, con la
-     * tarifa de servicio, porque su alojamiento fue bloqueado y el huésped no tiene la culpa (SCRUM-118, pendiente 11).
+     * Según la política de la publicación y la fecha de hoy. Una reserva en revisión se devuelve completa, con la
+     * tarifa de servicio, porque su alojamiento fue bloqueado y el huésped no tiene la culpa.
      */
     private BigDecimal devolucion(DatosReserva reserva, String politica) {
         if (reserva.estado() == EstadoReserva.EN_REVISION) {
@@ -89,16 +89,15 @@ public class ServicioCancelaciones {
     }
 
     /**
-     * CU-20 · SEC-04.
      * <ol>
      * <li>Validar que la reserva sea del huésped y esté CONFIRMADA o EN_REVISION.</li>
      * <li>Calcular la devolución con la política de la publicación, o completa si está en revisión.</li>
      * <li>Solicitar la devolución fuera de la transacción.</li>
      * <li>En una sola transacción: reserva CANCELADA, cancelación, auditoría y eventos. Al dejar de estar CONFIRMADA,
-     * la reserva libera el periodo (RF-13).</li>
+     * la reserva libera el periodo.</li>
      * </ol>
      * Si la devolución falla, la reserva se cancela igual con "devolución no procesada", y la falla queda en la
-     * auditoría y se notifica al huésped (RF-23, pendiente 3 del README).
+     * auditoría y se notifica al huésped.
      */
     public Cancelacion cancelarReserva(UUID huespedId, UUID reservaId, CancelarReservaComando comando) {
         DatosReserva reserva = reservaCancelable(huespedId, reservaId);

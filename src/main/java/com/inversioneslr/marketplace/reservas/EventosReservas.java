@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Eventos que emite el módulo de reservas (SCRUM-143). */
+/** Eventos que emite el módulo de reservas. */
 public interface EventosReservas {
 
     String TOTAL = "total";
@@ -124,7 +124,7 @@ public interface EventosReservas {
         }
     }
 
-    /** SEC-02: el cobro no se aprobó y no se creó la reserva. */
+    /** El cobro no se aprobó y no se creó la reserva. */
     record PagoFallido(UUID id, UUID huespedId, UUID publicacionId, String causa, BigDecimal total) implements FalloDeCobro {
 
         public PagoFallido(UUID huespedId, UUID publicacionId, String causa, BigDecimal total) {
@@ -137,7 +137,7 @@ public interface EventosReservas {
         }
     }
 
-    /** CU-24: la publicación fue bloqueada con esta reserva pendiente. */
+    /** La publicación fue bloqueada con esta reserva pendiente. */
     record ReservaEnRevision(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements PorModeracion {
 
         public ReservaEnRevision(UUID reservaId, UUID publicacionId, UUID huespedId) {
@@ -145,7 +145,7 @@ public interface EventosReservas {
         }
     }
 
-    /** SEC-03: otra reserva ganó el periodo y el cobro no se pudo devolver. La reconciliación lo reintenta. */
+    /** Otra reserva ganó el periodo y el cobro no se pudo devolver. La reconciliación lo reintenta. */
     record DevolucionFallida(UUID id, UUID huespedId, UUID publicacionId, String causa, String referencia, BigDecimal total)
             implements FalloDeCobro {
 
@@ -159,7 +159,7 @@ public interface EventosReservas {
         }
     }
 
-    /** SCRUM-112: su alojamiento fue desbloqueado y la reserva vuelve de EN_REVISION a CONFIRMADA. */
+    /** Su alojamiento fue desbloqueado y la reserva vuelve de EN_REVISION a CONFIRMADA. */
     record ReservaRestablecida(UUID id, UUID reservaId, UUID publicacionId, UUID huespedId) implements PorModeracion {
 
         public ReservaRestablecida(UUID reservaId, UUID publicacionId, UUID huespedId) {

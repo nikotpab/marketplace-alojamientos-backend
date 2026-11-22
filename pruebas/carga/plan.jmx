@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- SCRUM-67 · ASR-01: carga simultánea de todos los escenarios de RNF-01 a RNF-08. Lo ejecuta ejecutar.sh. -->
+<!-- Carga simultánea de todos los escenarios. Lo ejecuta ejecutar.sh. -->
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Carga del marketplace">

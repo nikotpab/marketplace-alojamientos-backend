@@ -1,5 +1,5 @@
 # Nodo de aplicación en la EC2: Caddy y la API. La base de datos es RDS y no se expone.
-# deploy/desplegar.sh escribe .env con los parámetros de SSM y elige la imagen de la API (SCRUM-121).
+# deploy/desplegar.sh escribe .env con los parámetros de SSM y elige la imagen de la API.
 name: marketplace
 
 services:
@@ -8,7 +8,7 @@ services:
     restart: always
     env_file: .env
     environment:
-      # Los enlaces de los correos llevan al frontend publicado (SCRUM-109, SCRUM-110).
+      # Los enlaces de los correos llevan al frontend publicado.
       URL_PUBLICA: https://${DOMINIO}
     # La t4g.small tiene 2 GB: con este límite, la JVM (MaxRAMPercentage=75) deja memoria a Caddy y al sistema.
     mem_limit: 1400m

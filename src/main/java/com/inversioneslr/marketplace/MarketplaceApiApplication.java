@@ -6,7 +6,7 @@ import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoCon
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-// Sin el usuario por defecto de Spring, que además escribiría una contraseña en los logs (RNF-25).
+// Sin el usuario por defecto de Spring, que además escribiría una contraseña en los logs.
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableAsync
 @EnableScheduling

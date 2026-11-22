@@ -5,10 +5,10 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
-/** Eventos que emite el módulo de pagos (SCRUM-143). */
+/** Eventos que emite el módulo de pagos. */
 public interface EventosPagos {
 
-    /** SCRUM-59: la reconciliación devolvió un cobro que no llegó a tener reserva. */
+    /** La reconciliación devolvió un cobro que no llegó a tener reserva. */
     record CobroRevertido(UUID id, UUID pagoId, BigDecimal monto, String referencia) implements EventoDominio {
 
         public CobroRevertido(UUID pagoId, BigDecimal monto, String referencia) {

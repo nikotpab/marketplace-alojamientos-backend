@@ -57,7 +57,7 @@ public class ServicioReservas implements FachadaReservas {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioReservas.class);
 
-    static final String METODO_PAGO_PRUEBA = "pm_card_[A-Za-z0-9_]+";
+    static final String METODO_PAGO_PRUEBA = "pm_card_\\w+";
     static final String MENSAJE_METODO_PAGO = "Usa un método de pago de prueba de Stripe, por ejemplo pm_card_visa";
 
     /** Coincide con el mínimo que Stripe conserva sus claves de idempotencia. */
@@ -94,9 +94,9 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     /**
-     * CU-17 · SEC-01, SEC-02, SEC-03. Cobra fuera de la transacción para no retener una conexión mientras responde
+     * Cobra fuera de la transacción para no retener una conexión mientras responde
      * la pasarela, y solo con el pago aprobado guarda la reserva, el pago, la clave, la auditoría y el evento, todo o nada.
-     * Una solicitud repetida recibe el resultado original sin procesarse de nuevo (ADR-04).
+     * Una solicitud repetida recibe el resultado original sin procesarse de nuevo.
      */
     public Reserva confirmarReserva(UUID huespedId, ConfirmarReservaComando comando, String claveSolicitud) {
         Optional<SolicitudProcesada> solicitudPrevia = reservas.buscarSolicitud(claveSolicitud);
@@ -155,7 +155,7 @@ public class ServicioReservas implements FachadaReservas {
         });
     }
 
-    /** SEC-03: otra reserva ganó el periodo. Si la devolución falla, queda en auditoría y la reconciliación la reintenta. */
+    /** Otra reserva ganó el periodo. Si la devolución falla, queda en auditoría y la reconciliación la reintenta. */
     private void devolverCobro(UUID huespedId, DatosPublicacion publicacion, String claveSolicitud, String referencia, Reserva reserva) {
         try {
             pagos.devolverCobroSinReserva(claveSolicitud, referencia, reserva.total());
@@ -194,7 +194,7 @@ public class ServicioReservas implements FachadaReservas {
         return adicionales;
     }
 
-    /** SEC-02: un pago rechazado o no procesado no crea nada, pero la falla queda en auditoría. */
+    /** Un pago rechazado o no procesado no crea nada, pero la falla queda en auditoría. */
     private String cobrar(UUID huespedId, DatosPublicacion publicacion, Cotizacion cotizacionFinal, String claveSolicitud,
                           String metodoPago) {
         try {
@@ -216,9 +216,9 @@ public class ServicioReservas implements FachadaReservas {
     }
 
     /**
-     * CU-18: el huésped ve sus reservas y el anfitrión las de sus alojamientos. Cada reserva dice si ya tiene reseña, y
-     * las canceladas traen el motivo y la devolución (SCRUM-113). El anfitrión ve el nombre del huésped; su contacto,
-     * solo si la reserva está confirmada (RNF-21). Una consulta por módulo, sin N+1 (SCRUM-142).
+     * El huésped ve sus reservas y el anfitrión las de sus alojamientos. Cada reserva dice si ya tiene reseña, y
+     * las canceladas traen el motivo y la devolución. El anfitrión ve el nombre del huésped; su contacto,
+     * solo si la reserva está confirmada. Una consulta por módulo, sin N+1.
      */
     public List<ReservaVista> consultarHistorial(UsuarioAutenticado usuario, EstadoReserva estado) {
         boolean anfitrion = usuario.rol() == Rol.ANFITRION;
@@ -261,14 +261,14 @@ public class ServicioReservas implements FachadaReservas {
         return completo.isEmpty() ? null : completo;
     }
 
-    /** ADR-04: las claves se conservan 24 h, tiempo suficiente para los reintentos de un cliente. */
+    /** Las claves se conservan 24 h, tiempo suficiente para los reintentos de un cliente. */
     @Scheduled(cron = "0 0 * * * *")
     public void eliminarSolicitudesVencidas() {
         reservas.eliminarSolicitudesVencidas(reloj.instant());
     }
 
     /**
-     * RF-25 · pendiente 13 del README: cada noche pasa a COMPLETADA las reservas confirmadas cuya fecha de salida ya
+     * Cada noche pasa a COMPLETADA las reservas confirmadas cuya fecha de salida ya
      * pasó, y avisa al huésped de que ya puede reseñar.
      */
     @Scheduled(cron = "0 0 1 * * *", zone = "America/Bogota")
@@ -305,7 +305,7 @@ public class ServicioReservas implements FachadaReservas {
         reservas.actualizarEstado(reservaId.valor(), buscar(reservaId.valor()).cancelar().estado());
     }
 
-    /** CU-24: las que aún no empiezan se conservan para auditoría y pasan a revisión manual. Se avisa a cada huésped. */
+    /** Las que aún no empiezan se conservan para auditoría y pasan a revisión manual. Se avisa a cada huésped. */
     @Override
     public void marcarFuturasEnRevision(PublicacionId publicacionId) {
         reservas.marcarFuturasEnRevision(publicacionId.valor(), LocalDate.now(reloj)).forEach(reserva ->
@@ -326,7 +326,7 @@ public class ServicioReservas implements FachadaReservas {
 
     /**
      * Con los nombres que envía el frontend. {@code metodoPagoId} es opcional: sin él se usa STRIPE_METODO_PAGO. Solo
-     * se aceptan métodos de prueba de Stripe ({@code pm_card_...}), nunca números de tarjeta (RNF-25).
+     * se aceptan métodos de prueba de Stripe ({@code pm_card_...}), nunca números de tarjeta.
      */
     public record ConfirmarReservaComando(@NotNull UUID publicacionId,
                                           @NotNull LocalDate llegada,
@@ -340,8 +340,8 @@ public class ServicioReservas implements FachadaReservas {
      * Con los nombres del frontend. El frontend agrupa por estado: próximas, completadas y canceladas.
      *
      * @param nombreHuesped   solo en la vista del anfitrión
-     * @param contactoHuesped solo en la vista del anfitrión y en reservas confirmadas (RNF-21)
-     * @param cancelacion     solo en las canceladas: motivo, devolución y cómo terminó (SCRUM-113)
+     * @param contactoHuesped solo en la vista del anfitrión y en reservas confirmadas
+     * @param cancelacion     solo en las canceladas: motivo, devolución y cómo terminó
      * @param resenada        si ya tiene reseña: el huésped no puede reseñarla otra vez
      */
     public record ReservaVista(UUID id, String codigo, EstadoReserva estado, UUID publicacionId, String alojamiento,

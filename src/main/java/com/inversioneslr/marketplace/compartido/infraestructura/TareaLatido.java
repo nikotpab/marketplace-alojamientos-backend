@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Latido cada 30 s (RNF-15). Es una línea de log que llega a CloudWatch: la alarma se dispara si falta
+ * Latido cada 30 s. Es una línea de log que llega a CloudWatch: la alarma se dispara si falta
  * el latido correcto, tanto si la aplicación dejó de responder como si un componente reporta una falla.
  */
 @Component

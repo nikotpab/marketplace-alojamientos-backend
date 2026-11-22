@@ -42,7 +42,7 @@ public interface RepositorioReservas {
      */
     List<Reserva> listarPorHuesped(UUID huespedId, EstadoReserva estado);
 
-    /** Las reservas de esas publicaciones, en el mismo orden. El título lo da la fachada de publicaciones (SCRUM-142). */
+    /** Las reservas de esas publicaciones, en el mismo orden. El título lo da la fachada de publicaciones. */
     List<Reserva> listarPorPublicaciones(Collection<UUID> publicacionIds, EstadoReserva estado);
 
     /** Las confirmadas de la publicación cuyas noches se cruzan con el rango semiabierto [desde, hasta). */
@@ -64,7 +64,7 @@ public interface RepositorioReservas {
     List<Reserva> marcarFuturasEnRevision(UUID publicacionId, LocalDate desde);
 
     /**
-     * SCRUM-112: devuelve a CONFIRMADA las reservas EN_REVISION de la publicación. Mientras estuvo bloqueada no se pudo
+     * Devuelve a CONFIRMADA las reservas EN_REVISION de la publicación. Mientras estuvo bloqueada no se pudo
      * reservar, así que no chocan con la restricción anti-solape.
      *
      * @return las reservas que cambiaron

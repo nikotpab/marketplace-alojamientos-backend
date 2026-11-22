@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** SCRUM-114 · RF-22: total 330.000, de los que 30.000 son la tarifa de servicio, que no se devuelve. */
+/** Total 330.000, de los que 30.000 son la tarifa de servicio, que no se devuelve. */
 class PoliticaEstrictaTest {
 
     private static final LocalDate LLEGADA = LocalDate.of(2030, 6, 20);

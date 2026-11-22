@@ -28,7 +28,7 @@ class PagosIT extends PruebaIntegracion {
         assertThat(pago).containsEntry("id_pago_stripe", referencia).containsEntry("estado", "APROBADO");
     }
 
-    /** SCRUM-118 · ADR-04: pasadas 24 h, un reintento con la misma clave es un intento nuevo y no pisa el pago anterior. */
+    /** Pasadas 24 h, un reintento con la misma clave es un intento nuevo y no pisa el pago anterior. */
     @Test
     void losPagosResueltosSueltanSuClaveA24HorasYLosPendientesLaConservan() {
         String vieja = pago("APROBADO", 25);

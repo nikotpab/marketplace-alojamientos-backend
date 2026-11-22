@@ -8,6 +8,6 @@ public interface RepositorioCancelaciones {
 
     Cancelacion guardar(Cancelacion cancelacion);
 
-    /** Una sola consulta: las cancelaciones de esas reservas, para el historial (SCRUM-113). */
+    /** Una sola consulta: las cancelaciones de esas reservas, para el historial. */
     List<Cancelacion> buscarPorReservas(Collection<UUID> reservaIds);
 }

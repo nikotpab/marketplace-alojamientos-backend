@@ -35,7 +35,7 @@ public class ServicioBusqueda {
         this.reloj = reloj;
     }
 
-    /** CU-14 · SEC-06: solo publicaciones ACTIVAS y libres en las fechas pedidas. */
+    /** Solo publicaciones ACTIVAS y libres en las fechas pedidas. */
     public PaginaAlojamientos buscarAlojamientos(FiltrosBusqueda filtros, int pagina, int tamano) {
         validar(filtros);
         return busqueda.buscar(filtros, Math.max(pagina, 0), Math.clamp(tamano, 1, TAMANO_MAXIMO));
@@ -60,7 +60,7 @@ public class ServicioBusqueda {
         return new ExcepcionNegocio(ExcepcionNegocio.Tipo.DATOS_INVALIDOS, mensaje, Map.of(campo, mensaje));
     }
 
-    /** CU-15 · CU-13: solo publicaciones activas, con sus reseñas visibles y los días que no se pueden reservar. */
+    /** Solo publicaciones activas, con sus reseñas visibles y los días que no se pueden reservar. */
     public Detalle consultarDetalle(UUID publicacionId) {
         AlojamientoDetalle alojamiento = busqueda.buscarDetalle(publicacionId)
                 .orElseThrow(() -> new ExcepcionNegocio(ExcepcionNegocio.Tipo.NO_ENCONTRADO, "Este alojamiento no existe o ya no está disponible."));

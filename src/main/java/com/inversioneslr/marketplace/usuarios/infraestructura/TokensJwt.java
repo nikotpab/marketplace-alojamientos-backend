@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * JWT firmado con HS256. El token identifica al usuario, su rol y su versión de sesión; no guarda datos personales.
- * SCRUM-117: cada verificación compara la versión con la del usuario, en una consulta por llave primaria. Así, restringir,
+ * Cada verificación compara la versión con la del usuario, en una consulta por llave primaria. Así, restringir,
  * desactivar o restablecer la contraseña invalida los tokens anteriores en la siguiente petición, sin esperar las 8 h.
  */
 @Component
@@ -84,7 +84,7 @@ public class TokensJwt implements Tokens {
                 return Optional.empty();
             }
             UUID id = UUID.fromString(datos.getSubject());
-            // Los tokens anteriores a SCRUM-117 no traen la versión: valen como la 0 hasta que se invalide la sesión.
+            // Los tokens emitidos antes de la versión de sesión no la traen: valen como la 0 hasta que se invalide la sesión.
             Integer version = datos.getIntegerClaim(VERSION);
             int esperada = version == null ? 0 : version;
             if (usuarios.versionSesionVigente(id).filter(vigente -> vigente == esperada).isEmpty()) {

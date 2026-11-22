@@ -33,7 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/** SCRUM-141: CU-16 y CU-28 sin base de datos ni Docker, con la fachada de publicaciones simulada. */
+/** Cotización y tarifas sin base de datos ni Docker, con la fachada de publicaciones simulada. */
 @ExtendWith(MockitoExtension.class)
 class ServicioCotizacionTest {
 

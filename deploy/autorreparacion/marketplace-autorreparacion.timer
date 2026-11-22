@@ -1,4 +1,4 @@
-# SCRUM-122: con el healthcheck de la imagen (cada 30 s, 3 fallos), una API colgada se reinicia en menos de 3 min.
+# Con el healthcheck de la imagen (cada 30 s, 3 fallos), una API colgada se reinicia en menos de 3 min.
 [Unit]
 Description=Revisa cada minuto si algún contenedor del marketplace quedó unhealthy
 

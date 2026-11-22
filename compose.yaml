@@ -18,7 +18,7 @@ services:
       interval: 2s
       retries: 30
 
-  # SCRUM-109 y SCRUM-110: recibe los correos de desarrollo. SMTP en el 1025 y la bandeja en http://localhost:8025.
+  # Recibe los correos de desarrollo. SMTP en el 1025 y la bandeja en http://localhost:8025.
   correo:
     image: axllent/mailpit:v1.33
     ports:

@@ -17,7 +17,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/** SCRUM-109: el correo sale después del commit y una falla no llega al caso de uso. */
+/** El correo sale después del commit y una falla no llega al caso de uso. */
 class CorreosSmtpTest {
 
     private final JavaMailSender servidor = mock(JavaMailSender.class);

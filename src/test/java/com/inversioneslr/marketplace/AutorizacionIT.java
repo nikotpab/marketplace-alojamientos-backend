@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /**
- * SCRUM-64 · ASR-06 · ADR-07: recorre el 100 % de los endpoints con cada rol. Un rol sin permiso recibe 403 y el
+ * Recorre el 100 % de los endpoints con cada rol. Un rol sin permiso recibe 403 y el
  * intento queda en la auditoría; sin sesión, 401. La tabla debe coincidir con la de ConfiguracionSeguridad.
  */
 class AutorizacionIT extends PruebaIntegracion {

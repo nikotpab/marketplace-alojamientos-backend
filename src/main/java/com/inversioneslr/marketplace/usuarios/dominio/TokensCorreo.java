@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Tokens de un solo uso que viajan en los enlaces de los correos (SCRUM-110). */
+/** Tokens de un solo uso que viajan en los enlaces de los correos. */
 public interface TokensCorreo {
 
     enum Proposito { RESTABLECER_CONTRASENA }

@@ -29,7 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** CU-30 · RF-34. Como en DashboardIT, las reservas se hicieron en un mes que no usa ninguna otra prueba. */
+/** Como en DashboardIT, las reservas se hicieron en un mes que no usa ninguna otra prueba. */
 class ReportesIT extends PruebaIntegracion {
 
     private static final String CIUDAD = "Ciudad de reporte";
@@ -64,7 +64,7 @@ class ReportesIT extends PruebaIntegracion {
                 .andReturn().getResponse().getContentAsByteArray();
 
         assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
-        // SCRUM-108: el PDF se puede leer y trae el título y las columnas.
+        // El PDF se puede leer y trae el título y las columnas.
         try (PdfReader lector = new PdfReader(pdf)) {
             assertThat(new PdfTextExtractor(lector).getTextFromPage(1)).contains("Reservas", "Alojamiento", "Llegada");
         }

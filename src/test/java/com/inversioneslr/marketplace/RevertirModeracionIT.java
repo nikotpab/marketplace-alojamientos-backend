@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** SCRUM-112 · CU-05 · pendientes 10 y 11 del README: el administrador revierte un bloqueo o una restricción. */
+/** El administrador revierte un bloqueo o una restricción. */
 class RevertirModeracionIT extends PruebaIntegracion {
 
     UUID anfitrion;
@@ -99,7 +99,7 @@ class RevertirModeracionIT extends PruebaIntegracion {
                 .andExpect(status().isConflict());
     }
 
-    /** ASR-06: AutorizacionIT recorre los tres endpoints con cada rol; aquí, que un anfitrión no deshace su propio bloqueo. */
+    /** AutorizacionIT recorre los tres endpoints con cada rol; aquí, que un anfitrión no deshace su propio bloqueo. */
     @Test
     void elAnfitrionNoPuedeDesbloquearSuPublicacion() throws Exception {
         comoAplicacion.update("UPDATE publicacion SET estado = 'BLOQUEADA' WHERE id = ?", publicacion);

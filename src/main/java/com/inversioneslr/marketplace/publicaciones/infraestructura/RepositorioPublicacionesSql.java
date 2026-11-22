@@ -344,7 +344,7 @@ public class RepositorioPublicacionesSql implements RepositorioPublicaciones {
                 .list();
     }
 
-    /** El nombre del anfitrión queda vacío: lo completa ServicioPublicaciones con la fachada de usuarios (SCRUM-142). */
+    /** El nombre del anfitrión queda vacío: lo completa ServicioPublicaciones con la fachada de usuarios. */
     private static PublicacionConAnfitrion aVista(ResultSet fila, int numero) throws SQLException {
         EstadoPublicacion estado = EstadoPublicacion.valueOf(fila.getString("estado"));
         return new PublicacionConAnfitrion(new PublicacionVista(

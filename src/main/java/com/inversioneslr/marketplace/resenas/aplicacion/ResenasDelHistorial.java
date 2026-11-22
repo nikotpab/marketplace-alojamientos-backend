@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
- * SCRUM-113: el historial de reservas pregunta cuáles ya tienen reseña sin leer la tabla. Depende solo del repositorio,
+ * El historial de reservas pregunta cuáles ya tienen reseña sin leer la tabla. Depende solo del repositorio,
  * no de ServicioResenias, porque ServicioResenias depende de reservas y se formaría un ciclo de beans.
  */
 @Component

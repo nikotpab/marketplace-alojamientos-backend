@@ -7,8 +7,8 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * SCRUM-113: lo que el historial muestra de una reserva cancelada, sin leer la tabla de cancelaciones. Lo implementa el
- * módulo de cancelaciones, que ya depende de reservas: así no hay ciclo entre los dos (como OcupacionReservas, SCRUM-142).
+ * Lo que el historial muestra de una reserva cancelada, sin leer la tabla de cancelaciones. Lo implementa el
+ * módulo de cancelaciones, que ya depende de reservas: así no hay ciclo entre los dos (como OcupacionReservas).
  */
 public interface CancelacionesDeReservas {
 

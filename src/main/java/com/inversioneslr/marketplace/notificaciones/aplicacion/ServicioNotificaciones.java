@@ -21,14 +21,14 @@ public class ServicioNotificaciones {
         this.reloj = reloj;
     }
 
-    /** RF-24 · ADR-06: una notificación por destinatario, en la misma transacción del caso de uso. */
+    /** Una notificación por destinatario, en la misma transacción del caso de uso. */
     @EventListener
     public void atender(EventoDominio evento) {
         evento.destinatarios().forEach(usuarioId ->
                 notificaciones.guardar(Notificacion.nueva(evento.id(), usuarioId, evento.tipo(), reloj.instant())));
     }
 
-    /** CU-21: cada usuario ve solo las suyas. */
+    /** Cada usuario ve solo las suyas. */
     public Bandeja consultar(UUID usuarioId) {
         List<Notificacion> propias = notificaciones.listarPorUsuario(usuarioId);
         long noLeidas = propias.stream().filter(notificacion -> !notificacion.leida()).count();

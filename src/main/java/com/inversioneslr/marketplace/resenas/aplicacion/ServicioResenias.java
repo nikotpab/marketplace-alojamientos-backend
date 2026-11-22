@@ -51,8 +51,8 @@ public class ServicioResenias implements FachadaResenas {
     }
 
     /**
-     * CU-22: solo con una reserva COMPLETADA propia y una reseña por reserva. El contenido se guarda tal cual: el
-     * frontend lo muestra con la interpolación de Angular, que escapa el HTML (RNF-22).
+     * Solo con una reserva COMPLETADA propia y una reseña por reserva. El contenido se guarda tal cual: el
+     * frontend lo muestra con la interpolación de Angular, que escapa el HTML.
      */
     @Transactional
     public ResenaVisible publicar(UUID huespedId, UUID reservaId, PublicarResenaComando comando) {
@@ -71,7 +71,7 @@ public class ServicioResenias implements FachadaResenas {
         return visible(guardada, usuarios.personas(Set.of(autor)).get(autor));
     }
 
-    /** SCRUM-142: el huésped de cada reserva y su nombre en una consulta a cada fachada, sin leer sus tablas. */
+    /** El huésped de cada reserva y su nombre en una consulta a cada fachada, sin leer sus tablas. */
     @Override
     public List<ResenaVisible> listarVisibles(PublicacionId publicacionId) {
         Map<ReservaId, UsuarioId> huespedes = reservas.huespedPorReserva(publicacionId);
@@ -96,12 +96,16 @@ public class ServicioResenias implements FachadaResenas {
      * concat_ws(' ', nombre, left(apellido, 1) || '.'): omite lo que falte.
      */
     private static String autor(Persona huesped) {
-        String inicial = huesped.apellido() == null ? null
-                : huesped.apellido().substring(0, huesped.apellido().isEmpty() ? 0 : huesped.apellido().offsetByCodePoints(0, 1)) + ".";
+        String apellido = huesped.apellido();
+        String inicial = null;
+        if (apellido != null) {
+            int fin = apellido.isEmpty() ? 0 : apellido.offsetByCodePoints(0, 1);
+            inicial = apellido.substring(0, fin) + ".";
+        }
         return Stream.of(huesped.nombre(), inicial).filter(Objects::nonNull).collect(Collectors.joining(" "));
     }
 
-    /** CU-26: queda en la auditoría quién la ocultó. */
+    /** Queda en la auditoría quién la ocultó. */
     @Override
     @Transactional
     public void ocultar(UsuarioId administradorId, ResenaId resenaId) {
@@ -112,7 +116,7 @@ public class ServicioResenias implements FachadaResenas {
     }
 
     /**
-     * SCRUM-111 · RF-29: cualquier usuario con sesión reporta una reseña visible, una sola vez y nunca la propia. Queda
+     * Cualquier usuario con sesión reporta una reseña visible, una sola vez y nunca la propia. Queda
      * en la auditoría con el motivo.
      */
     @Transactional
@@ -127,7 +131,7 @@ public class ServicioResenias implements FachadaResenas {
         eventos.publicar(new ResenaReportada(usuarioId, resenaId, comando.motivo().name()));
     }
 
-    /** SCRUM-111: la publicación y el autor de cada una en una consulta a cada fachada, sin leer sus tablas. */
+    /** La publicación y el autor de cada una en una consulta a cada fachada, sin leer sus tablas. */
     @Override
     public List<ResenaConReportes> listarReportadas() {
         List<ResenaReportadaGuardada> reportadas = resenas.listarReportadas();

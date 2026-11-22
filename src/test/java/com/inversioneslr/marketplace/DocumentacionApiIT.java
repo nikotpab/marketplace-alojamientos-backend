@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 
-/** SCRUM-99: la documentación de la API se publica sin sesión y solo cubre /api/v1. */
+/** La documentación de la API se publica sin sesión y solo cubre /api/v1. */
 class DocumentacionApiIT extends PruebaIntegracion {
 
     @Test

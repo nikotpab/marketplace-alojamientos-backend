@@ -11,7 +11,7 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** Guarda y consulta las notificaciones (RF-24). */
+/** Guarda y consulta las notificaciones. */
 @Repository
 public class AdaptadorNotificaciones implements RepositorioNotificaciones {
 

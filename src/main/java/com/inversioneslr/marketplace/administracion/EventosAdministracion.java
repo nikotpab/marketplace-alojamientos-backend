@@ -4,11 +4,11 @@ import com.inversioneslr.marketplace.compartido.EventoDominio;
 import java.util.Map;
 import java.util.UUID;
 
-/** Eventos que emite el módulo de administración (SCRUM-143). */
+/** Eventos que emite el módulo de administración. */
 public interface EventosAdministracion {
 
     /**
-     * RF-34: quién exportó, qué reporte y con qué filtros. Es el historial de exportaciones. Los filtros van como
+     * Quién exportó, qué reporte y con qué filtros. Es el historial de exportaciones. Los filtros van como
      * texto, con "null" si no se filtró por ellos.
      */
     record ReporteExportado(UUID id, UUID actorId, String reporte, String formato, int filas, String desde, String hasta, String ciudad)

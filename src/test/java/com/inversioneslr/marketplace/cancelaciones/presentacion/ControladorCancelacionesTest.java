@@ -66,7 +66,7 @@ class ControladorCancelacionesTest {
 
     @Test
     void estimaDevolucionParaElHuesped() throws Exception {
-        when(servicio.estimarDevolucion(eq(HUESPED_ID), eq(RESERVA_ID)))
+        when(servicio.estimarDevolucion(HUESPED_ID, RESERVA_ID))
                 .thenReturn(new ServicioCancelaciones.EstimacionDevolucion(new BigDecimal("300000"), "Flexible"));
 
         mvc.perform(get("/api/v1/reservas/{id}/cancelacion/estimacion", RESERVA_ID)
