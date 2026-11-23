@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.2</version>
+        <version>4.2.0</version>
         <relativePath/>
     </parent>
 
@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <spring-modulith.version>2.1.2</spring-modulith.version>
+        <spring-modulith.version>2.2.0</spring-modulith.version>
         <!-- Groovy 5.0.8 (gestionado por el BOM de Spring Boot) tiene un NPE en ClosureMetaClass
              que afecta las peticiones GET de RestAssured. Se fuerza 4.0.x para evitarlo. -->
         <groovy.version>4.0.21</groovy.version>
@@ -112,7 +112,7 @@
         <dependency>
             <groupId>com.stripe</groupId>
             <artifactId>stripe-java</artifactId>
-            <version>34.1.0</version>
+            <version>34.2.0</version>
         </dependency>
         <!-- Documentación OpenAPI generada desde los controladores, con Swagger UI. -->
         <dependency>
@@ -187,7 +187,7 @@
                 <plugin>
                     <groupId>org.sonarsource.scanner.maven</groupId>
                     <artifactId>sonar-maven-plugin</artifactId>
-                    <version>5.8.0.7211</version>
+                    <version>5.9.0.7382</version>
                 </plugin>
             </plugins>
         </pluginManagement>
